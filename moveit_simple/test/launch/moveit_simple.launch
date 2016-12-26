@@ -1,0 +1,38 @@
+<launch>
+  <!-- Unit test launch file -->
+
+  <!-- Load up parameter server, based on standard planning_context.launch moveit file-->
+  <!-- The name of the parameter under which the URDF is loaded -->
+  <arg name="robot_description" default="robot_description"/>
+
+  <!-- URDF file (including path) -->
+  <arg name="urdf_file" default="$(find moveit_simple)/test/resources/kuka_kr210/kr210l150.urdf"/>
+
+  <!-- Launch test node -->
+  <arg name="run_test_node" default="true"/>
+
+  <!-- Load universal robot description format (URDF) -->
+  <param name="$(arg robot_description)" textfile="$(arg urdf_file)"/>
+
+  <!-- The semantic description that corresponds to the URDF -->
+  <param name="$(arg robot_description)_semantic" textfile="$(find moveit_simple)/test/resources/kuka_kr210/kuka_kr210.srdf" />
+  
+  <!-- Load updated joint limits (override information from URDF) -->
+  <group ns="$(arg robot_description)_planning">
+    <rosparam command="load" file="$(find moveit_simple)/test/resources/kuka_kr210/joint_limits.yaml"/>
+  </group>
+
+  <!-- Load default settings for kinematics; these settings are overridden by settings in a node's namespace -->
+  <group ns="$(arg robot_description)_kinematics">
+    <rosparam command="load" file="$(find moveit_simple)/test/resources/kuka_kr210/kinematics.yaml"/>
+  </group>
+
+  <!-- Nodes for simulating robot motion and state -->
+  <node name="joint_trajectory_action" type="joint_trajectory_action" pkg="industrial_robot_client"/>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+  <node name="robot_simulator" pkg="industrial_robot_simulator" type="industrial_robot_simulator"/>
+
+  <!-- Static tranform publisher for testing tf lookup -->
+  <node name="tf_pub1" type="static_transform_publisher" pkg="tf" args="1.9 0 2.2 0 -0.5 0 base_link tf_pub1 100"/>
+
+</launch>
