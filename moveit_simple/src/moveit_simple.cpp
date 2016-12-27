@@ -203,6 +203,27 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
 }
 
 
+bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
+                   double timeout, std::vector<double> joint_seed) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  bool inCollision = true;
+  try
+  {
+    Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
+    std::unique_ptr<TrajectoryPoint> point =
+      std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+    robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
+    inCollision = planning_scene_->isStateColliding(*robot_state_, joint_group_->getName());
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN_STREAM("IsInCollision failed for for arbitrary pose point: " << ex.what());
+    inCollision = true;
+  }
+  return inCollision;
+}
 
 
 bool Robot::isReachable(const std::string & name, double timeout,
@@ -217,7 +238,7 @@ bool Robot::isReachable(const std::string & name, double timeout,
 
 
 
-bool Robot::isReachable(const Eigen::Affine3d pose, const std::string & frame,
+bool Robot::isReachable(const Eigen::Affine3d & pose, const std::string & frame,
                         double timeout, std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);

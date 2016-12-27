@@ -67,10 +67,24 @@ class Robot
 public:
   Robot(const ros::NodeHandle & nh, const std::string &robot_description,
         const std::string &group_name);
+
+  /**
+   * @brief isInCollision  returns true if pose results in robot config that is
+   * in collision with the environment as defined by the URDF.
+   * @param pose - cartesian pose of the tool to check
+   * @param frame - tool pose relative to frame
+   * @param timeout - (optional) timeout for IK
+   * @param joint_seed (optional) - seed to use
+   * @return
+   */
+  bool isInCollision(const Eigen::Affine3d pose, const std::string & frame,
+                     double timeout = 10.0,
+                     std::vector<double> joint_seed = std::vector<double>() ) const;
   /**
    * @brief isReachable - check if point is reacheable
    * @param name - name of point to check
    * @param joint_seed - (optional) tries to find joint solutions closest to seed
+   * @param timeout - (optional) timeout for IK
    * @return
    */
   bool isReachable(const std::string & name, double timeout = 10.0,
@@ -81,10 +95,11 @@ public:
    * @brief isReachable - check if pose (relative to named frame) is reacheable
    * @param pose - pose to check
    * @param frame - frame in which pose is expressed
+   * @param timeout - (optional) timeout for IK
    * @param joint_seed (optional) - seed to use
    * @return
    */
-  bool isReachable(const Eigen::Affine3d pose, const std::string & frame,
+  bool isReachable(const Eigen::Affine3d & pose, const std::string & frame,
                    double timeout = 10.0,
                    std::vector<double> joint_seed = std::vector<double>() ) const;
 
