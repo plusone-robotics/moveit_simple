@@ -45,8 +45,9 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
 
   visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
                         robot_model_ptr_->getRootLinkName(),
-                        "moveit_simple_visual_markers", robot_model_ptr_));
-  visual_tools_->loadRobotStatePub("moveit_simple_robot_state");
+                        nh_.getNamespace() + "/rviz_visual_tools",
+                        robot_model_ptr_));
+  visual_tools_->loadRobotStatePub(nh_.getNamespace() + "/display_robot_state");
 
   ROS_INFO_STREAM("Calculating all positions assuming, root: " << robot_model_ptr_->getRootLinkName()
                   << ", and tool: " << robot_model_ptr_->getLinkModelNames());
