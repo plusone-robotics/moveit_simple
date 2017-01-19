@@ -33,7 +33,7 @@ TEST(MoveitSimpleTest, reachability)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
 
-  ROS_INFO_STREAM("Testing reachability of unknown poiint, should fail");
+  ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
   EXPECT_FALSE(robot.isReachable("unknown_name"));
 
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
@@ -51,7 +51,7 @@ TEST(MoveitSimpleTest, add_trajectory)
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
   const std::string TRAJECTORY_NAME("traj1");
 
-  ROS_INFO_STREAM("Testing loading of unknown poiint, should fail");
+  ROS_INFO_STREAM("Testing loading of unknown point, should fail");
   EXPECT_FALSE(robot.addTrajPoint("bad_traj", "unknown_name", 1.0));
 
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
