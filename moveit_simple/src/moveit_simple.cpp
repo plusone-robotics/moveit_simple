@@ -17,7 +17,7 @@
  */
 
 #include "moveit_simple/moveit_simple.h"
-#include "descartes_core/pretty_print.hpp"
+#include "cxx-prettyprint/prettyprint.hpp"
 #include "ros/console.h"
 #include "eigen_conversions/eigen_msg.h"
 

@@ -22,7 +22,7 @@
   <build_depend>control_msgs</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>actionlib</build_depend>
-  <build_depend>descartes_core</build_depend>
+  <build_depend>prettyprint</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>moveit_core</run_depend>
