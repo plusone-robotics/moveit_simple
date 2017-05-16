@@ -559,7 +559,18 @@ Robot::dynamic_reconfig_callback(moveit_simple::moveit_simple_dynamic_reConfig &
 {
   /// Hard coded these checks in for now.
   if (config.speed_modifier <= 10.0 && config.speed_modifier > 0.0)
-    speed_modifier_ = config.speed_modifier;
+    setSpeedModifier(config.speed_modifier);
+}
+
+void Robot::setSpeedModifier(double speed_modifier)
+{
+  // TODO(geoffrey): Check if it is within bounds here???
+  speed_modifier_ = speed_modifier;
+}
+
+double Robot::getSpeedModifier(void)
+{
+  return speed_modifier_;
 }
 
 }

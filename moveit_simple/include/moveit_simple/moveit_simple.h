@@ -166,6 +166,21 @@ public:
   static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
       const std::vector<double> & joint_point, double time);
 
+  /**
+   * @brief setSpeedModifier - Setter method for the execution speed modifier of the 
+   * execute method.
+   * @param speed_modifier
+   * @return
+   */
+  void setSpeedModifier(double speed_modifier);
+
+  /**
+   * @brief setSpeedModifier - Getter method for the execution speed modifier of the 
+   * execute method.
+   * @return speed_modifier_
+   */
+  double getSpeedModifier(void);
+
 protected:
   Robot();
 
