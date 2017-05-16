@@ -31,7 +31,8 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   action_("joint_trajectory_action", true),
   tf_buffer_(),
   tf_listener_(tf_buffer_),
-  nh_(nh)
+  nh_(nh),
+  speed_modifier_(1.0)
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
                   << ", group name: " << group_name);
@@ -60,6 +61,10 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   ROS_INFO_STREAM("Loading ROS pubs/subs");
   j_state_sub_ = nh_.subscribe("joint_states", 1, &Robot::updateState, this);
 
+  // Dynamic ReConfigure 
+  dynamic_reconfig_callback_type_ = boost::bind(&Robot::dynamic_reconfig_callback, this, _1, _2);
+  dynamic_reconfig_server_.setCallback(dynamic_reconfig_callback_type_);
+
   //TODO: How to handle action server and other failures in the constructor
   // Perhaps move any items that can fail our of the constructor into an init
   // function with a proper return
@@ -67,7 +72,6 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   {
     ROS_ERROR_STREAM("Failed to connect to joint trajectory action server: ");
   }
-
 
   return;
 }
@@ -314,6 +318,12 @@ bool Robot::execute(const std::string traj_name)
     goal.trajectory.joint_names = joint_group_->getVariableNames();
     if ( toJointTrajectory(traj_name, goal.trajectory.points) )
     {
+      // Modifies the speed of execution for the trajectory based off of the speed_modifier_
+      for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+      {
+        goal.trajectory.points[i].time_from_start *= speed_modifier_;
+      }
+
       ros::Duration traj_time =
           goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
       ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
@@ -543,5 +553,13 @@ void Robot::updateState(const sensor_msgs::JointStateConstPtr& msg)
   robot_state_->setVariablePositions(msg->name, msg->position);
 }
 
+void 
+Robot::dynamic_reconfig_callback(moveit_simple::moveit_simple_dynamic_reConfig &config,
+                                 uint32_t level)
+{
+  /// Hard coded these checks in for now.
+  if (config.speed_modifier <= 10.0 && config.speed_modifier > 0.0)
+    speed_modifier_ = config.speed_modifier;
+}
 
 }

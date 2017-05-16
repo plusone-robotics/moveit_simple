@@ -41,7 +41,9 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <sensor_msgs/JointState.h>
 
-
+// Dynamic Reconfigure Parameters
+#include <dynamic_reconfigure/server.h>
+#include <moveit_simple/moveit_simple_dynamic_reConfig.h>
 
 namespace moveit_simple
 {
@@ -197,6 +199,9 @@ protected:
 
   void updateState(const sensor_msgs::JointStateConstPtr& msg);
 
+  void 
+  dynamic_reconfig_callback(moveit_simple::moveit_simple_dynamic_reConfig &config,
+                            uint32_t level);
 
   // Robot internal objects
   std::map<std::string, Trajectory> traj_map_;
@@ -225,6 +230,15 @@ protected:
   ros::Subscriber j_state_sub_;
   mutable std::recursive_mutex m_;
 
+  // Dynamic Reconfigure
+  double speed_modifier_;
+
+  dynamic_reconfigure::Server
+      <moveit_simple::moveit_simple_dynamic_reConfig> dynamic_reconfig_server_;
+
+  dynamic_reconfigure::Server
+      <moveit_simple::moveit_simple_dynamic_reConfig>::CallbackType 
+      dynamic_reconfig_callback_type_;  
 };
 
 
