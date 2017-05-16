@@ -32,6 +32,7 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   tf_buffer_(),
   tf_listener_(tf_buffer_),
   nh_(nh),
+  params_(nh),
   speed_modifier_(1.0)
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
@@ -61,9 +62,9 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   ROS_INFO_STREAM("Loading ROS pubs/subs");
   j_state_sub_ = nh_.subscribe("joint_states", 1, &Robot::updateState, this);
 
-  // Dynamic ReConfigure 
-  dynamic_reconfig_callback_type_ = boost::bind(&Robot::dynamic_reconfig_callback, this, _1, _2);
-  dynamic_reconfig_server_.setCallback(dynamic_reconfig_callback_type_);
+  // Dynamic Reconfig Parameters 
+  params_.fromParamServer();
+  dynamic_reconfig_server_.setCallback(boost::bind(&Robot::reconfigureRequest, this, _1, _2));
 
   //TODO: How to handle action server and other failures in the constructor
   // Perhaps move any items that can fail our of the constructor into an init
@@ -553,18 +554,15 @@ void Robot::updateState(const sensor_msgs::JointStateConstPtr& msg)
   robot_state_->setVariablePositions(msg->name, msg->position);
 }
 
-void 
-Robot::dynamic_reconfig_callback(moveit_simple::moveit_simple_dynamic_reConfig &config,
-                                 uint32_t level)
+void Robot::reconfigureRequest(moveit_simple_Config &config, uint32_t level)
 {
-  /// Hard coded these checks in for now.
-  if (config.speed_modifier <= 10.0 && config.speed_modifier > 0.0)
-    setSpeedModifier(config.speed_modifier);
+  params_.fromConfig(config);
+  if (params_.speed_modifier > 0.0)
+    setSpeedModifier(params_.speed_modifier);  
 }
 
 void Robot::setSpeedModifier(double speed_modifier)
 {
-  // TODO(geoffrey): Check if it is within bounds here???
   speed_modifier_ = speed_modifier;
 }
 
