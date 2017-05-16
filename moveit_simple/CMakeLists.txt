@@ -15,10 +15,15 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_visual_tools
   actionlib
   prettyprint
+  dynamic_reconfigure
 )
 
 find_package(Boost REQUIRED)
 find_package(Eigen REQUIRED)
+
+generate_dynamic_reconfigure_options(
+  cfg/dynamic_reconfigure.cfg
+)
 
 catkin_package(
   INCLUDE_DIRS
@@ -49,7 +54,7 @@ include_directories(
 )
 
 add_library(moveit_simple src/moveit_simple.cpp)
-add_dependencies(moveit_simple ${catkin_EXPORTED_TARGETS})
+add_dependencies(moveit_simple ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 target_link_libraries(moveit_simple ${catkin_LIBRARIES})
 target_compile_options(moveit_simple PUBLIC -std=c++11)
 
