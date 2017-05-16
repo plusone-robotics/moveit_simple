@@ -10,11 +10,11 @@ notifications:
       - shaun.edwards@gmail.com
 env:
   matrix:
-    - USE_DEB=true  ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=https://raw.githubusercontent.com/shaun-edwards/moveit_simple/indigo-devel/.travis.rosinstall
-    - USE_DEB=true  ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=https://raw.githubusercontent.com/shaun-edwards/moveit_simple/indigo-devel/.travis.rosinstall
+    - ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
+    - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
 matrix:
   allow_failures:
-    - env: USE_DEB=true  ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=https://raw.githubusercontent.com/shaun-edwards/moveit_simple/indigo-devel/.travis.rosinstall
+    - env: ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
 script: 
