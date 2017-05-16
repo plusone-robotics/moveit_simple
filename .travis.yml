@@ -10,14 +10,11 @@ notifications:
       - shaun.edwards@gmail.com
 env:
   matrix:
-    - USE_DEB=true  ROS_DISTRO="indigo" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - USE_DEB=true  ROS_DISTRO="indigo" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-    - USE_DEB=true  ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - USE_DEB=true  ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
+    - USE_DEB=true  ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=https://raw.githubusercontent.com/shaun-edwards/moveit_simple/indigo-devel/.travis.rosinstall
+    - USE_DEB=true  ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=https://raw.githubusercontent.com/shaun-edwards/moveit_simple/indigo-devel/.travis.rosinstall
 matrix:
   allow_failures:
-    - env: USE_DEB=true  ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: USE_DEB=true  ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
+    - env: USE_DEB=true  ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=https://raw.githubusercontent.com/shaun-edwards/moveit_simple/indigo-devel/.travis.rosinstall
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
 script: 
