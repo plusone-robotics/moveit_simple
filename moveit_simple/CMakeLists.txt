@@ -16,14 +16,13 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   prettyprint
   dynamic_reconfigure
+  rosparam_handler
 )
 
 find_package(Boost REQUIRED)
 find_package(Eigen REQUIRED)
 
-generate_dynamic_reconfigure_options(
-  cfg/dynamic_reconfigure.cfg
-)
+generate_ros_parameter_files(cfg/moveit_simple_.params)
 
 catkin_package(
   INCLUDE_DIRS
@@ -41,6 +40,7 @@ catkin_package(
     control_msgs
     sensor_msgs
     actionlib
+    rosparam_handler
   DEPENDS
     Boost
     Eigen
@@ -54,7 +54,9 @@ include_directories(
 )
 
 add_library(moveit_simple src/moveit_simple.cpp)
-add_dependencies(moveit_simple ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
+add_dependencies(moveit_simple ${catkin_EXPORTED_TARGETS})
+add_dependencies(moveit_simple ${PROJECT_NAME}_gencfg)
+add_dependencies(moveit_simple ${PROJECT_NAME}_genparam)
 target_link_libraries(moveit_simple ${catkin_LIBRARIES})
 target_compile_options(moveit_simple PUBLIC -std=c++11)
 
