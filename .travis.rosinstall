@@ -1,1 +1,4 @@
-- git: {uri: https://github.com/shaun-edwards/prettyprint.git local-name: prettyprint}
+- git:
+    uri: https://github.com/shaun-edwards/prettyprint.git 
+    local-name: prettyprint
+    version: master
