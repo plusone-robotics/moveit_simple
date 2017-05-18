@@ -9,12 +9,14 @@ notifications:
     recipients:
       - shaun.edwards@gmail.com
 env:
+  global:
+    - BEFORE_SCRIPT='git clone https://github.com/shaun-edwards/prettyprint.git --recursive /root/catkin_ws/src/prettyprint'
   matrix:
-    - ROS_DISTRO="indigo" BEFORE_SCRIPT='git clone https://github.com/shaun-edwards/prettyprint.git --recursive'
-    - ROS_DISTRO="kinetic" BEFORE_SCRIPT='git clone https://github.com/shaun-edwards/prettyprint.git --recursive'
+    - ROS_DISTRO="indigo"
+    - ROS_DISTRO="kinetic"
 matrix:
   allow_failures:
-    - env: ROS_DISTRO="kinetic" BEFORE_SCRIPT='git clone https://github.com/shaun-edwards/prettyprint.git --recursive'
+    - env: ROS_DISTRO="kinetic"
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
 script: 
