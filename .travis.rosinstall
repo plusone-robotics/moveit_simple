@@ -1,0 +1,4 @@
+- git:
+    uri: https://github.com/shaun-edwards/prettyprint.git 
+    local-name: prettyprint
+    version: master
