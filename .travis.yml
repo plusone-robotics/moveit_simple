@@ -9,12 +9,14 @@ notifications:
     recipients:
       - shaun.edwards@gmail.com
 env:
+  global:
+    - BEFORE_SCRIPT='git clone https://github.com/shaun-edwards/prettyprint.git --recursive'
   matrix:
-    - ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
-    - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
+    - ROS_DISTRO="indigo"
+    - ROS_DISTRO="kinetic"
 matrix:
   allow_failures:
-    - env: ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
+    - env: ROS_DISTRO="kinetic"
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
 script: 
