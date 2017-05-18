@@ -10,7 +10,7 @@ notifications:
       - shaun.edwards@gmail.com
 env:
   global:
-    - BEFORE_SCRIPT='git clone https://github.com/shaun-edwards/prettyprint.git --recursive /root/catkin_ws/src/prettyprint; ls -R'
+    - BEFORE_SCRIPT='git clone https://github.com/shaun-edwards/prettyprint.git --recursive /root/catkin_ws/src/prettyprint; ls -R /root/catkin_ws/src/'
   matrix:
     - ROS_DISTRO="indigo"
     - ROS_DISTRO="kinetic"
