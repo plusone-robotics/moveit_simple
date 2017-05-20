@@ -25,7 +25,6 @@ namespace moveit_simple
 {
 
 
-
 Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
              const std::string &group_name):
   action_("joint_trajectory_action", true),
@@ -302,7 +301,8 @@ void Robot::clearTrajectory(const::std::string traj_name)
 
 
 
-bool Robot::execute(const std::string traj_name)
+bool Robot::execute(const std::string traj_name,
+                    const bool use_last_traj_pt, const double last_traj_threshold)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -312,7 +312,8 @@ bool Robot::execute(const std::string traj_name)
   {
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory.joint_names = joint_group_->getVariableNames();
-    if ( toJointTrajectory(traj_name, goal.trajectory.points) )
+    if ( toJointTrajectory(traj_name, goal.trajectory.points, use_last_traj_pt,
+                           last_traj_threshold) )
     {
       ros::Duration traj_time =
           goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
@@ -344,7 +345,9 @@ bool Robot::execute(const std::string traj_name)
 }
 
 bool Robot::toJointTrajectory(const std::string traj_name,
-                       std::vector<trajectory_msgs::JointTrajectoryPoint> & points)
+                       std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
+                        const bool use_last_traj_pt,
+                        const double last_traj_threshold)
 {
   const double IK_TIMEOUT = 0.250;   //250 ms for IK solving
   const Trajectory & traj = traj_map_[traj_name];
@@ -352,7 +355,25 @@ bool Robot::toJointTrajectory(const std::string traj_name,
   // The first point in any trajectory is the current pose
   std::vector<double> current_joint_position;
   robot_state_->copyJointGroupPositions(joint_group_->getName(), current_joint_position);
-  points.push_back(toJointTrajPtMsg(current_joint_position, 0.0));
+  if ( use_last_traj_pt )
+  {
+    ROS_INFO_STREAM("WORK-AROUND ENABLED, checking current vs last joint trajectory pt");
+    if( isEqual( current_joint_position, last_joint_point_, last_traj_threshold))
+    {
+      ROS_INFO_STREAM("WORK-AROUND CHECK PASSED, last point is close enough to current");
+      points.push_back(toJointTrajPtMsg(last_joint_point_, 0.0));
+    }
+    else
+    {
+      ROS_INFO_STREAM("WORK-AROUND CHECK NOT PASSED, Using current joint position as first point (IGNORING WORRKAROUND)");
+      points.push_back(toJointTrajPtMsg(current_joint_position, 0.0));
+    }
+  }
+  else
+  {
+    ROS_INFO_STREAM("Using current joint position as first point (NO WORK-AROUND)");
+    points.push_back(toJointTrajPtMsg(current_joint_position, 0.0));
+  }
 
   for(size_t i = 0; i < traj.size(); ++i)
   {
@@ -409,10 +430,13 @@ bool Robot::toJointTrajectory(const std::string traj_name,
         return false;
       }
     }
-
+    //ROS_INFO_STREAM("Setting last joint of traj pt: " << i << " to zero");
+    current_point->setJoint(5, 0);
+    //ROS_INFO_STREAM("Appending trajectory point: " << current_point->jointPoint());
     points.push_back(toJointTrajPtMsg(*current_point));
     ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
   }
+  last_joint_point_ = points.back().positions;
   return true;
 }
 
@@ -449,6 +473,34 @@ bool Robot::isConfigChange(const std::vector<double> jp1,
     }
   }
   return false;
+}
+
+
+bool Robot::isEqual(const std::vector<double> jp1,
+                    const std::vector<double> jp2, const double tolerance) const
+{
+  if( jp1.size() != jp2.size() )
+  {
+    ROS_ERROR_STREAM("Cannot check for equal, size mismatch");
+    return false;
+  }
+
+  for( size_t ii = 0; ii < jp1.size(); ii++ )
+  {
+    double joint_change = std::abs(jp1[ii] - jp2[ii]);
+    if ( joint_change > tolerance )
+    {
+      ROS_INFO_STREAM("Joint[" << ii << "] change of " << joint_change << " exceeds limit: "
+                      << tolerance);
+      return false;
+    }
+    else
+    {
+      ROS_INFO_STREAM("Joint[" << ii << "] change of " << joint_change << " winthin limit: "
+                      << tolerance);
+    }
+  }
+  return true;
 }
 
 

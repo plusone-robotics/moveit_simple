@@ -147,7 +147,7 @@ public:
    * prior calls to "addTrajPoint".
    * @return - true if desired trajectory was executed.
    */
-  bool execute(const std::string traj_name);
+  bool execute(const std::string traj_name, const bool use_last_traj_pt = false, const double last_traj_threshold = 0.1);
   /**
    * @brief clearTrajectory - clears stored trajectory
    * @param traj_name - trajectory to clear
@@ -171,7 +171,9 @@ protected:
                                          const std::string &in_frame) const;
 
   bool toJointTrajectory(const std::string traj_name,
-                         std::vector<trajectory_msgs::JointTrajectoryPoint> & points);
+                         std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
+                         const bool use_last_traj_pt = false,
+                         const double last_traj_threshold = 0.1);
 
   bool addTrajPoint(const std::string & traj_name,
                     std::unique_ptr<TrajectoryPoint> &point);
@@ -192,10 +194,15 @@ protected:
   bool isConfigChange(const std::vector<double> jp1,
                       const std::vector<double> jp2) const;
 
+
+  bool isEqual(const std::vector<double> jp1,
+                      const std::vector<double> jp2, const double tolerance) const;
+
   trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
       const JointTrajectoryPoint & joint_point) const;
 
   void updateState(const sensor_msgs::JointStateConstPtr& msg);
+
 
 
   // Robot internal objects
@@ -224,6 +231,9 @@ protected:
   ros::NodeHandle nh_;
   ros::Subscriber j_state_sub_;
   mutable std::recursive_mutex m_;
+
+  //Temporary object for mh5 hotfix
+  std::vector<double> last_joint_point_;
 
 };
 
@@ -293,6 +303,11 @@ public:
   const std::vector<double> & jointPoint() const
   {
     return joint_point_;
+  }
+
+  void setJoint(const size_t idx, const double value)
+  {
+    joint_point_[idx] = value;
   }
 
 protected:
