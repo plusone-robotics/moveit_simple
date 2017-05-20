@@ -9,8 +9,6 @@ notifications:
     recipients:
       - shaun.edwards@gmail.com
 env:
-  global:
-    - BEFORE_SCRIPT='catkin config -w $CATKIN_WORKSPACE --no-install'
   matrix:
     - ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
     - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
