@@ -42,6 +42,9 @@
   <test_depend>joint_trajectory_action</test_depend>
   <test_depend>robot_state_publisher</test_depend>
   <test_depend>industrial_robot_simulator</test_depend>
+  <test_depend>moveit_kinematics</test_depend>
+  
+
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
