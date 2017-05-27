@@ -2,7 +2,7 @@
     uri: https://github.com/shaun-edwards/prettyprint.git 
     local-name: prettyprint
     version: master
--git
+-git:
   uri: https://github.com/cbandera/rosparam_handler.git
   local-name: rosparam_handler
   version: master
