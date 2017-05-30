@@ -558,7 +558,7 @@ void Robot::reconfigureRequest(moveit_simple_Config &config, uint32_t level)
 {
   params_.fromConfig(config);
   if (params_.speed_modifier > 0.0)
-    setSpeedModifier(params_.speed_modifier);  
+    setSpeedModifier(params_.speed_modifier);
 }
 
 void Robot::setSpeedModifier(double speed_modifier)
@@ -569,6 +569,22 @@ void Robot::setSpeedModifier(double speed_modifier)
 double Robot::getSpeedModifier(void)
 {
   return speed_modifier_;
+}
+
+double Robot::getTotalExecutionTime(std::string traj_name)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  if (traj_map_.count(traj_name))
+  {
+    control_msgs::FollowJointTrajectoryGoal goal;
+    goal.trajectory.joint_names = joint_group_->getVariableNames();
+    if (toJointTrajectory(traj_name, goal.trajectory.points))
+    {
+      return goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start.toSec();
+    }
+  }
+  else { return 0.0; }
 }
 
 }

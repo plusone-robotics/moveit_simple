@@ -181,6 +181,13 @@ public:
    */
   double getSpeedModifier(void);
 
+  /**
+   * @brief getTotalExecutionTime - Returns the total execution time for the current
+   * trajectory
+   * @return total_execution_time
+   */
+  double getTotalExecutionTime(std::string traj_name);
+
 protected:
   Robot();
 

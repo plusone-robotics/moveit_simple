@@ -65,6 +65,12 @@ TEST(MoveitSimpleTest, add_trajectory)
   EXPECT_TRUE(robot.execute(TRAJECTORY_NAME));
 }
 
+bool checkIfTimeWithinTolerance(double actual_time, double expected_time, 
+  double tolerance = 0.15) // Tolerance is a percentage
+{
+
+}
+
 TEST(MoveitSimpleTest, speed_reconfiguration)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
@@ -79,7 +85,25 @@ TEST(MoveitSimpleTest, speed_reconfiguration)
   robot.addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0);
 
   EXPECT_TRUE(robot.getSpeedModifier() == 1.0);
+  double nominal_time = robot.getTotalExecutionTime(TRAJECTORY_NAME);
 
+  ROS_ERROR_STREAM(nominal_time);
+
+  robot.setSpeedModifier(0.5);
+  EXPECT_TRUE(robot.getSpeedModifier() == 0.5);
+
+  double half_time = robot.getTotalExecutionTime(TRAJECTORY_NAME);
+
+  ROS_ERROR_STREAM(half_time);
+
+  robot.setSpeedModifier(2.0);
+  EXPECT_TRUE(robot.getSpeedModifier() == 2.0);
+
+  double double_time = robot.getTotalExecutionTime(TRAJECTORY_NAME);
+  
+  ROS_ERROR_STREAM(double_time);
+#if 0
+  EXPECT_TRUE(robot.getSpeedModifier() == 1.0);
   double start_regular_execution = ros::Time::now().toSec();
   robot.execute(TRAJECTORY_NAME);
   double end_regular_execution = ros::Time::now().toSec();
@@ -106,6 +130,11 @@ TEST(MoveitSimpleTest, speed_reconfiguration)
 
   ROS_ERROR_STREAM("Time for single execution at double speed: "
     << end_double_execution - start_double_execution << " seconds.");
+
+  double regular_time = end_regular_execution - start_regular_execution;
+  double half_time = end_half_execution - start_half_execution;
+  double double_time = end_double_execution - start_double_execution;
+#endif
 }
 
 }
