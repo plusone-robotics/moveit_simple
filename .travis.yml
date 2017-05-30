@@ -1,0 +1,21 @@
+sudo: required 
+dist: trusty 
+language: generic 
+compiler:
+  - gcc
+notifications:
+  email:
+    on_failure: always
+    recipients:
+      - shaun.edwards@gmail.com
+env:
+  matrix:
+    - ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
+    - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
+matrix:
+  allow_failures:
+    - env: ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
+install:
+  - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
+script: 
+  - source .ci_config/travis.sh
