@@ -85,7 +85,7 @@ TEST(MoveitSimpleTest, speed_reconfiguration)
   double end_regular_execution = ros::Time::now().toSec();
 
   ROS_ERROR_STREAM("Time for single execution at regular speed: " 
-    << end_regular_execution - start_regular_execution << "seconds.");
+    << end_regular_execution - start_regular_execution << " seconds.");
 
   robot.setSpeedModifier(0.5);
   EXPECT_TRUE(robot.getSpeedModifier() == 0.5);
@@ -95,7 +95,7 @@ TEST(MoveitSimpleTest, speed_reconfiguration)
   double end_half_execution = ros::Time::now().toSec();
 
   ROS_ERROR_STREAM("Time for single execution at half speed: "
-    << end_half_execution - start_half_execution << "seconds.");
+    << end_half_execution - start_half_execution << " seconds.");
 
   robot.setSpeedModifier(2.0);
   EXPECT_TRUE(robot.getSpeedModifier() == 2.0);
@@ -105,7 +105,7 @@ TEST(MoveitSimpleTest, speed_reconfiguration)
   double end_double_execution = ros::Time::now().toSec();
 
   ROS_ERROR_STREAM("Time for single execution at double speed: "
-    << end_double_execution - start_double_execution << "seconds.");
+    << end_double_execution - start_double_execution << " seconds.");
 }
 
 }
