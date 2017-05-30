@@ -248,7 +248,7 @@ protected:
 
   moveit_simple::moveit_simple_Parameters params_;
   dynamic_reconfigure::Server
-       <moveit_simple::moveit_simple_Config> dynamic_reconfig_server_; 
+       <moveit_simple_Config> dynamic_reconfig_server_; 
 };
 
 
