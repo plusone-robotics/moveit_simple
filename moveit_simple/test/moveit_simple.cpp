@@ -74,9 +74,6 @@ TEST(MoveitSimpleTest, add_trajectory)
   // Check if a trajectory with an empty goal is passed in to execution
   moveit_simple::TrajectoryGoal empty_goal;
   EXPECT_FALSE(robot.execute(TRAJECTORY_NAME, empty_goal));
-
-  // Check if a wrong name is passed into execution
-  EXPECT_FALSE(robot.execute("Random Name", empty_goal));
 }
 
 }
