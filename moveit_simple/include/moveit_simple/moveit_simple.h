@@ -51,7 +51,7 @@ class JointTrajectoryPoint;
 class CartTrajectoryPoint;
 class Robot;
 typedef std::vector<std::unique_ptr<TrajectoryPoint> > Trajectory;
-
+typedef control_msgs::FollowJointTrajectoryGoal TrajectoryGoal;
 
 /**
  * @brief Robot is a wrapper around standard MoveIt objects.  It makes multiple
@@ -142,12 +142,23 @@ public:
                         std::vector<double> & joint_point) const;
 
   /**
-   * @brief execute a given trajectory
+   * @brief plans a given trajectory
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
-   * @return - true if desired trajectory was executed.
+   * @param goal - control_msgs::FollowJointTrajectoryGoal
+   * @return - true if desired trajectory was planned
    */
-  bool execute(const std::string traj_name);
+  bool plan(const std::string traj_name, TrajectoryGoal &goal);
+
+  /**
+   * @brief executes a given trajectory
+   * @param traj_name - name of trajectory to be executed (must be filled with
+   * prior calls to "addTrajPoint".
+   * @param goal - control_msgs::FollowJointTrajectoryGoal (must have been planned)
+   * @return - true if desired trajectory was executed
+   */
+  bool execute(const std::string traj_name, const TrajectoryGoal &goal);
+
   /**
    * @brief clearTrajectory - clears stored trajectory
    * @param traj_name - trajectory to clear

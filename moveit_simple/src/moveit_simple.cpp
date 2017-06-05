@@ -300,48 +300,58 @@ void Robot::clearTrajectory(const::std::string traj_name)
   traj_map_.erase(traj_name);
 }
 
-
-
-bool Robot::execute(const std::string traj_name)
+bool Robot::plan(const std::string traj_name, 
+  TrajectoryGoal &goal)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
-
-  const double TIMEOUT_SCALE = 1.25;  //scales time to wait for action timeout.
   bool success = false;
-  if ( traj_map_.count(traj_name) )
+  if (traj_map_.count(traj_name))
   {
-    control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory.joint_names = joint_group_->getVariableNames();
-    if ( toJointTrajectory(traj_name, goal.trajectory.points) )
+    if (toJointTrajectory(traj_name, goal.trajectory.points))
     {
-      ros::Duration traj_time =
-          goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
-      ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
-      if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
-      {
-        ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
-        success = true;
-      }
-      else
-      {
-        ROS_WARN_STREAM("Trajectory " << traj_name << " failed to exectue");
-        success = false;
-      }
+      ROS_INFO_STREAM("Successfully converted " << traj_name << " to joint trajectory");
+      success = true;
     }
     else
     {
-      ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
+      ROS_WARN_STREAM("Failed to convert " << traj_name << " to joint trajectory");
       success = false;
     }
+  }
+  else {success = false;}
+  return success;
+}
 
+bool Robot::execute(const std::string traj_name, 
+  const TrajectoryGoal &goal)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  const double TIMEOUT_SCALE = 1.25;
+  bool success = false;
+
+  // Check if an empty goal is passed
+  if (goal.trajectory.points.size() == 0)
+  {
+    return false;
+  }
+
+  ros::Duration traj_time = 
+    goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
+  ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
+  if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
+  {
+    ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
+    success = true;
   }
   else
   {
-    ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
+    ROS_WARN_STREAM("Trajectory " << traj_name << " failed to exectue");
     success = false;
   }
   return success;
 }
+
 
 bool Robot::toJointTrajectory(const std::string traj_name,
                        std::vector<trajectory_msgs::JointTrajectoryPoint> & points)

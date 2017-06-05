@@ -62,7 +62,18 @@ TEST(MoveitSimpleTest, add_trajectory)
   EXPECT_TRUE(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
   EXPECT_TRUE(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
 
-  EXPECT_TRUE(robot.execute(TRAJECTORY_NAME));
+  // Check if a proper plan and execution works.
+  moveit_simple::TrajectoryGoal trajectory_goal;
+  EXPECT_TRUE(robot.plan(TRAJECTORY_NAME, trajectory_goal));
+  EXPECT_TRUE(robot.execute(TRAJECTORY_NAME, trajectory_goal));
+
+  // Check if a trajectory without any trajPoints is passed in plan
+  moveit_simple::TrajectoryGoal random_goal;
+  EXPECT_FALSE(robot.plan("Random Name", random_goal));
+
+  // Check if a trajectory with an empty goal is passed in to execution
+  moveit_simple::TrajectoryGoal empty_goal;
+  EXPECT_FALSE(robot.execute(TRAJECTORY_NAME, empty_goal));
 }
 
 }
