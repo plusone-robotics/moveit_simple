@@ -111,7 +111,7 @@ public:
    * @param time - time from start of trajectory to reach point
    * @return true if point successfullly added
    */
-  bool addTrajPoint(const std::string & traj_name, const std::string & point_name,
+  void addTrajPoint(const std::string & traj_name, const std::string & point_name,
                     double time);
   /**
    * @brief Add trajectory point to motion buffer
@@ -173,7 +173,7 @@ protected:
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points);
 
-  bool addTrajPoint(const std::string & traj_name,
+  void addTrajPoint(const std::string & traj_name,
                     std::unique_ptr<TrajectoryPoint> &point);
 
   bool isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout,

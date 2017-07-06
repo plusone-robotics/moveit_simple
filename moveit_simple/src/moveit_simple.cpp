@@ -88,7 +88,7 @@ bool Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
     Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
     std::unique_ptr<TrajectoryPoint> point =
       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
-    success = addTrajPoint(traj_name, point);
+//    success = addTrajPoint(traj_name, point);
   }
   catch (tf2::TransformException &ex)
   {
@@ -102,7 +102,7 @@ bool Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
 
 
 
-bool Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
+void Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
                          double time)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -110,27 +110,29 @@ bool Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name
                  << " at time " << time);
   std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
-  return addTrajPoint(traj_name, point);
+  addTrajPoint(traj_name, point);
 }
 
 
 
 
-bool Robot::addTrajPoint(const std::string & traj_name,
+void Robot::addTrajPoint(const std::string & traj_name,
                          std::unique_ptr<TrajectoryPoint> & point)
 {
   bool success = false;
   if( point )
   {
     traj_map_[traj_name].push_back(std::move(point));
-    success = true;
+//    success = true;
   }
   else
   {
+
     ROS_ERROR_STREAM("Failed to add point for trajectory " << traj_name);
-    success = false;
+    throw std::invalid_argument("a nullptr");
+//    success = false;
   }
-  return success;
+//  return success;
 }
 
 
