@@ -124,7 +124,7 @@ public:
    *
    * @return true if point successfullly added
   */
-  bool addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
+  void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
                     const std::string & frame, double time,
                     const std::string & point_name = std::string());
 
@@ -147,7 +147,7 @@ public:
    * prior calls to "addTrajPoint".
    * @return - true if desired trajectory was executed.
    */
-  bool execute(const std::string traj_name);
+  void execute(const std::string traj_name);
   /**
    * @brief clearTrajectory - clears stored trajectory
    * @param traj_name - trajectory to clear
