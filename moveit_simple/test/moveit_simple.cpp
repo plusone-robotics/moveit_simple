@@ -57,8 +57,6 @@ TEST(MoveitSimpleTest, add_trajectory)
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
 
   ROS_INFO_STREAM("Testing loading of unknown point, should fail");
-//  EXPECT_FALSE(robot.addTrajPoint("bad_traj", "unknown_name", 1.0));
-//  EXPECT_ANY_THROW(robot.addTrajPoint("bad_traj", "unknown_name", 1.0));
   EXPECT_THROW(robot.addTrajPoint("bad_traj", "unknown_name", 1.0),std::runtime_error);
   EXPECT_THROW(robot.addTrajPoint(TRAJECTORY_NAME, pose, "random_link", 5.0, "unknown_name"), tf2::TransformException);
 
@@ -73,13 +71,6 @@ TEST(MoveitSimpleTest, add_trajectory)
   EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0, "random_name"));
   EXPECT_NO_THROW(robot.execute(TRAJECTORY_NAME));
 
-
-//  EXPECT_TRUE(robot.addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
-//  EXPECT_TRUE(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0));
-//  EXPECT_TRUE(robot.addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
-//  EXPECT_TRUE(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
-//  EXPECT_TRUE(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
-//  EXPECT_TRUE(robot.execute(TRAJECTORY_NAME));
 }
 
 }

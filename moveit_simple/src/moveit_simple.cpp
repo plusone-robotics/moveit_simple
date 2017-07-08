@@ -80,24 +80,12 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-//  bool success = false;
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << "relative to"
                   << frame << " at time " << time);
-//  try
-//  {
     Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
     std::unique_ptr<TrajectoryPoint> point =
       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
     addTrajPoint(traj_name, point);
-
-//    success = addTrajPoint(traj_name, point);
-//  }
-//  catch (tf2::TransformException &ex)
-//  {
-//    ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point: " << ex.what());
-//    success = false;
-//  }
-//  return success;
 
 }
 
@@ -125,16 +113,13 @@ void Robot::addTrajPoint(const std::string & traj_name,
   if( point )
   {
     traj_map_[traj_name].push_back(std::move(point));
-//    success = true;
   }
   else
   {
 
     ROS_ERROR_STREAM("Failed to add point for trajectory " << traj_name);
-    throw std::runtime_error("not a valid point to add");
-//    success = false;
+    throw std::runtime_error("Null point can't be added to "+ traj_name);
   }
-//  return success;
 }
 
 
@@ -178,7 +163,6 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
     catch (tf2::TransformException &ex)
     {
       ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
-//      return std::unique_ptr<TrajectoryPoint>(nullptr);
       throw ex;
     }
   }
@@ -186,8 +170,7 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
   else
   {
     ROS_ERROR_STREAM("Failed to find point " << name << ", consider implementing more look ups");
-//    return std::unique_ptr<TrajectoryPoint>(nullptr);
-    throw std::runtime_error("No point found");
+    throw std::runtime_error("Failed to find point: " + name);
   }
 }
 
@@ -248,18 +231,7 @@ bool Robot::isReachable(const std::string & name, double timeout,
     ROS_ERROR_STREAM("Reacheability failed due to lookup failure");
     reacheable = false;
   }
-// catch (tf2::TransformException &ex)
-// {
-//   ROS_WARN_STREAM("Reacheabilioty failed for arbitrary pose point: " << ex.what());
-//   reacheable = false;
-// }
-// catch(std::runtime_error &re)
-// {
-//   ROS_WARN_STREAM("Reacheability failed as : " << ex.what());
-//   reacheable = false;
-// }
   return reacheable;
-
 }
 
 
@@ -346,30 +318,25 @@ void Robot::execute(const std::string traj_name)
       if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
       {
         ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
-//        success = true;
       }
       else
       {
         ROS_WARN_STREAM("Trajectory " << traj_name << " failed to exectue");
-//        success = false;
-        throw std::runtime_error("Execution Failure");
+        throw std::runtime_error("Execution failed for "+ traj_name);
       }
     }
     else
     {
       ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
-//      success = false;
-      throw std::runtime_error("Conversion Failure");
+      throw std::runtime_error("Conversion to joint trajectory failed for " + traj_name);
     }
 
   }
   else
   {
     ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
-//    success = false;
-    throw std::runtime_error("No Trajectory Found");
+    throw std::runtime_error("No trajectory found named " + traj_name);
   }
-//  return success;
 }
 
 bool Robot::toJointTrajectory(const std::string traj_name,

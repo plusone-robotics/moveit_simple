@@ -109,7 +109,7 @@ public:
    * @param traj_name - name of trajectory buffer to add point to
    * @param point_name - name of point to add
    * @param time - time from start of trajectory to reach point
-   * @return true if point successfullly added
+   * \throws <std::runtime_error> (If point_name is not found)
    */
   void addTrajPoint(const std::string & traj_name, const std::string & point_name,
                     double time);
@@ -121,8 +121,7 @@ public:
    * @param frame - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param point_name - (optional) name of point (used in log messages)
-   *
-   * @return true if point successfullly added
+   * \throws <tf2::TransformException> (Transform  from frame to robot base failed)
   */
   void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
                     const std::string & frame, double time,
@@ -145,7 +144,9 @@ public:
    * @brief execute a given trajectory
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
-   * @return - true if desired trajectory was executed.
+   * \throws <std::runtime_error> (Execution failure)
+   * \throws <std::runtime_error> (Conversion to joint trajectory failed)
+   * \throws <std::runtime_error> (Trajectory not found)
    */
   void execute(const std::string traj_name);
   /**
