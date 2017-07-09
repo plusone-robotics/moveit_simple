@@ -51,13 +51,10 @@ class JointTrajectoryPoint;
 class CartTrajectoryPoint;
 class Robot;
 typedef std::vector<std::unique_ptr<TrajectoryPoint> > Trajectory;
-class addTrajPointException;
-class noPointNameException;
 class nullPointException;
-class executeException;
 class executionFailureException;
-class toJointTrajCoversionFailException;
-class noTrajectoryNameException;
+class IKFailException;
+class noTrajNameException;
 
 
 /**
@@ -360,46 +357,28 @@ private:
   Eigen::Affine3d pose_;
 };
 
-class addTrajPointException: public std::runtime_error
+class nullPointException: public std::runtime_error
 { 
 public:
-  addTrajPointException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
+  nullPointException(const std::string errorDescription) :  std::runtime_error(errorDescription) { ; };
 };
 
-class noPointNameException: public addTrajPointException
+class executionFailureException: public std::runtime_error
 { 
 public:
-  noPointNameException(const std::string errorDescription) :  addTrajPointException(errorDescription) { ; };
+  executionFailureException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
 };
 
-class nullPointException: public addTrajPointException
+class IKFailException: public std::runtime_error
 { 
 public:
-  nullPointException(const std::string errorDescription) :  addTrajPointException(errorDescription) { ; };
+  IKFailException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
 };
 
-class executeException: public std::runtime_error
+class noTrajNameException: public std::runtime_error
 { 
 public:
-  executeException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
-};
-
-class executionFailureException: public executeException
-{ 
-public:
-  executionFailureException(const std::string errorDescription) : executeException(errorDescription) { ; };
-};
-
-class toJointTrajCoversionFailException: public executeException
-{ 
-public:
-  toJointTrajCoversionFailException(const std::string errorDescription) : executeException(errorDescription) { ; };
-};
-
-class noTrajectoryNameException: public executeException
-{ 
-public:
-  noTrajectoryNameException(const std::string errorDescription) : executeException(errorDescription) { ; };
+  noTrajNameException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
 };
 
 

@@ -86,7 +86,6 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
     std::unique_ptr<TrajectoryPoint> point =
       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
     addTrajPoint(traj_name, point);
-
 }
 
 
@@ -116,7 +115,6 @@ void Robot::addTrajPoint(const std::string & traj_name,
   }
   else
   {
-
     ROS_ERROR_STREAM("Failed to add point for trajectory " << traj_name);
     throw nullPointException("Null point can't be added to "+ traj_name);
   }
@@ -163,14 +161,14 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
     catch (tf2::TransformException &ex)
     {
       ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
-      throw ex;
+      return std::unique_ptr<TrajectoryPoint>(nullptr);
     }
   }
 
   else
   {
     ROS_ERROR_STREAM("Failed to find point " << name << ", consider implementing more look ups");
-    throw noPointNameException("Failed to find point: " + name);
+    return std::unique_ptr<TrajectoryPoint>(nullptr);
   }
 }
 
@@ -221,17 +219,8 @@ bool Robot::isReachable(const std::string & name, double timeout,
 {
   bool reacheable = false;
   std::lock_guard<std::recursive_mutex> guard(m_);
-  try
-  {
-    std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(name, 0.0);
-    reacheable = isReachable(point, timeout, joint_seed );
-  }
-  catch ( ... )
-  {
-    ROS_ERROR_STREAM("Reacheability failed due to lookup failure");
-    reacheable = false;
-  }
-  return reacheable;
+  std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(name, 0.0);
+  return isReachable(point, timeout, joint_seed );
 }
 
 
@@ -328,14 +317,14 @@ void Robot::execute(const std::string traj_name)
     else
     {
       ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
-      throw toJointTrajCoversionFailException("Conversion to joint trajectory failed for " + traj_name);
+      throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
     }
 
   }
   else
   {
     ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
-    throw noTrajectoryNameException("No trajectory found named " + traj_name);
+    throw noTrajNameException("No trajectory found named " + traj_name);
   }
 }
 
