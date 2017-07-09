@@ -118,7 +118,7 @@ void Robot::addTrajPoint(const std::string & traj_name,
   {
 
     ROS_ERROR_STREAM("Failed to add point for trajectory " << traj_name);
-    throw std::runtime_error("Null point can't be added to "+ traj_name);
+    throw nullPointException("Null point can't be added to "+ traj_name);
   }
 }
 
@@ -170,7 +170,7 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
   else
   {
     ROS_ERROR_STREAM("Failed to find point " << name << ", consider implementing more look ups");
-    throw std::runtime_error("Failed to find point: " + name);
+    throw noPointNameException("Failed to find point: " + name);
   }
 }
 
@@ -322,20 +322,20 @@ void Robot::execute(const std::string traj_name)
       else
       {
         ROS_WARN_STREAM("Trajectory " << traj_name << " failed to exectue");
-        throw std::runtime_error("Execution failed for "+ traj_name);
+        throw executionFailureException("Execution failed for "+ traj_name);
       }
     }
     else
     {
       ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
-      throw std::runtime_error("Conversion to joint trajectory failed for " + traj_name);
+      throw toJointTrajCoversionFailException("Conversion to joint trajectory failed for " + traj_name);
     }
 
   }
   else
   {
     ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
-    throw std::runtime_error("No trajectory found named " + traj_name);
+    throw noTrajectoryNameException("No trajectory found named " + traj_name);
   }
 }
 

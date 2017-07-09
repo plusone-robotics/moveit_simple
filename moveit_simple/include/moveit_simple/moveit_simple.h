@@ -51,6 +51,13 @@ class JointTrajectoryPoint;
 class CartTrajectoryPoint;
 class Robot;
 typedef std::vector<std::unique_ptr<TrajectoryPoint> > Trajectory;
+class addTrajPointException;
+class noPointNameException;
+class nullPointException;
+class executeException;
+class executionFailureException;
+class toJointTrajCoversionFailException;
+class noTrajectoryNameException;
 
 
 /**
@@ -352,5 +359,48 @@ protected:
 private:
   Eigen::Affine3d pose_;
 };
+
+class addTrajPointException: public std::runtime_error
+{ 
+public:
+  addTrajPointException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
+};
+
+class noPointNameException: public addTrajPointException
+{ 
+public:
+  noPointNameException(const std::string errorDescription) :  addTrajPointException(errorDescription) { ; };
+};
+
+class nullPointException: public addTrajPointException
+{ 
+public:
+  nullPointException(const std::string errorDescription) :  addTrajPointException(errorDescription) { ; };
+};
+
+class executeException: public std::runtime_error
+{ 
+public:
+  executeException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
+};
+
+class executionFailureException: public executeException
+{ 
+public:
+  executionFailureException(const std::string errorDescription) : executeException(errorDescription) { ; };
+};
+
+class toJointTrajCoversionFailException: public executeException
+{ 
+public:
+  toJointTrajCoversionFailException(const std::string errorDescription) : executeException(errorDescription) { ; };
+};
+
+class noTrajectoryNameException: public executeException
+{ 
+public:
+  noTrajectoryNameException(const std::string errorDescription) : executeException(errorDescription) { ; };
+};
+
 
 }
