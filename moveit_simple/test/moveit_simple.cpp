@@ -57,7 +57,7 @@ TEST(MoveitSimpleTest, add_trajectory)
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
 
   ROS_INFO_STREAM("Testing loading of unknown point, should fail");
-  EXPECT_THROW(robot.addTrajPoint("bad_traj", "unknown_name", 1.0),moveit_simple::nullPointException);
+  EXPECT_THROW(robot.addTrajPoint("bad_traj", "unknown_name", 1.0),std::invalid_argument);
   EXPECT_THROW(robot.addTrajPoint(TRAJECTORY_NAME, pose, "random_link", 5.0, "unknown_name"), tf2::TransformException);
 
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
@@ -70,7 +70,16 @@ TEST(MoveitSimpleTest, add_trajectory)
   EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
   EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0, "random_name"));
   EXPECT_NO_THROW(robot.execute(TRAJECTORY_NAME));
-  EXPECT_THROW(robot.execute("bad_traj"), moveit_simple::noTrajNameException);
+
+  EXPECT_NO_THROW(robot.addTrajPoint("traj2", "waypoint4", 4.5));
+  EXPECT_THROW(robot.execute("traj2"), moveit_simple::IKFailException);
+
+// Not sure if it is a good test for Execution Failure
+  EXPECT_NO_THROW(robot.addTrajPoint("traj3", "waypoint1", 1.5));
+  EXPECT_NO_THROW(robot.addTrajPoint("traj3", "home", 0.5));
+  EXPECT_THROW(robot.execute("traj3"), moveit_simple::ExecutionFailureException);
+
+  EXPECT_THROW(robot.execute("bad_traj"), std::invalid_argument);
 
 }
 
