@@ -74,11 +74,6 @@ TEST(MoveitSimpleTest, add_trajectory)
   EXPECT_NO_THROW(robot.addTrajPoint("traj2", "waypoint4", 4.5));
   EXPECT_THROW(robot.execute("traj2"), moveit_simple::IKFailException);
 
-// Not sure if it is a good test for Execution Failure
-  EXPECT_NO_THROW(robot.addTrajPoint("traj3", "waypoint1", 1.5));
-  EXPECT_NO_THROW(robot.addTrajPoint("traj3", "home", 0.5));
-  EXPECT_THROW(robot.execute("traj3"), moveit_simple::ExecutionFailureException);
-
   EXPECT_THROW(robot.execute("bad_traj"), std::invalid_argument);
 
 }
