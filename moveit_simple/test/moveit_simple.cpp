@@ -78,4 +78,76 @@ TEST(MoveitSimpleTest, add_trajectory)
 
 }
 
+bool checkIfTimeWithinTolerance(double actual_time, double expected_time, 
+  double tolerance = 0.15) // Tolerance is a percentage
+{
+
+}
+
+TEST(MoveitSimpleTest, speed_reconfiguration)
+{
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
+  const std::string TRAJECTORY_NAME("traj1");
+
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
+  robot.addTrajPoint(TRAJECTORY_NAME, "home",      0.5);
+  robot.addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0);
+  robot.addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0);
+  robot.addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0);
+  robot.addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0);
+
+  EXPECT_TRUE(robot.getSpeedModifier() == 1.0);
+  double nominal_time = robot.getTotalExecutionTime(TRAJECTORY_NAME);
+
+  ROS_ERROR_STREAM(nominal_time);
+
+  robot.setSpeedModifier(0.5);
+  EXPECT_TRUE(robot.getSpeedModifier() == 0.5);
+
+  double half_time = robot.getTotalExecutionTime(TRAJECTORY_NAME);
+
+  ROS_ERROR_STREAM(half_time);
+
+  robot.setSpeedModifier(2.0);
+  EXPECT_TRUE(robot.getSpeedModifier() == 2.0);
+
+  double double_time = robot.getTotalExecutionTime(TRAJECTORY_NAME);
+  
+  ROS_ERROR_STREAM(double_time);
+#if 0
+  EXPECT_TRUE(robot.getSpeedModifier() == 1.0);
+  double start_regular_execution = ros::Time::now().toSec();
+  robot.execute(TRAJECTORY_NAME);
+  double end_regular_execution = ros::Time::now().toSec();
+
+  ROS_ERROR_STREAM("Time for single execution at regular speed: " 
+    << end_regular_execution - start_regular_execution << " seconds.");
+
+  robot.setSpeedModifier(0.5);
+  EXPECT_TRUE(robot.getSpeedModifier() == 0.5);
+
+  double start_half_execution = ros::Time::now().toSec();
+  robot.execute(TRAJECTORY_NAME);
+  double end_half_execution = ros::Time::now().toSec();
+
+  ROS_ERROR_STREAM("Time for single execution at half speed: "
+    << end_half_execution - start_half_execution << " seconds.");
+
+  robot.setSpeedModifier(2.0);
+  EXPECT_TRUE(robot.getSpeedModifier() == 2.0);
+
+  double start_double_execution = ros::Time::now().toSec();
+  robot.execute(TRAJECTORY_NAME);
+  double end_double_execution = ros::Time::now().toSec();
+
+  ROS_ERROR_STREAM("Time for single execution at double speed: "
+    << end_double_execution - start_double_execution << " seconds.");
+
+  double regular_time = end_regular_execution - start_regular_execution;
+  double half_time = end_half_execution - start_half_execution;
+  double double_time = end_double_execution - start_double_execution;
+#endif
+}
+
 }

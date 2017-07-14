@@ -31,7 +31,9 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   action_("joint_trajectory_action", true),
   tf_buffer_(),
   tf_listener_(tf_buffer_),
-  nh_(nh)
+  nh_(nh),
+  params_(nh),
+  speed_modifier_(1.0)
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
                   << ", group name: " << group_name);
@@ -60,6 +62,10 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   ROS_INFO_STREAM("Loading ROS pubs/subs");
   j_state_sub_ = nh_.subscribe("joint_states", 1, &Robot::updateState, this);
 
+  // Dynamic Reconfig Parameters 
+  params_.fromParamServer();
+  dynamic_reconfig_server_.setCallback(boost::bind(&Robot::reconfigureRequest, this, _1, _2));
+
   //TODO: How to handle action server and other failures in the constructor
   // Perhaps move any items that can fail our of the constructor into an init
   // function with a proper return
@@ -67,7 +73,6 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   {
     ROS_ERROR_STREAM("Failed to connect to joint trajectory action server: ");
   }
-
 
   return;
 }
@@ -312,6 +317,12 @@ void Robot::execute(const std::string traj_name)
     goal.trajectory.joint_names = joint_group_->getVariableNames();
     if ( toJointTrajectory(traj_name, goal.trajectory.points) )
     {
+      // Modifies the speed of execution for the trajectory based off of the speed_modifier_
+      for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+      {
+        goal.trajectory.points[i].time_from_start *= speed_modifier_;
+      }
+
       ros::Duration traj_time =
           goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
       ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
@@ -539,5 +550,37 @@ void Robot::updateState(const sensor_msgs::JointStateConstPtr& msg)
   robot_state_->setVariablePositions(msg->name, msg->position);
 }
 
+void Robot::reconfigureRequest(moveit_simple_Config &config, uint32_t level)
+{
+  params_.fromConfig(config);
+  if (params_.speed_modifier > 0.0)
+    setSpeedModifier(params_.speed_modifier);
+}
+
+void Robot::setSpeedModifier(double speed_modifier)
+{
+  speed_modifier_ = speed_modifier;
+}
+
+double Robot::getSpeedModifier(void)
+{
+  return speed_modifier_;
+}
+
+double Robot::getTotalExecutionTime(std::string traj_name)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  if (traj_map_.count(traj_name))
+  {
+    control_msgs::FollowJointTrajectoryGoal goal;
+    goal.trajectory.joint_names = joint_group_->getVariableNames();
+    if (toJointTrajectory(traj_name, goal.trajectory.points))
+    {
+      return goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start.toSec();
+    }
+  }
+  else { return 0.0; }
+}
 
 }

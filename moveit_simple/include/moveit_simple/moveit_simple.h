@@ -41,7 +41,9 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <sensor_msgs/JointState.h>
 
-
+// Dynamic Reconfigure Parameters
+#include <dynamic_reconfigure/server.h>
+#include <moveit_simple/moveit_simple_Parameters.h>
 
 namespace moveit_simple
 {
@@ -168,6 +170,28 @@ public:
   static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
       const std::vector<double> & joint_point, double time);
 
+  /**
+   * @brief setSpeedModifier - Setter method for the execution speed modifier of the 
+   * execute method.
+   * @param speed_modifier
+   * @return
+   */
+  void setSpeedModifier(double speed_modifier);
+
+  /**
+   * @brief setSpeedModifier - Getter method for the execution speed modifier of the 
+   * execute method.
+   * @return speed_modifier_
+   */
+  double getSpeedModifier(void);
+
+  /**
+   * @brief getTotalExecutionTime - Returns the total execution time for the current
+   * trajectory
+   * @return total_execution_time
+   */
+  double getTotalExecutionTime(std::string traj_name);
+
 protected:
   Robot();
 
@@ -201,6 +225,7 @@ protected:
 
   void updateState(const sensor_msgs::JointStateConstPtr& msg);
 
+  void reconfigureRequest(moveit_simple_Config &config, uint32_t level);
 
   // Robot internal objects
   std::map<std::string, Trajectory> traj_map_;
@@ -229,6 +254,12 @@ protected:
   ros::Subscriber j_state_sub_;
   mutable std::recursive_mutex m_;
 
+  // Dynamic Reconfigure
+  double speed_modifier_;
+
+  moveit_simple::moveit_simple_Parameters params_;
+  dynamic_reconfigure::Server
+       <moveit_simple_Config> dynamic_reconfig_server_; 
 };
 
 
