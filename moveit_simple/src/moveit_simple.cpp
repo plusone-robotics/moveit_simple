@@ -74,13 +74,12 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
 
 
 
-bool Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
+void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
                   const std::string & frame, double time,
                   const std::string & point_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  bool success = false;
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << "relative to"
                   << frame << " at time " << time);
   try
@@ -88,49 +87,40 @@ bool Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
     Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
     std::unique_ptr<TrajectoryPoint> point =
       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
-    success = addTrajPoint(traj_name, point);
+    traj_map_[traj_name].push_back(std::move(point));
   }
-  catch (tf2::TransformException &ex)
+  catch(tf2::TransformException &ex)
   {
-    ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point: " << ex.what());
-    success = false;
+    ROS_ERROR_STREAM("Add to trajectory failed for arbitrary pose point: " << ex.what());
+    throw ex;
   }
-  return success;
-
 }
 
 
 
 
-bool Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
+void Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
                          double time)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name
                  << " at time " << time);
-  std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
-  return addTrajPoint(traj_name, point);
-}
-
-
-
-
-bool Robot::addTrajPoint(const std::string & traj_name,
-                         std::unique_ptr<TrajectoryPoint> & point)
-{
-  bool success = false;
-  if( point )
+  try
   {
+    std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
     traj_map_[traj_name].push_back(std::move(point));
-    success = true;
   }
-  else
+  catch ( std::invalid_argument &ia )
   {
-    ROS_ERROR_STREAM("Failed to add point for trajectory " << traj_name);
-    success = false;
+    ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
+    throw ia;
   }
-  return success;
+  catch ( tf2::TransformException &ex )
+  {
+    ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
+    throw ex;
+  }
 }
 
 
@@ -174,14 +164,14 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
     catch (tf2::TransformException &ex)
     {
       ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
-      return std::unique_ptr<TrajectoryPoint>(nullptr);
+      throw ex;
     }
   }
 
   else
   {
     ROS_ERROR_STREAM("Failed to find point " << name << ", consider implementing more look ups");
-    return std::unique_ptr<TrajectoryPoint>(nullptr);
+    throw std::invalid_argument("Failed to find point: " + name);
   }
 }
 
@@ -220,7 +210,7 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
   }
   catch (tf2::TransformException &ex)
   {
-    ROS_WARN_STREAM("IsInCollision failed for for arbitrary pose point: " << ex.what());
+    ROS_WARN_STREAM("IsInCollision failed for arbitrary pose point: " << ex.what());
     inCollision = true;
   }
   return inCollision;
@@ -230,10 +220,18 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
 bool Robot::isReachable(const std::string & name, double timeout,
                         std::vector<double> joint_seed) const
 {
+  bool reacheable = false;
   std::lock_guard<std::recursive_mutex> guard(m_);
-
+  try
+  {
   std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(name, 0.0);
   return isReachable(point, timeout, joint_seed );
+  }
+  catch( ... )
+  {
+  ROS_ERROR_STREAM("Invalid point for reach check");
+  return false;
+  }
 }
 
 
@@ -254,7 +252,7 @@ bool Robot::isReachable(const Eigen::Affine3d & pose, const std::string & frame,
   }
   catch (tf2::TransformException &ex)
   {
-    ROS_WARN_STREAM("Reacheabilioty failed for for arbitrary pose point: " << ex.what());
+    ROS_WARN_STREAM("Reacheability failed for arbitrary pose point: " << ex.what());
     reacheable = false;
   }
   return reacheable;
@@ -302,7 +300,7 @@ void Robot::clearTrajectory(const::std::string traj_name)
 
 
 
-bool Robot::execute(const std::string traj_name)
+void Robot::execute(const std::string traj_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -320,27 +318,25 @@ bool Robot::execute(const std::string traj_name)
       if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
       {
         ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
-        success = true;
       }
       else
       {
-        ROS_WARN_STREAM("Trajectory " << traj_name << " failed to exectue");
-        success = false;
+        ROS_ERROR_STREAM("Trajectory " << traj_name << " failed to exectue");
+        throw ExecutionFailureException("Execution failed for "+ traj_name);
       }
     }
     else
     {
       ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
-      success = false;
+      throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
     }
 
   }
   else
   {
     ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
-    success = false;
+    throw std::invalid_argument("No trajectory found named " + traj_name);
   }
-  return success;
 }
 
 bool Robot::toJointTrajectory(const std::string traj_name,
