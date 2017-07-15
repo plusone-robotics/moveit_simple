@@ -144,6 +144,15 @@ public:
                         std::vector<double> & joint_point) const;
 
   /**
+   * @brief getFK finds cartesian pose for the given joint positions.
+   * @param joint_point - joint positions
+   * @param pose - pose corresponding to joint_pose
+   * @return true if pose is found
+   */
+  bool getFK(const std::vector<double> & joint_point,
+             Eigen::Affine3d & pose) const;
+
+  /**
    * @brief execute a given trajectory
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
@@ -271,6 +280,9 @@ protected:
   virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(
       const Robot & robot,  double timeout, const std::vector<double> & seed) const=0;
 
+  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(
+      const Robot & robot) const=0;
+
   double t_;
   std::string name_;
   PointType type_;
@@ -302,11 +314,10 @@ public:
 protected:
 
   virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(
-      const Robot & robot,  double timeout, const std::vector<double> & seed) const
-  {
-    ROS_DEBUG_STREAM("JointTrajectoryPoint: passing through joint trajectory point");
-    return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(*this));
-  }
+      const Robot & robot,  double timeout, const std::vector<double> & seed) const;
+
+  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(
+      const Robot & robot) const;
 
 private:
   std::vector<double> joint_point_;
@@ -336,21 +347,10 @@ public:
 protected:
 
   virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(
-      const Robot & robot,  double timeout, const std::vector<double> & seed) const
-  {
-    std::vector<double> joints;
+      const Robot & robot,  double timeout, const std::vector<double> & seed) const;
 
-    ROS_DEBUG_STREAM("CartTrajectoryPoint: Calculating IK for joint trajectory point");
-    if( robot.getJointSolution(pose_, timeout, seed, joints) )
-    {
-      return std::unique_ptr<JointTrajectoryPoint>( new JointTrajectoryPoint(joints, time(), name()));
-    }
-    else
-    {
-      ROS_WARN_STREAM("Failed to find joint solution for point: " << name_);
-      return std::unique_ptr<JointTrajectoryPoint>(nullptr);
-    }
-  }
+  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(
+      const Robot & robot) const;
 
 private:
   Eigen::Affine3d pose_;

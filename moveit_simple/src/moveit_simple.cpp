@@ -478,6 +478,24 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in,
 
 
 
+
+bool Robot::getFK(const std::vector<double> & joint_point,
+                  Eigen::Affine3d &pose) const
+{
+  robot_state_->setJointGroupPositions(joint_group_, joint_point);
+  const std::vector<std::string> link_names = robot_model_ptr_->getLinkModelNames();
+  if (!link_names.empty())
+  {
+    pose = robot_state_->getFrameTransform(link_names.back());
+    return true;
+  }else{
+    return false;
+  }
+}
+
+
+
+
 bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
                   std::vector<double> & joint_point,
                   double timeout, unsigned int attempts) const
@@ -539,5 +557,54 @@ void Robot::updateState(const sensor_msgs::JointStateConstPtr& msg)
   robot_state_->setVariablePositions(msg->name, msg->position);
 }
 
+
+std::unique_ptr<JointTrajectoryPoint> JointTrajectoryPoint::toJointTrajPoint(
+        const Robot & robot,  double timeout, const std::vector<double> & seed) const
+{
+  ROS_DEBUG_STREAM("JointTrajectoryPoint: passing through joint trajectory point");
+  return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(*this));
+}
+
+std::unique_ptr<CartTrajectoryPoint> JointTrajectoryPoint::toCartTrajPoint(
+                                   const Robot & robot) const
+{
+  Eigen::Affine3d pose;
+
+  ROS_DEBUG_STREAM("JointTrajectoryPoint: Calculating FK for Cartesian trajectory point");
+  if(robot.getFK(joint_point_, pose))
+  {
+    return std::unique_ptr<CartTrajectoryPoint>( new CartTrajectoryPoint(pose, time(), name()));
+  }
+  else
+  {
+    ROS_WARN_STREAM("Failed to find FK for point: " << name_);
+    return std::unique_ptr<CartTrajectoryPoint>(nullptr);
+  }
+}
+
+
+std::unique_ptr<JointTrajectoryPoint> CartTrajectoryPoint::toJointTrajPoint(
+       const Robot & robot,  double timeout, const std::vector<double> & seed) const
+{
+  std::vector<double> joints;
+
+  ROS_DEBUG_STREAM("CartTrajectoryPoint: Calculating IK for joint trajectory point");
+  if( robot.getJointSolution(pose_, timeout, seed, joints) )
+  {
+    return std::unique_ptr<JointTrajectoryPoint>( new JointTrajectoryPoint(joints, time(), name()));
+  }
+  else
+  {
+    ROS_WARN_STREAM("Failed to find joint solution for point: " << name_);
+    return std::unique_ptr<JointTrajectoryPoint>(nullptr);
+  }
+}
+
+std::unique_ptr<CartTrajectoryPoint> CartTrajectoryPoint::toCartTrajPoint(
+    const Robot & robot) const
+{
+  ROS_DEBUG_STREAM("CartTrajectoryPoint: passing through cartesian trajectory point");
+  return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(*this));
+}
 
 }
