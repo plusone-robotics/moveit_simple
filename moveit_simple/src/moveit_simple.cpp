@@ -194,6 +194,15 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
 }
 
 
+bool Robot::getPosition(const std::vector<double> & joint_point,
+                                  Eigen::Affine3d & pose) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  return getFK(joint_point, pose);
+}
+
+
 bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
                    double timeout, std::vector<double> joint_seed) const
 {
@@ -478,7 +487,6 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in,
 
 
 
-
 bool Robot::getFK(const std::vector<double> & joint_point,
                   Eigen::Affine3d &pose) const
 {
@@ -571,7 +579,7 @@ std::unique_ptr<CartTrajectoryPoint> JointTrajectoryPoint::toCartTrajPoint(
   Eigen::Affine3d pose;
 
   ROS_DEBUG_STREAM("JointTrajectoryPoint: Calculating FK for Cartesian trajectory point");
-  if(robot.getFK(joint_point_, pose))
+  if(robot.getPosition(joint_point_, pose))
   {
     return std::unique_ptr<CartTrajectoryPoint>( new CartTrajectoryPoint(pose, time(), name()));
   }

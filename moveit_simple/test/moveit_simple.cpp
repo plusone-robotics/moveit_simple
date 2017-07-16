@@ -78,4 +78,20 @@ TEST(MoveitSimpleTest, add_trajectory)
 
 }
 
+
+TEST(MoveitSimpleTest, kinematics)
+{
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
+  Eigen::Affine3d pose1;
+  std::vector<double> joint_point(6,0);
+  std::vector<double> seed;
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
+  EXPECT_TRUE(robot.getPosition(joint_point, pose1));
+  EXPECT_TRUE(robot.getJointSolution(pose1, 3.0, seed, joint_point));
+  EXPECT_FALSE(robot.getJointSolution(pose, 3.0, seed, joint_point));
+
+}
+
 }

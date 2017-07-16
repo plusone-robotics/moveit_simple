@@ -144,12 +144,12 @@ public:
                         std::vector<double> & joint_point) const;
 
   /**
-   * @brief getFK finds cartesian pose for the given joint positions.
+   * @brief getPosition finds cartesian pose for the given joint positions.
    * @param joint_point - joint positions
    * @param pose - pose corresponding to joint_pose
    * @return true if pose is found
    */
-  bool getFK(const std::vector<double> & joint_point,
+  bool getPosition(const std::vector<double> & joint_point,
              Eigen::Affine3d & pose) const;
 
   /**
@@ -198,6 +198,9 @@ protected:
               unsigned int attempts=1) const;
   bool getIK(const Eigen::Affine3d pose, std::vector<double> & joint_point,
              double timeout=1, unsigned int attempts=1) const;
+
+  bool getFK(const std::vector<double> & joint_point,
+                               Eigen::Affine3d &pose) const;
 
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & name,
                                                               double time) const;
