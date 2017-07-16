@@ -50,7 +50,8 @@ class TrajectoryPoint;
 class JointTrajectoryPoint;
 class CartTrajectoryPoint;
 class Robot;
-typedef std::vector<std::unique_ptr<TrajectoryPoint> > Trajectory;
+typedef std::vector<std::unique_ptr<TrajectoryPoint>> Trajectory;
+typedef std::pair<std::vector<std::string>, std::vector<unsigned int>> Trajectory_info;
 class ExecutionFailureException;
 class IKFailException;
 
@@ -111,11 +112,14 @@ public:
    * @param traj_name - name of trajectory buffer to add point to
    * @param point_name - name of point to add
    * @param time - time from start of trajectory to reach point
+   * @param traj_type - Type of Trajectory from last point to this point
+   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @throws <std::invalid_argument> (point_name is not found)
    * @throws <tf2::TransformException> (transform of TF named point_name fails)
    */
   void addTrajPoint(const std::string & traj_name, const std::string & point_name,
-                    double time);
+                    double time, const std::string & traj_type = "JOINT",
+                    const unsigned int num_steps = 0);
   /**
    * @brief Add trajectory point to motion buffer
    *
@@ -123,11 +127,15 @@ public:
    * @param pose - pose of point to add
    * @param frame - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
+   * @param traj_type - Type of Trajectory from last point to this point
+   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param point_name - (optional) name of point (used in log messages)
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
   void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
                     const std::string & frame, double time,
+                    const std::string & traj_type = "JOINT",
+                    const unsigned int num_steps = 0,
                     const std::string & point_name = std::string());
 
   /**
@@ -177,6 +185,18 @@ public:
   static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
       const std::vector<double> & joint_point, double time);
 
+  /**
+   * @brief interpolate - returns the pose interpolated from \e from pose towards \e to
+   * pose at time t in [0,1].
+   * @param from: initial pose
+   * @param to: final pose
+   * @param t: parameteric time
+   */
+  Eigen::Affine3d interpolate( const Eigen::Affine3d & from,
+                               const Eigen::Affine3d & to,
+                               double t);
+
+
 protected:
   Robot();
 
@@ -185,6 +205,42 @@ protected:
 
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points);
+
+
+  /**
+   * @brief  jointInterpolation - joint Interpolation from last added point to
+   * current trajectory point.
+   * @param traj_point: next traj_point till which joint interpolation is required.
+   * @param points: Joint Trajectory Point to be executed
+   * @return true if traj_point is successfully added to the points.
+   */
+  bool jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
+           std::vector<trajectory_msgs::JointTrajectoryPoint> & points);
+
+
+  /**
+   * @brief  cartesianInterpolation - Cartesian Interpolation from last added point to
+   * current trajectory point.
+   * @param traj_point: next traj_point till which cartesian interpolation is required.
+   * @param points: Joint Trajectory Point to be executed
+   * @param num_steps: number of steps to be interpolated between current point and traj_point
+   * @return true if all the points including traj_point are added to the points.
+   */
+  bool cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
+           std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
+           const unsigned int num_steps);
+
+  /**
+   * @brief interpolate - interpolates from \e from point towards \e to
+   * point at time t in [0,1] and stores it in \e point.
+   * @param from: initial point
+   * @param to: final point
+   * @param t: parameteric time
+   * @param point: interpolated point
+   */
+  void interpolate( const std::unique_ptr<CartTrajectoryPoint>& from,
+                         const std::unique_ptr<CartTrajectoryPoint>& to,
+                         double t, std::unique_ptr<TrajectoryPoint> & point);
 
   void addTrajPoint(const std::string & traj_name,
                     std::unique_ptr<TrajectoryPoint> &point);
@@ -216,6 +272,7 @@ protected:
 
   // Robot internal objects
   std::map<std::string, Trajectory> traj_map_;
+  std::map<std::string, Trajectory_info> traj_info_map_;
 
   // MoveIt objects
   mutable moveit::core::RobotStatePtr robot_state_;

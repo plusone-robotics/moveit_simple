@@ -75,8 +75,9 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
 
 
 void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
-                  const std::string & frame, double time,
-                  const std::string & point_name)
+                         const std::string & frame, double time,
+                         const std::string & traj_type, const unsigned int num_steps,
+                         const std::string & point_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -88,6 +89,8 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
     std::unique_ptr<TrajectoryPoint> point =
       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
     traj_map_[traj_name].push_back(std::move(point));
+    traj_info_map_[traj_name].first.push_back(std::move(traj_type));
+    traj_info_map_[traj_name].second.push_back(std::move(num_steps));
   }
   catch(tf2::TransformException &ex)
   {
@@ -100,7 +103,8 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
 
 
 void Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
-                         double time)
+                         double time, const std::string & traj_type,
+                         const unsigned int num_steps)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -110,6 +114,8 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
   {
     std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
     traj_map_[traj_name].push_back(std::move(point));
+    traj_info_map_[traj_name].first.push_back(std::move(traj_type));
+    traj_info_map_[traj_name].second.push_back(std::move(num_steps));
   }
   catch ( std::invalid_argument &ia )
   {
@@ -305,6 +311,7 @@ void Robot::clearTrajectory(const::std::string traj_name)
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   traj_map_.erase(traj_name);
+  traj_info_map_.erase(traj_name);
 }
 
 
@@ -351,8 +358,9 @@ void Robot::execute(const std::string traj_name)
 bool Robot::toJointTrajectory(const std::string traj_name,
                        std::vector<trajectory_msgs::JointTrajectoryPoint> & points)
 {
-  const double IK_TIMEOUT = 0.250;   //250 ms for IK solving
   const Trajectory & traj = traj_map_[traj_name];
+  const std::vector< std::string> & traj_type = traj_info_map_[traj_name].first;
+  const std::vector<unsigned int> num_steps = traj_info_map_[traj_name].second;
 
   // The first point in any trajectory is the current pose
   std::vector<double> current_joint_position;
@@ -362,63 +370,163 @@ bool Robot::toJointTrajectory(const std::string traj_name,
   for(size_t i = 0; i < traj.size(); ++i)
   {
     const std::unique_ptr<TrajectoryPoint> & traj_point = traj[i];
-    std::vector<double> prev_point = points[i].positions;
-    std::unique_ptr<JointTrajectoryPoint> current_point;
-
-    if( traj_point->type() != TrajectoryPoint::JOINT )
+    if (traj_type[i] != "CARTESIAN")
     {
-      const size_t MAX_IK_ATTEMPTS = 2;
-      size_t num_attempts = 0;
-
-      while(true)
+      if(jointInterpolation(traj_point, points))
       {
-        num_attempts++;
-        current_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
-
-        if (current_point)
-        {
-          if( isConfigChange(prev_point, current_point->jointPoint()) )
-          {
-            ROS_WARN_STREAM("Configuration change detected in move to/from cart point: " << i << "("
-                             << traj_point->name() << "), of type: "
-                             << traj_point->type() << " from: " << traj_name << " to joint trajectory");
-          }
-          else
-          {
-            ROS_INFO_STREAM("Found proper IK (no config change) in " << num_attempts
-                            << " attempts");
-            break;
-          }
-        }
-        else
-        {
-          ROS_WARN_STREAM("Failed to convert trajectory point: " << i << "("
-                         << traj_point->name() << "), of type: "
-                         << traj_point->type() << " from: " << traj_name << " to joint trajectory");
-          return false;
-        }
-        if (num_attempts >= MAX_IK_ATTEMPTS)
-        {
-          ROS_ERROR_STREAM("Failed to find proper IK (no config change) in " << num_attempts
-                           << " attempts");
-          return false;
-        }
+        ROS_INFO_STREAM("Trajectory successfully added till " << traj_point->name());
+      }else{
+        ROS_ERROR_STREAM("Conversion to joint trajectory failed for " << traj_name <<
+                        " due to IK failure of " << traj_point->name());
+        return false;
       }
-    }
-    else
-    {
-      current_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
-      if (!current_point)
+    }else{
+      if (cartesianInterpolation(traj_point, points, num_steps[i]))
       {
-        ROS_WARN_STREAM("Failed to convernt joint point - this shouldn't happen");
+        ROS_INFO_STREAM("Trajectory successfully added till " << traj_point->name());
+      }else{
+        ROS_ERROR_STREAM("Conversion to joint trajectory failed for " << traj_name <<
+                        " before adding " << traj_point->name());
         return false;
       }
     }
-
-    points.push_back(toJointTrajPtMsg(*current_point));
-    ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
   }
   return true;
+}
+
+bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
+           std::vector<trajectory_msgs::JointTrajectoryPoint> & points)
+{
+  const double IK_TIMEOUT = 0.250;   //250 ms for IK solving
+  trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
+  std::vector<double> prev_point = prev_point_info.positions;
+  std::unique_ptr<JointTrajectoryPoint> current_point;
+  if( traj_point->type() != TrajectoryPoint::JOINT)
+  {
+    const size_t MAX_IK_ATTEMPTS = 2;
+    size_t num_attempts = 0;
+
+    while(true)
+    {
+      num_attempts++;
+      current_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
+
+      if (current_point)
+      {
+        if( isConfigChange(prev_point, current_point->jointPoint()) )
+        {
+          ROS_WARN_STREAM("Configuration change detected in move to/from cart point: ("
+                           << traj_point->name() << "), of type: "
+                           << traj_point->type() << " to joint trajectory");
+        }
+        else
+        {
+          ROS_INFO_STREAM("Found proper IK (no config change) in " << num_attempts
+                          << " attempts");
+          break;
+        }
+      }
+      else
+      {
+        ROS_WARN_STREAM("Failed to convert trajectory point:  ("
+                       << traj_point->name() << "), of type: "
+                       << traj_point->type() << " to joint trajectory");
+        return false;
+      }
+      if (num_attempts >= MAX_IK_ATTEMPTS)
+      {
+        ROS_ERROR_STREAM("Failed to find proper IK (no config change) in " << num_attempts
+                         << " attempts");
+        return false;
+      }
+    }
+  }
+  else
+  {
+    current_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
+    if (!current_point)
+    {
+      ROS_WARN_STREAM("Failed to convernt joint point - this shouldn't happen");
+      return false;
+    }
+  }
+
+  points.push_back(toJointTrajPtMsg(*current_point));
+  ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
+  return true;
+}
+
+bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
+           std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
+           unsigned int num_steps)
+{
+  trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
+  // Covert the previous point stored in points to Cartesian Trajectory Point
+  std::unique_ptr<TrajectoryPoint>prev_point =  std::unique_ptr<TrajectoryPoint>
+(new JointTrajectoryPoint(prev_point_info.positions, prev_point_info.time_from_start.toSec(), ""));
+  std::unique_ptr<CartTrajectoryPoint>prev_traj_point =
+  prev_point->toCartTrajPoint(*this);
+  if (prev_traj_point)
+  {
+    std::unique_ptr<CartTrajectoryPoint> target_point = traj_point->toCartTrajPoint(*this);
+    if (target_point)
+    {
+      unsigned int points_added = 0;
+      for (std::size_t i=1; i<=num_steps+1; ++i)
+      {
+        double t = (double)i / (double)(num_steps+1);
+        std::unique_ptr<TrajectoryPoint> new_point;
+        interpolate(prev_traj_point,target_point,t,new_point);
+
+        // New cartesian point can be added by joint interpolation
+        if(jointInterpolation(new_point, points))
+        {
+          points_added++;
+          ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) << " added successfullyfor " << traj_point->name());
+        }else{
+          ROS_ERROR_STREAM("Conversion to joint trajectory failed at " << i << " among "
+                            << (num_steps+1) << "points for " << traj_point->name());
+          return false;
+        }
+      }
+        return true;
+    }else{
+      ROS_ERROR_STREAM("Failed to find FK for " << traj_point->name());
+      return false;
+    }
+    ROS_ERROR_STREAM("Failed to find FK for already added point. This is unexpected." );
+    return false;
+  }
+}
+
+
+void Robot::interpolate( const std::unique_ptr<CartTrajectoryPoint>& from,
+                         const std::unique_ptr<CartTrajectoryPoint>& to,
+                         double t, std::unique_ptr<TrajectoryPoint> & point)
+{
+  Eigen::Affine3d start_pose = from->pose();
+  double start_time = from->time();
+
+  Eigen::Affine3d target_pose = to->pose();
+  double target_time = to->time();
+
+  Eigen::Affine3d pose =
+   interpolate(start_pose, target_pose, t);
+  double time = t* target_time + (1-t)*start_time;
+
+  point = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose, time, ""));
+}
+
+Eigen::Affine3d Robot::interpolate( const Eigen::Affine3d & from,
+                                    const Eigen::Affine3d & to,
+                                    double t)
+{
+
+  Eigen::Quaterniond from_quaternion(from.rotation());
+  Eigen::Quaterniond to_quaternion(to.rotation());
+  Eigen::Affine3d pose(from_quaternion.slerp(t, to_quaternion));
+  pose.translation() = t * to.translation() + (1 - t) * from.translation();
+  return pose;
 }
 
 
