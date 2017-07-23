@@ -125,7 +125,7 @@ public:
    * @param traj_name - name of trajectory buffer to add point to
    * @param point_name - name of point to add
    * @param time - time from start of trajectory to reach point
-   * @param traj_type - Type of Trajectory from last point to this point
+   * @param type - Type of interpolation from last point to this point
    * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
    * By deafult, it is set to 0
@@ -142,7 +142,7 @@ public:
    * @param pose - pose of point to add
    * @param frame - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
-   * @param traj_type - Type of Trajectory from last point to this point
+   * @param type - Type of interpolation from last point to this point
    * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
    * By deafult, it is set to 0
@@ -237,7 +237,7 @@ protected:
   /**
    * @brief  jointInterpolation - joint Interpolation from last added point to
    * current trajectory point(traj_point).
-   * @param traj_point: next traj_point till which joint interpolation is required.
+   * @param traj_point: target traj_point for joint interpolation
    * @param points: Vector of Joint Trajectory Point to be executed
    * @param num_steps: number of steps to be interpolated between current point and traj_point
    * @return true if all the points including traj_point are added to the points.
@@ -249,7 +249,7 @@ protected:
   /**
    * @brief  cartesianInterpolation - Cartesian Interpolation from last added point to
    * current trajectory point(traj_point).
-   * @param traj_point: next traj_point till which cartesian interpolation is required.
+   * @param traj_point: target traj_point for cartesian interpolation
    * @param points: Vector of Joint Trajectory Point to be executed
    * @param num_steps: number of steps to be interpolated between current point and traj_point
    * @return true if all the points including traj_point are added to the points.
