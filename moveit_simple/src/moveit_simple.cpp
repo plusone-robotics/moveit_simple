@@ -363,7 +363,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
   for(size_t i = 0; i < traj_info.size(); ++i)
   {
     const std::unique_ptr<TrajectoryPoint> & traj_point = traj_info[i].point;
-    if (traj_info[i].type == JOINT)
+    if (traj_info[i].type == interpolation_type::JOINT)
     {
       if(jointInterpolation(traj_point, points, traj_info[i].num_steps))
       {
@@ -374,7 +374,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
         return false;
       }
     }
-    else if (traj_info[i].type == CARTESIAN)
+    else if (traj_info[i].type == interpolation_type::CARTESIAN)
     {
       if (cartesianInterpolation(traj_point, points, traj_info[i].num_steps))
       {
@@ -400,7 +400,7 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_poi
   trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
    std::vector<double> prev_point = prev_point_info.positions;
    double prev_time = prev_point_info.time_from_start.toSec();
-   // Cnovert the previous point stored in points to Joint Trajectory Point
+   // Convert the previous point stored in points to Joint Trajectory Point
   std::unique_ptr<JointTrajectoryPoint>prev_traj_point =
                                std::unique_ptr<JointTrajectoryPoint>
                                (new JointTrajectoryPoint(prev_point, prev_time, ""));

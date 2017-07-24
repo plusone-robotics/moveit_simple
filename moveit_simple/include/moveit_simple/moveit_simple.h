@@ -50,18 +50,20 @@ class TrajectoryPoint;
 class JointTrajectoryPoint;
 class CartTrajectoryPoint;
 class Robot;
-typedef std::vector<std::unique_ptr<TrajectoryPoint>> Trajectory;
-typedef std::pair<std::vector<std::string>, std::vector<unsigned int>> Trajectory_info;
 class ExecutionFailureException;
 class IKFailException;
 
-
-enum InterpolationType
-   {
+namespace interpolation_type
+{
+  enum InterpolationType
+    {
       UNKNOWN = 0,
       JOINT = 1,
       CARTESIAN = 2
-   };
+    };
+}
+typedef interpolation_type::InterpolationType InterpolationType;
+
 struct TrajectoryPointInfo {
   std::unique_ptr<TrajectoryPoint> point;
   InterpolationType type;
