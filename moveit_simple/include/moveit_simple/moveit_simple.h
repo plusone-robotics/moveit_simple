@@ -213,7 +213,7 @@ public:
    */
   Eigen::Affine3d interpolate( const Eigen::Affine3d & from,
                                const Eigen::Affine3d & to,
-                               double t);
+                               double t) const;
 
   /**
    * @brief interpolate - returns the joint point interpolated from \e from joint point
@@ -224,7 +224,7 @@ public:
    */
   std::vector<double> interpolate( const std::vector<double> & from,
                                   const std::vector<double> & to,
-                                  double t);
+                                  double t) const;
 
 protected:
   Robot();
@@ -270,7 +270,8 @@ protected:
    */
   void interpolate( const std::unique_ptr<CartTrajectoryPoint>& from,
                     const std::unique_ptr<CartTrajectoryPoint>& to,
-                    double t, std::unique_ptr<CartTrajectoryPoint> & point);
+                    double t, 
+                    std::unique_ptr<CartTrajectoryPoint> & point) const;
 
   /**
    * @brief interpolate - Joint interpolation from \e from point towards \e to
@@ -282,10 +283,13 @@ protected:
    */
   void interpolate( const std::unique_ptr<JointTrajectoryPoint>& from,
                     const std::unique_ptr<JointTrajectoryPoint>& to,
-                    double t, std::unique_ptr<JointTrajectoryPoint> & point);
+                    double t, 
+                    std::unique_ptr<JointTrajectoryPoint> & point) const;
 
   void addTrajPoint(const std::string & traj_name,
-                    std::unique_ptr<TrajectoryPoint> &point);
+                    std::unique_ptr<TrajectoryPoint> &point,
+                    const InterpolationType & type = interpolation_type::JOINT,
+                    const unsigned int num_steps = 0);
 
   bool isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout,
                    std::vector<double> joint_seed = std::vector<double>() ) const;

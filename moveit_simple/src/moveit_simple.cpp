@@ -88,7 +88,7 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
     Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
     std::unique_ptr<TrajectoryPoint> point =
       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
-    traj_info_map_[traj_name].push_back({std::move(point), type, num_steps});
+    addTrajPoint(traj_name, point, type, num_steps);
   }
   catch(tf2::TransformException &ex)
   {
@@ -111,7 +111,7 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
   try
   {
     std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
-    traj_info_map_[traj_name].push_back({std::move(point), type, num_steps});
+    addTrajPoint(traj_name, point, type, num_steps);
   }
   catch ( std::invalid_argument &ia )
   {
@@ -126,7 +126,14 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
 }
 
 
-
+  
+void Robot::addTrajPoint(const std::string & traj_name,
+                         std::unique_ptr<TrajectoryPoint> &point,
+                         const InterpolationType & type,
+                         const unsigned int num_steps)
+{
+  traj_info_map_[traj_name].push_back({std::move(point), type, num_steps});
+}
 
 std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string & name,
                                                             double time) const
@@ -539,7 +546,7 @@ bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj
 
 void Robot::interpolate( const std::unique_ptr<JointTrajectoryPoint>& from,
                          const std::unique_ptr<JointTrajectoryPoint>& to,
-                         double t, std::unique_ptr<JointTrajectoryPoint> & point)
+                         double t, std::unique_ptr<JointTrajectoryPoint> & point) const
 {
   std::vector<double> start_joint_point = from->jointPoint();
   double start_time = from->time();
@@ -566,7 +573,7 @@ void Robot::interpolate( const std::unique_ptr<JointTrajectoryPoint>& from,
 
 std::vector<double> Robot::interpolate( const std::vector<double> & from,
                                         const std::vector<double> & to,
-                                        double t)
+                                        double t) const
 {
   std::vector<double> joint_point(from.size());
   for (std::size_t i=0; i< from.size(); ++i)
@@ -580,7 +587,8 @@ std::vector<double> Robot::interpolate( const std::vector<double> & from,
 
 void Robot::interpolate( const std::unique_ptr<CartTrajectoryPoint>& from,
                          const std::unique_ptr<CartTrajectoryPoint>& to,
-                         double t, std::unique_ptr<CartTrajectoryPoint> & point)
+                         double t, 
+                         std::unique_ptr<CartTrajectoryPoint> & point) const
 {
   Eigen::Affine3d start_pose = from->pose();
   double start_time = from->time();
@@ -597,7 +605,7 @@ void Robot::interpolate( const std::unique_ptr<CartTrajectoryPoint>& from,
 
 Eigen::Affine3d Robot::interpolate( const Eigen::Affine3d & from,
                                     const Eigen::Affine3d & to,
-                                    double t)
+                                    double t) const
 {
 
   Eigen::Quaterniond from_quaternion(from.rotation());

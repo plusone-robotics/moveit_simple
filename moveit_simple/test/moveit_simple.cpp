@@ -57,8 +57,8 @@ TEST(MoveitSimpleTest, add_trajectory)
   const std::string TRAJECTORY_NAME("traj1");
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
-  const moveit_simple::InterpolationType cart = moveit_simple::CARTESIAN;
-  const moveit_simple::InterpolationType joint = moveit_simple::JOINT;
+  const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
   ROS_INFO_STREAM("Testing loading of unknown point, should fail");
   EXPECT_THROW(robot.addTrajPoint("bad_traj", "unknown_name", 1.0),std::invalid_argument);
@@ -80,10 +80,161 @@ TEST(MoveitSimpleTest, add_trajectory)
 
 }
 
+TEST(MoveitSimpleTest, planning)
+{
+  // Calling the protected methods from Robot for test
+  class RobotTest: public moveit_simple::Robot
+  {
+  public:
+    using moveit_simple::Robot::Robot;
+    using moveit_simple::Robot::addTrajPoint;
+    using moveit_simple::Robot::toJointTrajectory;
+    using moveit_simple::Robot::interpolate;
+    using moveit_simple::Robot::jointInterpolation;
+    using moveit_simple::Robot::cartesianInterpolation;
+  };
+  RobotTest robot2(ros::NodeHandle(), "robot_description", "manipulator");
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
+  const std::string TRAJECTORY_NAME("traj1");
+  const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  std::vector<trajectory_msgs::JointTrajectoryPoint> points;
+
+  std::vector<double>joint1(6,0);
+  std::vector<double>joint2(6,M_PI/6);
+  std::vector<double>joint_interpolated_expected_joint(6,M_PI/12);
+  std::vector<double>seed;
+  std::vector<double>cart_interpolated_expected_joint;
+
+  Eigen::Affine3d pose1;
+  Eigen::Affine3d pose2;
+  Eigen::Affine3d  joint_interpolated_expected_pose;
+
+  EXPECT_TRUE(robot2.getPose(joint1, pose1));
+  EXPECT_TRUE(robot2.getPose(joint2, pose2));
+  EXPECT_TRUE(robot2.getPose(joint_interpolated_expected_joint, joint_interpolated_expected_pose));
+
+  Eigen::Quaterniond point1_quaternion(pose1.rotation());
+  Eigen::Quaterniond point2_quaternion(pose2.rotation());
+  Eigen::Affine3d cart_interpolated_expected_pose(point1_quaternion.slerp(0.5, point2_quaternion));
+  cart_interpolated_expected_pose.translation() =  0.5*(pose2.translation() + pose1.translation());
+
+  EXPECT_TRUE(robot2.getJointSolution(cart_interpolated_expected_pose, 3.0, seed, cart_interpolated_expected_joint));
+
+  // joint_point1, cart_point1 and cart_point3 represent the same pose
+  // joint_point2, cart_point2 and joint_point3 represent the same pose
+  std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::JointTrajectoryPoint(joint1, 1.0, "joint_point1"));
+
+  std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point2 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::JointTrajectoryPoint(joint2, 2.0, "joint_point2"));
+
+  std::unique_ptr<moveit_simple::TrajectoryPoint> cart_point1 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::CartTrajectoryPoint(pose1, 3.0, "cart_point1"));
+
+  std::unique_ptr<moveit_simple::TrajectoryPoint> cart_point2 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::CartTrajectoryPoint(pose2, 4.0, "cart_point2"));
+
+  std::unique_ptr<moveit_simple::TrajectoryPoint> cart_point3 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::CartTrajectoryPoint(pose1, 5.0, "cart_point2"));
+
+  std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point3 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::JointTrajectoryPoint(joint2, 6.0, "joint_point3"));
+
+  // Add first point to start from a known point
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME, joint_point1));
+  // joint interpolation between two joint points
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME,  joint_point2,  joint, 1));
+  // joint interpolation between a cartesian point and a joint point
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME, cart_point1, joint, 1));
+  // cartesian interpolation between two cartesian points
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME, cart_point2,  cart, 1));
+  // joint interpolation between two cartesian points
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME, cart_point3,  joint, 1));
+  // cartesian interpolation between a cartesian point and a joint point
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME,  joint_point3, cart, 1));
+
+  // Convert the input trajectory to vector of
+  //  trajectory_msgs::JointTrajectoryPoint
+  EXPECT_TRUE(robot2.toJointTrajectory(TRAJECTORY_NAME,points));
+  EXPECT_EQ(points.size(),12);
+
+  //  EXPECT_NO_THROW(robot2.execute(TRAJECTORY_NAME));
+
+  ROS_INFO_STREAM("Converting the joint positions to poses to compare " <<
+                                                "against expected poses");
+  std::vector<Eigen::Affine3d> pose_out;
+  pose_out.resize(points.size());
+  for (std::size_t i = 0; i < points.size(); ++i)
+  {
+    EXPECT_TRUE(robot2.getPose(points[i].positions, pose_out[i]));
+  }
+
+
+  ROS_INFO_STREAM("Testing if the planned path is correct");
+
+  EXPECT_TRUE(pose1.isApprox(pose_out[1],1e-3));
+  ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
+  ROS_INFO_STREAM(" pose_out[1]: " << std::endl << pose_out[1].matrix());
+
+  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[2],1e-3));
+  ROS_INFO_STREAM(" joint_interpolated_expected_pose: " << std::endl
+                       << joint_interpolated_expected_pose.matrix());
+  ROS_INFO_STREAM(" pose_out[2]: " << std::endl << pose_out[2].matrix());
+
+  EXPECT_TRUE(pose2.isApprox(pose_out[3],1e-3));
+  ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
+  ROS_INFO_STREAM(" pose_out[3]: " << std::endl << pose_out[3].matrix());
+
+  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[4],1e-3));
+  ROS_INFO_STREAM(" pose_out[4]: " << std::endl << pose_out[4].matrix());
+  ROS_INFO_STREAM(" joint_interpolated_expected_pose: " << std::endl
+                       << joint_interpolated_expected_pose.matrix());
+
+  EXPECT_TRUE(pose1.isApprox(pose_out[5],1e-3));
+  ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
+  ROS_INFO_STREAM(" pose_out[5]: " << std::endl << pose_out[5].matrix());
+
+  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[6],1e-3));
+  ROS_INFO_STREAM(" pose_out[6]: " << std::endl << pose_out[6].matrix());
+  ROS_INFO_STREAM(" cart_interpolated_expected_pose: " << std::endl
+                       << cart_interpolated_expected_pose.matrix());
+
+  EXPECT_TRUE(pose2.isApprox(pose_out[7],1e-3));
+  ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
+  ROS_INFO_STREAM(" pose_out[7]: " << std::endl << pose_out[7].matrix());
+
+  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[8],1e-3));
+  ROS_INFO_STREAM(" pose_out[8]: " << std::endl << pose_out[8].matrix());
+  ROS_INFO_STREAM(" joint_interpolated_expected_pose: " << std::endl
+                       << joint_interpolated_expected_pose.matrix());
+
+  EXPECT_TRUE(pose1.isApprox(pose_out[9],1e-3));
+  ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
+  ROS_INFO_STREAM(" pose_out[9]: " << std::endl << pose_out[9].matrix());
+
+  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[10],1e-3));
+  ROS_INFO_STREAM(" pose_out[10]: " << std::endl << pose_out[10].matrix());
+  ROS_INFO_STREAM(" cart_interpolated_expected_pose: " << std::endl
+                       << cart_interpolated_expected_pose.matrix());
+
+  EXPECT_TRUE(pose2.isApprox(pose_out[11],1e-3));
+  ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
+  ROS_INFO_STREAM(" pose_out[11]: " << std::endl << pose_out[11].matrix());
+}
 
 TEST(MoveitSimpleTest, interpolation)
 {
-  class Robot2: public moveit_simple::Robot
+  // Calling the protected methods from Robot for test
+  class RobotTest: public moveit_simple::Robot
   {
   public:
     using moveit_simple::Robot::Robot;
@@ -92,19 +243,17 @@ TEST(MoveitSimpleTest, interpolation)
     using moveit_simple::Robot::jointInterpolation;
     using moveit_simple::Robot::cartesianInterpolation;
   };
-  Robot2 robot2(ros::NodeHandle(), "robot_description", "manipulator");
+  RobotTest robot2(ros::NodeHandle(), "robot_description", "manipulator");
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
   const std::string TRAJECTORY_NAME("traj1");
-  const moveit_simple::InterpolationType cart = moveit_simple::CARTESIAN;
-  const moveit_simple::InterpolationType joint = moveit_simple::JOINT;
 
   std::vector<trajectory_msgs::JointTrajectoryPoint> points;
 
   // Joint Interpolation Test
   std::vector<double>joint1(6,M_PI/6);
-  std::vector<double>joint2(6,-1*M_PI/3);
-  std::vector<double>joint_expected(6,-1*M_PI/12);
+  std::vector<double>joint2(6,-1*M_PI/6);
+  std::vector<double>joint_expected(6,0);
 
   const std::unique_ptr<moveit_simple::JointTrajectoryPoint> joint_point1 =
      std::unique_ptr<moveit_simple::JointTrajectoryPoint>
@@ -123,6 +272,8 @@ TEST(MoveitSimpleTest, interpolation)
   for (std::size_t i = 0; i < joint_expected.size(); ++i)
   {
     error_joint += fabs(joint_out[i] - joint_expected[i]);
+    ROS_INFO_STREAM(" joint_out_ " << i << joint_out[i]);
+    ROS_INFO_STREAM(" joint_expected_ " << i << joint_expected[i]);
   }
   EXPECT_NEAR(error_joint, 0.0, 1e-2);
 
@@ -142,7 +293,9 @@ TEST(MoveitSimpleTest, interpolation)
   rot3.setFromTwoVectors(Eigen::Vector3d(3.142,-0.964,3.142), Eigen::Vector3d(-0.592,-0.000,3.452));
   pose3.linear() = rot3.toRotationMatrix();
 
-  Eigen::Affine3d pose_expected = Eigen::Affine3d::Identity();
+  Eigen::Quaterniond point1_quaternion(pose1.rotation());
+  Eigen::Quaterniond point2_quaternion(pose2.rotation());
+  Eigen::Affine3d pose_expected(point1_quaternion.slerp(0.5, point2_quaternion));
   pose_expected.translation() = Eigen::Vector3d(1.9,0.0,2.45);
 
   const std::unique_ptr<moveit_simple::CartTrajectoryPoint> cart_point1 =
@@ -157,10 +310,7 @@ TEST(MoveitSimpleTest, interpolation)
 
   robot2.interpolate(cart_point1,cart_point2,0.5,cart_point_out);
 
-  double error_cart = fabs(cart_point_out->time() - 3.5)
-               + (pose_expected.translation() - cart_point_out->pose().translation()).norm();
-  EXPECT_NEAR(error_cart, 0.0, 1e-2);
-
+  EXPECT_TRUE(pose_expected.isApprox(cart_point_out->pose(),1e-3));
 
   // Test for mixed interpolation and point count in points
   const std::unique_ptr<moveit_simple::TrajectoryPoint> traj_point_joint1 =
@@ -201,34 +351,54 @@ TEST(MoveitSimpleTest, interpolation)
 }
 
 
+
 TEST(MoveitSimpleTest, kinematics)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
   Eigen::Affine3d pose1;
   Eigen::Affine3d pose2;
-  std::vector<double> joint_point1(6,0);
+  Eigen::Affine3d pose3;
+  std::vector<double> joint_point1(6,M_PI/6);
   std::vector<double> joint_point2;
   std::vector<double> joint_point3;
-  std::vector<double> seed(6,0.1);
+  std::vector<double> joint_point4;
+  std::vector<double> seed = joint_point1;
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
   EXPECT_TRUE(robot.getPose(joint_point1, pose1));
   EXPECT_TRUE(robot.getJointSolution(pose1, 3.0, seed, joint_point2));
-  EXPECT_FALSE(robot.getJointSolution(pose, 4.0, seed, joint_point3));
   EXPECT_TRUE(robot.getPose(joint_point2, pose2));
+  EXPECT_TRUE(robot.getJointSolution(pose2, 3.0, seed, joint_point3));
+  EXPECT_TRUE(robot.getPose(joint_point3, pose3));
+  EXPECT_FALSE(robot.getJointSolution(pose, 3.0, seed, joint_point3));
 
-  double error_pose = (pose1.translation() - pose2.translation()).norm() +
-                      (pose1.linear() - pose2.linear()).norm();
-  EXPECT_NEAR(error_pose, 0.0, 1e-2);
-
-
-  double error_joint = 0.0;
+  // Check for error in getJointSolution
+  double error_joint1 = 0.0;
   for (std::size_t i = 0; i < joint_point1.size(); ++i)
   {
-    error_joint += fabs(joint_point1[i] - joint_point2[i]);
+    error_joint1 += fabs(joint_point1[i] - joint_point2[i]);
+    ROS_INFO_STREAM(" joint_point1_ " << i << joint_point1[i]);
+    ROS_INFO_STREAM(" joint_point2_ " << i << joint_point1[i]);
   }
-  EXPECT_NEAR(error_joint, 0.0, 1e-2);
+  EXPECT_NEAR(error_joint1, 0.0, 1e-2);
+
+  double error_joint2 = 0.0;
+  for (std::size_t i = 0; i < joint_point1.size(); ++i)
+  {
+    error_joint2 += fabs(joint_point1[i] - joint_point3[i]);
+    ROS_INFO_STREAM(" joint_point1_ " << i << joint_point1[i]);
+    ROS_INFO_STREAM(" joint_point3_ " << i << joint_point1[i]);
+  }
+  EXPECT_NEAR(error_joint2, 0.0, 1e-2);
+
+  // CHeck for error in getPose
+  ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
+  ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
+  ROS_INFO_STREAM(" pose3: " << std::endl << pose3.matrix());
+
+  EXPECT_TRUE(pose1.isApprox(pose2,1e-3));
+  EXPECT_TRUE(pose1.isApprox(pose3,1e-3));
 
 }
 
