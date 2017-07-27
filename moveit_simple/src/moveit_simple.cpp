@@ -404,6 +404,8 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_poi
            unsigned int num_steps)
 {
   const double IK_TIMEOUT = 0.250;   //250 ms for IK solving
+  // create a local vector for storing interpolated points
+  std::vector<trajectory_msgs::JointTrajectoryPoint> points_local;
   trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
    std::vector<double> prev_point = prev_point_info.positions;
    double prev_time = prev_point_info.time_from_start.toSec();
@@ -471,22 +473,22 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_poi
     interpolate(prev_traj_point,target_point,t,new_point);
     if(new_point)
     {
-      points.push_back(toJointTrajPtMsg(*new_point));
-      ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
+      points_local.push_back(toJointTrajPtMsg(*new_point));
       points_added++;
       ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) <<
                       " successfully interpolated for " << traj_point->name());
     }else{
        ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among "
                         << (num_steps+1) << "points for " << traj_point->name()
-                        << ". Clearing points added in unsuccessful attempt");
-      for (std::size_t j=0; j<points_added; ++j)
-      {
-        points.pop_back();
-      }
+                        << ". Exiting without interpolation");
+      points_local.clear();
       return false;
     }
   }
+  // Append the global points with local_points
+  points.insert(points.end(), points_local.begin(), points_local.end());
+  ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
+  points_local.clear();
   return true;
 }
 
@@ -495,6 +497,11 @@ bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj
            std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
            unsigned int num_steps)
 {
+  // create a local vector for storing interpolated points and append
+  // it with last element of global points to be used for interpolation
+  std::vector<trajectory_msgs::JointTrajectoryPoint> points_local;
+  points_local.push_back(points.back());
+  
   trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
   // Convert the previous point stored in points to Cartesian Trajectory Point
   std::unique_ptr<TrajectoryPoint>prev_point =  std::unique_ptr<TrajectoryPoint>
@@ -524,23 +531,25 @@ bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj
     std::unique_ptr<TrajectoryPoint> new_point =std::unique_ptr<TrajectoryPoint>
                ( new CartTrajectoryPoint(new_point_cart->pose(), new_point_cart->time(), ""));
 
-    // Add new point at the end of Joint Trajectory (named points)
-    if(jointInterpolation(new_point, points,(unsigned int) 0))
+    // Add new point at the end of Joint Trajectory (named points_local)
+    if(jointInterpolation(new_point, points_local,(unsigned int) 0))
     {
       points_added++;
-      ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) << " added successfullyfor " << traj_point->name());
+      ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) << 
+                                             " added successfullyfor " << traj_point->name());
     }else{
       ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among "
                         << (num_steps+1) << "points for " << traj_point->name()
-                        << ". Clearing points added in unsuccessful attempt");
-      for (std::size_t j=0; j<points_added; ++j)
-      {
-        points.pop_back();
-      }
+                        << ". Exiting without interpolation");
+      points_local.clear();
       return false;
     }
   }
-    return true;
+  // Append the global points with local_points
+  points.insert(points.end(), points_local.begin()+1, points_local.end());
+  ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
+  points_local.clear();
+  return true;
 }
 
 

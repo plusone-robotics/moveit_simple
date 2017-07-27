@@ -123,7 +123,8 @@ TEST(MoveitSimpleTest, planning)
 
   EXPECT_TRUE(robot2.getJointSolution(cart_interpolated_expected_pose, 3.0, seed, cart_interpolated_expected_joint));
 
-  // joint_point1, cart_point1 and cart_point3 represent the same pose
+  // joint_point1,joint_point4, cart_point1 and cart_point3 
+  // represent the same pose
   // joint_point2, cart_point2 and joint_point3 represent the same pose
   std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
      std::unique_ptr<moveit_simple::TrajectoryPoint>
@@ -149,6 +150,10 @@ TEST(MoveitSimpleTest, planning)
      std::unique_ptr<moveit_simple::TrajectoryPoint>
      (new moveit_simple::JointTrajectoryPoint(joint2, 6.0, "joint_point3"));
 
+  std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point4 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::JointTrajectoryPoint(joint1, 7.0, "joint_point4"));
+
   // Add first point to start from a known point
   EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME, joint_point1));
   // joint interpolation between two joint points
@@ -161,11 +166,13 @@ TEST(MoveitSimpleTest, planning)
   EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME, cart_point3,  joint, 1));
   // cartesian interpolation between a cartesian point and a joint point
   EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME,  joint_point3, cart, 1));
+  // cartesian interpolation between two joint points
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME,  joint_point4, cart, 1));
 
   // Convert the input trajectory to vector of
   //  trajectory_msgs::JointTrajectoryPoint
   EXPECT_TRUE(robot2.toJointTrajectory(TRAJECTORY_NAME,points));
-  EXPECT_EQ(points.size(),12);
+  EXPECT_EQ(points.size(),14);
 
   //  EXPECT_NO_THROW(robot2.execute(TRAJECTORY_NAME));
 
@@ -229,7 +236,17 @@ TEST(MoveitSimpleTest, planning)
   EXPECT_TRUE(pose2.isApprox(pose_out[11],1e-3));
   ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
   ROS_INFO_STREAM(" pose_out[11]: " << std::endl << pose_out[11].matrix());
+
+  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[12],1e-3));
+  ROS_INFO_STREAM(" pose_out[12]: " << std::endl << pose_out[12].matrix());
+  ROS_INFO_STREAM(" cart_interpolated_expected_pose: " << std::endl
+                       << cart_interpolated_expected_pose.matrix());
+
+  EXPECT_TRUE(pose1.isApprox(pose_out[13],1e-3));
+  ROS_INFO_STREAM(" pose2: " << std::endl << pose1.matrix());
+  ROS_INFO_STREAM(" pose_out[13]: " << std::endl << pose_out[13].matrix());
 }
+
 
 TEST(MoveitSimpleTest, interpolation)
 {
