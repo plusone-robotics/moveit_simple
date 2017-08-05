@@ -226,6 +226,15 @@ public:
                                   const std::vector<double> & to,
                                   double t) const;
 
+
+  /**
+  * @brief getCurrentRobotState - Returns a vector<double> of the
+  * current joint positions of the robot from robot_state_.
+  *
+  * @return std::vector<double> current_joint_position
+  */
+  std::vector<double> getCurrentRobotState(void) const;
+
 protected:
   Robot();
 
@@ -315,12 +324,14 @@ protected:
 
   void updateState(const sensor_msgs::JointStateConstPtr& msg);
 
+  void updateCurrentState(const sensor_msgs::JointStateConstPtr& msg);
 
   // Robot internal objects
   std::map<std::string, TrajectoryInfo> traj_info_map_;
 
   // MoveIt objects
   mutable moveit::core::RobotStatePtr robot_state_;
+  mutable moveit::core::RobotStatePtr current_robot_state_;
   planning_scene::PlanningScenePtr planning_scene_;
   const moveit::core::JointModelGroup *joint_group_;
   robot_model::RobotModelConstPtr robot_model_ptr_;

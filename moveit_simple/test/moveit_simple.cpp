@@ -435,4 +435,49 @@ TEST(MoveitSimpleTest, kinematics)
 
 }
 
+
+TEST(MoveitSimpleTest, copy_current_pose)
+{
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+  const std::string TRAJECTORY_NAME("traj1");
+
+
+  // Adding trajectory points.
+  EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0));
+  EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
+  EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
+  EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
+
+  std::vector<double> before_execution_1, before_execution_2,
+                      before_execution_3, final_position;
+
+  // Before the first execution robot should be at position "home"
+  before_execution_1 = robot.getCurrentRobotState();
+  EXPECT_NO_THROW(robot.execute(TRAJECTORY_NAME));
+
+  // Second Execution
+  // Robot should be at "waypoint3" at all checkpoints from here on out.
+  before_execution_2 = robot.getCurrentRobotState();
+  EXPECT_NO_THROW(robot.execute(TRAJECTORY_NAME));
+
+  // Third Execution
+  before_execution_3 = robot.getCurrentRobotState();
+  EXPECT_NO_THROW(robot.execute(TRAJECTORY_NAME));
+
+  // Final Position
+  final_position = robot.getCurrentRobotState();
+
+  ROS_INFO_STREAM("before_execution_1" << vector_to_string(before_execution_1));
+  ROS_INFO_STREAM("before_execution_2" << vector_to_string(before_execution_2));
+  ROS_INFO_STREAM("before_execution_3" << vector_to_string(before_execution_3));
+  ROS_INFO_STREAM("final_poistion" << vector_to_string(final_position));
+
+  // Testing
+  EXPECT_FALSE(before_execution_1 == before_execution_2);
+  EXPECT_TRUE(before_execution_2 == before_execution_3);
+  EXPECT_TRUE(before_execution_2 == final_position);
+}
+
 }
