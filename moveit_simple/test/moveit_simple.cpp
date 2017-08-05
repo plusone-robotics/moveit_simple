@@ -24,6 +24,23 @@ using testing::Types;
 namespace moveit_simple_test
 {
 
+
+std::string vector_to_string(const std::vector<double> &input_vector)
+{
+  std::string output;
+  for (std::size_t i = 0; i < input_vector.size(); i++)
+  {
+    if (i == 0)
+      output = "[" + std::to_string(input_vector[i]) + ", ";
+    else if (i == (input_vector.size() - 1))
+      output += std::to_string(input_vector[i]) + "]";
+    else
+      output += std::to_string(input_vector[i]) + ", ";
+  }
+  return output;
+}
+
+
 TEST(MoveitSimpleTest, construction)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
@@ -289,10 +306,10 @@ TEST(MoveitSimpleTest, interpolation)
   for (std::size_t i = 0; i < joint_expected.size(); ++i)
   {
     error_joint += fabs(joint_out[i] - joint_expected[i]);
-    ROS_INFO_STREAM(" joint_out_ " << i << joint_out[i]);
-    ROS_INFO_STREAM(" joint_expected_ " << i << joint_expected[i]);
   }
   EXPECT_NEAR(error_joint, 0.0, 1e-2);
+  ROS_INFO_STREAM("joint_out" << vector_to_string(joint_out));
+  ROS_INFO_STREAM("joint_expected" << vector_to_string(joint_out));
 
   // Cartesian Interpolation Test
   Eigen::Affine3d pose1 = Eigen::Affine3d::Identity();
@@ -391,12 +408,13 @@ TEST(MoveitSimpleTest, kinematics)
   EXPECT_FALSE(robot.getJointSolution(pose, 3.0, seed, joint_point3));
 
   // Check for error in getJointSolution
+  ROS_INFO_STREAM("joint_point1" << vector_to_string(joint_point1));
+  ROS_INFO_STREAM("joint_point2" << vector_to_string(joint_point2));
+  ROS_INFO_STREAM("joint_point3" << vector_to_string(joint_point3));
   double error_joint1 = 0.0;
   for (std::size_t i = 0; i < joint_point1.size(); ++i)
   {
     error_joint1 += fabs(joint_point1[i] - joint_point2[i]);
-    ROS_INFO_STREAM(" joint_point1_ " << i << joint_point1[i]);
-    ROS_INFO_STREAM(" joint_point2_ " << i << joint_point1[i]);
   }
   EXPECT_NEAR(error_joint1, 0.0, 1e-2);
 
@@ -404,8 +422,6 @@ TEST(MoveitSimpleTest, kinematics)
   for (std::size_t i = 0; i < joint_point1.size(); ++i)
   {
     error_joint2 += fabs(joint_point1[i] - joint_point3[i]);
-    ROS_INFO_STREAM(" joint_point1_ " << i << joint_point1[i]);
-    ROS_INFO_STREAM(" joint_point3_ " << i << joint_point1[i]);
   }
   EXPECT_NEAR(error_joint2, 0.0, 1e-2);
 
