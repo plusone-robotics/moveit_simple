@@ -17,6 +17,7 @@
  */
 
 #include <moveit_simple/moveit_simple.h>
+#include "prettyprint/prettyprint.hpp"
 #include <gtest/gtest.h>
 
 using testing::Types;
@@ -285,12 +286,12 @@ TEST(MoveitSimpleTest, interpolation)
   robot2.interpolate(joint_point1,joint_point2,0.5,joint_point_out);
   std::vector<double>joint_out = joint_point_out->jointPoint();
 
+  ROS_INFO_STREAM(" joint_out: " << joint_out);
+  ROS_INFO_STREAM(" joint_expected: " << joint_expected);
   double error_joint = fabs(joint_point_out->time() - 1.5);
   for (std::size_t i = 0; i < joint_expected.size(); ++i)
   {
     error_joint += fabs(joint_out[i] - joint_expected[i]);
-    ROS_INFO_STREAM(" joint_out_ " << i << joint_out[i]);
-    ROS_INFO_STREAM(" joint_expected_ " << i << joint_expected[i]);
   }
   EXPECT_NEAR(error_joint, 0.0, 1e-2);
 
@@ -391,12 +392,13 @@ TEST(MoveitSimpleTest, kinematics)
   EXPECT_FALSE(robot.getJointSolution(pose, 3.0, seed, joint_point3));
 
   // Check for error in getJointSolution
+  ROS_INFO_STREAM(" joint_point1: " << joint_point1);
+  ROS_INFO_STREAM(" joint_point2: " << joint_point2);
+  ROS_INFO_STREAM(" joint_point3: " << joint_point3);
   double error_joint1 = 0.0;
   for (std::size_t i = 0; i < joint_point1.size(); ++i)
   {
     error_joint1 += fabs(joint_point1[i] - joint_point2[i]);
-    ROS_INFO_STREAM(" joint_point1_ " << i << joint_point1[i]);
-    ROS_INFO_STREAM(" joint_point2_ " << i << joint_point1[i]);
   }
   EXPECT_NEAR(error_joint1, 0.0, 1e-2);
 
@@ -404,8 +406,6 @@ TEST(MoveitSimpleTest, kinematics)
   for (std::size_t i = 0; i < joint_point1.size(); ++i)
   {
     error_joint2 += fabs(joint_point1[i] - joint_point3[i]);
-    ROS_INFO_STREAM(" joint_point1_ " << i << joint_point1[i]);
-    ROS_INFO_STREAM(" joint_point3_ " << i << joint_point1[i]);
   }
   EXPECT_NEAR(error_joint2, 0.0, 1e-2);
 
