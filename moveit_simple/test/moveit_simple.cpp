@@ -29,24 +29,15 @@ namespace moveit_simple_test
  * @brief UserRobotTest is a fixture for testing public methods.
  * Objects that can be directly used inside the test
  - robot pointer for moveit_simple::Robot 
- - 
- - 
- - 
 */
 class UserRobotTest : public ::testing::Test
 {
 protected:
-//  moveit_simple::Robot robot;
   std::unique_ptr<moveit_simple::Robot> robot;
-//  moveit_simple::InterpolationType cart;
-//  moveit_simple::InterpolationType joint;
-//  moveit_simple::Robot* robot_ptr = std::robot;
   virtual void SetUp()
   {      
   robot = std::unique_ptr<moveit_simple::Robot> (new moveit_simple::Robot
                   (ros::NodeHandle(), "robot_description", "manipulator"));
-//  cart = moveit_simple::interpolation_type::CARTESIAN;
-//  joint = moveit_simple::interpolation_type::JOINT;
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
   }
   virtual void TearDown()
@@ -66,12 +57,9 @@ public:
 };
   
 /**
- * @brief UserRobotTest is a fixture for testing public methods.
+ * @brief DeveloperRobotTest is a fixture for testing public methods.
  * Objects that can be directly used inside the test
- - robot pointer for moveit_simple::Robot 
- - 
- - 
- - 
+ - robot pointer for DeveloperRobot
 */
 
 class DeveloperRobotTest : public ::testing::Test
@@ -91,9 +79,7 @@ protected:
 
 TEST_F(UserRobotTest, reachability)
 {
-// moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
-//  ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
   ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
   EXPECT_FALSE(robot->isReachable("unknown_name"));
@@ -113,10 +99,8 @@ TEST_F(UserRobotTest, reachability)
 
 TEST_F(UserRobotTest, add_trajectory)
 {
-//  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
   const std::string TRAJECTORY_NAME("traj1");
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
-//  ros::Duration(2.0).sleep();  //wait for tf tree to populate
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
@@ -127,7 +111,6 @@ TEST_F(UserRobotTest, add_trajectory)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0, cart, 8));
-//  EXPECT_NO_THROW(robot.addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, cart));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0));
@@ -143,20 +126,6 @@ TEST_F(UserRobotTest, add_trajectory)
 
 TEST_F(DeveloperRobotTest, planning)
 {
-  // Calling the protected methods from Robot for test
-// class RobotTest: public moveit_simple::Robot
-// {
-// public:
-//   using moveit_simple::Robot::Robot;
-//   using moveit_simple::Robot::addTrajPoint;
-//   using moveit_simple::Robot::toJointTrajectory;
-//   using moveit_simple::Robot::interpolate;
-//   using moveit_simple::Robot::jointInterpolation;
-//   using moveit_simple::Robot::cartesianInterpolation;
-// };
-// RobotTest robot2(ros::NodeHandle(), "robot_description", "manipulator");
-// ros::Duration(2.0).sleep();  //wait for tf tree to populate
-
   const std::string TRAJECTORY_NAME("traj1");
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
@@ -311,19 +280,6 @@ TEST_F(DeveloperRobotTest, planning)
 
 TEST_F(DeveloperRobotTest, interpolation)
 {
-// // Calling the protected methods from Robot for test
-// class RobotTest: public moveit_simple::Robot
-// {
-// public:
-//   using moveit_simple::Robot::Robot;
-//   using moveit_simple::Robot::toJointTrajectory;
-//   using moveit_simple::Robot::interpolate;
-//   using moveit_simple::Robot::jointInterpolation;
-//   using moveit_simple::Robot::cartesianInterpolation;
-// };
-// RobotTest robot2(ros::NodeHandle(), "robot_description", "manipulator");
-// ros::Duration(2.0).sleep();  //wait for tf tree to populate
-
   const std::string TRAJECTORY_NAME("traj1");
 
   std::vector<trajectory_msgs::JointTrajectoryPoint> points;
@@ -432,7 +388,6 @@ TEST_F(DeveloperRobotTest, interpolation)
 
 TEST_F(UserRobotTest, kinematics)
 {
-//  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
   Eigen::Affine3d pose1;
   Eigen::Affine3d pose2;
@@ -469,7 +424,7 @@ TEST_F(UserRobotTest, kinematics)
   }
   EXPECT_NEAR(error_joint2, 0.0, 1e-2);
 
-  // CHeck for error in getPose
+  // Check for error in getPose
   ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
   ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
   ROS_INFO_STREAM(" pose3: " << std::endl << pose3.matrix());
@@ -482,10 +437,7 @@ TEST_F(UserRobotTest, kinematics)
 
 TEST_F(UserRobotTest, copy_current_pose)
 {
-//  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
-//  ros::Duration(2.0).sleep();  //wait for tf tree to populate
   const std::string TRAJECTORY_NAME("traj1");
-
 
   // Adding trajectory points.
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
