@@ -175,7 +175,7 @@ TEST(MoveitSimpleTest, planning)
   EXPECT_TRUE(robot2.toJointTrajectory(TRAJECTORY_NAME,points));
   EXPECT_EQ(points.size(),14);
 
-  //  EXPECT_NO_THROW(robot2.execute(TRAJECTORY_NAME));
+  // EXPECT_NO_THROW(robot2.execute(TRAJECTORY_NAME));
 
   ROS_INFO_STREAM("Converting the joint positions to poses to compare " <<
                                                 "against expected poses");
@@ -419,4 +419,53 @@ TEST(MoveitSimpleTest, kinematics)
 
 }
 
+
+TEST(MoveitSimpleTest, collision)
+{
+  // Calling the protected methods from Robot for test
+  class RobotTest: public moveit_simple::Robot
+  {
+  public:
+    using moveit_simple::Robot::Robot;
+    using moveit_simple::Robot::addTrajPoint;
+    using moveit_simple::Robot::toJointTrajectory;
+    using moveit_simple::Robot::interpolate;
+    using moveit_simple::Robot::jointInterpolation;
+    using moveit_simple::Robot::cartesianInterpolation;
+    using moveit_simple::Robot::isInCollision;
+  };
+  RobotTest robot2(ros::NodeHandle(), "robot_description", "manipulator");
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
+  const std::string TRAJECTORY_NAME("traj1");
+  const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  std::vector<trajectory_msgs::JointTrajectoryPoint> points;
+
+  std::vector<double>joint1(6,0);
+  std::vector<double>joint2(6,0);
+  std::vector<double>joint3(6,0);
+  joint2[2] = M_PI;
+  joint3[2] = M_PI/2;
+  std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::JointTrajectoryPoint(joint1, 1.0, "joint_point1"));
+
+  std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point2 =
+     std::unique_ptr<moveit_simple::TrajectoryPoint>
+     (new moveit_simple::JointTrajectoryPoint(joint2, 2.0, "joint_point2"));
+  ROS_INFO_STREAM("joint1: " << joint1);
+  ROS_INFO_STREAM("joint2: " << joint2);
+  ROS_INFO_STREAM("joint3: " << joint3);
+  // Add first point to start from a known point
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME, joint_point1));
+  // joint interpolation between two joint points
+  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME,  joint_point2,  joint, 1));
+
+  EXPECT_NO_THROW(robot2.execute(TRAJECTORY_NAME));
+  EXPECT_FALSE(robot2.isInCollision(joint1));
+  EXPECT_TRUE(robot2.isInCollision(joint3));
+  EXPECT_THROW(robot2.execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
+}
 }
