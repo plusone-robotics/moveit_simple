@@ -498,20 +498,20 @@ TEST_F(UserRobotTest, copy_current_pose)
                       before_execution_3, final_position;
 
   // Before the first execution robot should be at position "home"
-  before_execution_1 = robot->getCurrentRobotState();
+  before_execution_1 = robot->getJointState();
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 
   // Second Execution
   // Robot should be at "waypoint3" at all checkpoints from here on out.
-  before_execution_2 = robot->getCurrentRobotState();
+  before_execution_2 = robot->getJointState();
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 
   // Third Execution
-  before_execution_3 = robot->getCurrentRobotState();
+  before_execution_3 = robot->getJointState();
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 
   // Final Position
-  final_position = robot->getCurrentRobotState();
+  final_position = robot->getJointState();
 
   ROS_INFO_STREAM("before_execution_1" << before_execution_1);
   ROS_INFO_STREAM("before_execution_2" << before_execution_2);

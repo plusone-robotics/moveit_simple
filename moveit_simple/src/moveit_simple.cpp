@@ -199,7 +199,7 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
   if (seed.empty())
   {
     ROS_INFO_STREAM("Empty seed passed to getJointSolution, using current state");
-    local_seed =  getCurrentRobotState();
+    local_seed =  getJointState();
   }
   return getIK(pose, local_seed, joint_point, timeout);
 }
@@ -365,7 +365,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
   const TrajectoryInfo & traj_info = traj_info_map_[traj_name];
 
   // The first point in any trajectory is the current pose
-  std::vector<double> current_joint_position = getCurrentRobotState();
+  std::vector<double> current_joint_position = getJointState();
   points.push_back(toJointTrajPtMsg(current_joint_position, 0.0));
 
   for(size_t i = 0; i < traj_info.size(); ++i)
@@ -770,7 +770,7 @@ void Robot::updateState(const sensor_msgs::JointStateConstPtr& msg)
   robot_state_->setVariablePositions(msg->name, msg->position);
 }
 
-std::vector<double> Robot::getCurrentRobotState(void) const
+std::vector<double> Robot::getJointState(void) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
   ros::spinOnce();

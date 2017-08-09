@@ -228,12 +228,12 @@ public:
 
 
   /**
-  * @brief getCurrentRobotState - Returns a vector<double> of the
+  * @brief getJointState - Returns a vector<double> of the
   * current joint positions of the robot from current_robot_state_.
   *
   * @return std::vector<double> current_joint_position
   */
-  std::vector<double> getCurrentRobotState(void) const;
+  std::vector<double> getJointState(void) const;
 
 protected:
   Robot();
