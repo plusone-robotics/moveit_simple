@@ -213,7 +213,7 @@ bool Robot::getPose(const std::vector<double> & joint_point,
 
 
 
-bool Robot::isInCollision(std::vector<double> joint_point) const
+bool Robot::isInCollision(std::vector<double> & joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -221,7 +221,7 @@ bool Robot::isInCollision(std::vector<double> joint_point) const
 
   if (joint_point.empty())
   {
-    ROS_INFO_STREAM("Empty joint point passed to isIncollision, using current state");
+    ROS_DEBUG_STREAM("Empty joint point passed to isIncollision, using current state");
     // Should be current robot state. Will update after Issue#3
     robot_state_->copyJointGroupPositions(joint_group_->getName(), local_joint_point);
   }

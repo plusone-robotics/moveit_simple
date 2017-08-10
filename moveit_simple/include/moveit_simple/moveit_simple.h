@@ -92,7 +92,7 @@ public:
    * If no joint point is provided current position is checked for collision
    * @return
    */
-  bool isInCollision(std::vector<double> joint_point = std::vector<double>() ) const;
+  bool isInCollision(std::vector<double> & joint_point = std::vector<double>() ) const;
 
   /**
    * @brief isInCollision  returns true if pose results in robot config that is
@@ -191,9 +191,12 @@ public:
    * @brief execute a given trajectory
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
+   * @param collision_check - bool to turn check for collision on\off
    * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
    * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
    * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
+   * @throws <moveit_simple::CollisionDetected> (One of interpolated point is 
+   * in Collision with itself or envieronment)
    */
   void execute(const std::string traj_name, bool collision_check = false);
   /**
@@ -251,6 +254,7 @@ protected:
    * @param traj_point: target traj_point for joint interpolation
    * @param points: Vector of Joint Trajectory Point to be executed
    * @param num_steps: number of steps to be interpolated between current point and traj_point
+   * @param collision_check - bool to turn check for collision on\off
    * @return true if all the points including traj_point are added to the points.
    */
   bool jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
@@ -263,6 +267,7 @@ protected:
    * @param traj_point: target traj_point for cartesian interpolation
    * @param points: Vector of Joint Trajectory Point to be executed
    * @param num_steps: number of steps to be interpolated between current point and traj_point
+   * @param collision_check - bool to turn check for collision on\off
    * @return true if all the points including traj_point are added to the points.
    */
   bool cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
