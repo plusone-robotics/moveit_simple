@@ -212,6 +212,25 @@ bool Robot::getPose(const std::vector<double> & joint_point,
 }
 
 
+
+bool Robot::isInCollision(const std::vector<double> & joint_point) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::vector<double> local_joint_point = joint_point;
+
+  if (joint_point.empty())
+  {
+    ROS_DEBUG_STREAM("Empty joint point passed to isIncollision, using current state");
+    // Should be current robot state. Will update after Issue#3
+    robot_state_->copyJointGroupPositions(joint_group_->getName(), local_joint_point);
+  }
+  robot_state_->setJointGroupPositions(joint_group_, local_joint_point);
+  bool inCollision = planning_scene_->isStateColliding(*robot_state_, joint_group_->getName());
+  return inCollision;
+}
+
+
 bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
                    double timeout, std::vector<double> joint_seed) const
 {
@@ -318,7 +337,7 @@ void Robot::clearTrajectory(const::std::string traj_name)
 
 
 
-void Robot::execute(const std::string traj_name)
+void Robot::execute(const std::string traj_name, bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -328,27 +347,34 @@ void Robot::execute(const std::string traj_name)
   {
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory.joint_names = joint_group_->getVariableNames();
-    if ( toJointTrajectory(traj_name, goal.trajectory.points) )
+    try
     {
-      ros::Duration traj_time =
-          goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
-      ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
-      if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
+      if ( toJointTrajectory(traj_name, goal.trajectory.points, collision_check) )
       {
-        ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
+        ros::Duration traj_time =
+            goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
+        ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
+        if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
+        {
+          ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
+        }
+        else
+        {
+          ROS_ERROR_STREAM("Trajectory " << traj_name << " failed to exectue");
+          throw ExecutionFailureException("Execution failed for "+ traj_name);
+        }
       }
       else
       {
-        ROS_ERROR_STREAM("Trajectory " << traj_name << " failed to exectue");
-        throw ExecutionFailureException("Execution failed for "+ traj_name);
+        ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
+        throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
       }
     }
-    else
+    catch(CollisionDetected &cd)
     {
-      ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
-      throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
+      ROS_ERROR_STREAM("Collision detected in the " << traj_name);
+      throw cd;
     }
-
   }
   else
   {
@@ -358,7 +384,8 @@ void Robot::execute(const std::string traj_name)
 }
 
 bool Robot::toJointTrajectory(const std::string traj_name,
-                       std::vector<trajectory_msgs::JointTrajectoryPoint> & points)
+                       std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
+                              bool collision_check)
 {
   const TrajectoryInfo & traj_info = traj_info_map_[traj_name];
 
@@ -372,7 +399,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
     const std::unique_ptr<TrajectoryPoint> & traj_point = traj_info[i].point;
     if (traj_info[i].type == interpolation_type::JOINT)
     {
-      if(jointInterpolation(traj_point, points, traj_info[i].num_steps))
+      if(jointInterpolation(traj_point, points, traj_info[i].num_steps, collision_check))
       {
         ROS_INFO_STREAM("Trajectory successfully added till " << traj_point->name());
       }else{
@@ -383,7 +410,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
     }
     else if (traj_info[i].type == interpolation_type::CARTESIAN)
     {
-      if (cartesianInterpolation(traj_point, points, traj_info[i].num_steps))
+      if (cartesianInterpolation(traj_point, points, traj_info[i].num_steps, collision_check))
       {
         ROS_INFO_STREAM("Trajectory successfully added till " << traj_point->name());
       }else{
@@ -401,7 +428,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
 
 bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
            std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
-           unsigned int num_steps)
+           unsigned int num_steps, bool collision_check)
 {
   const double IK_TIMEOUT = 0.250;   //250 ms for IK solving
   // create a local vector for storing interpolated points
@@ -460,7 +487,7 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_poi
     target_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
     if (!target_point)
     {
-      ROS_WARN_STREAM("Failed to convernt joint point - this shouldn't happen");
+      ROS_WARN_STREAM("Failed to convert joint point - this shouldn't happen");
       return false;
     }
   }
@@ -473,10 +500,18 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_poi
     interpolate(prev_traj_point,target_point,t,new_point);
     if(new_point)
     {
-      points_local.push_back(toJointTrajPtMsg(*new_point));
-      points_added++;
-      ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) <<
+      if ((collision_check) && (isInCollision(new_point->jointPoint())))
+      {
+        ROS_WARN_STREAM("Collision detected at " << points_added << " among "
+                        << (num_steps+1) << " points for " << traj_point->name());
+        points_local.clear();
+        throw CollisionDetected("Collision detected while interpolating " + traj_point->name());
+      }else{
+        points_local.push_back(toJointTrajPtMsg(*new_point));
+        points_added++;
+        ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) <<
                       " successfully interpolated for " << traj_point->name());
+       }
     }else{
        ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among "
                         << (num_steps+1) << "points for " << traj_point->name()
@@ -495,11 +530,12 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_poi
 
 bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
            std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
-           unsigned int num_steps)
+           unsigned int num_steps, bool collision_check)
 {
   // create a local vector for storing interpolated points and append
   // it with last element of global points to be used for interpolation
   std::vector<trajectory_msgs::JointTrajectoryPoint> points_local;
+  points_local.clear();
   points_local.push_back(points.back());
   
   trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
@@ -532,7 +568,7 @@ bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj
                ( new CartTrajectoryPoint(new_point_cart->pose(), new_point_cart->time(), ""));
 
     // Add new point at the end of Joint Trajectory (named points_local)
-    if(jointInterpolation(new_point, points_local,(unsigned int) 0))
+    if(jointInterpolation(new_point, points_local,(unsigned int) 0, collision_check))
     {
       points_added++;
       ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) << 
