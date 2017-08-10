@@ -213,7 +213,7 @@ bool Robot::getPose(const std::vector<double> & joint_point,
 
 
 
-bool Robot::isInCollision(std::vector<double> & joint_point) const
+bool Robot::isInCollision(const std::vector<double> & joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 

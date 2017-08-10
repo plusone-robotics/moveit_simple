@@ -92,7 +92,7 @@ public:
    * If no joint point is provided current position is checked for collision
    * @return
    */
-  bool isInCollision(std::vector<double> & joint_point = std::vector<double>() ) const;
+  bool isInCollision(const std::vector<double> & joint_point = std::vector<double>() ) const;
 
   /**
    * @brief isInCollision  returns true if pose results in robot config that is
