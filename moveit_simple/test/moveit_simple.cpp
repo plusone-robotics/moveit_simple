@@ -28,15 +28,15 @@ namespace moveit_simple_test
 /**
  * @brief UserRobotTest is a fixture for testing public methods.
  * Objects that can be directly used inside the test
- - robot pointer for moveit_simple::Robot 
+ - robot pointer for moveit_simple::OnlineRobot
 */
 class UserRobotTest : public ::testing::Test
 {
 protected:
-  std::unique_ptr<moveit_simple::Robot> robot;
+  std::unique_ptr<moveit_simple::OnlineRobot> robot;
   virtual void SetUp()
   {      
-  robot = std::unique_ptr<moveit_simple::Robot> (new moveit_simple::Robot
+  robot = std::unique_ptr<moveit_simple::OnlineRobot> (new moveit_simple::OnlineRobot
                   (ros::NodeHandle(), "robot_description", "manipulator"));
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
   }
@@ -46,23 +46,23 @@ protected:
 
 
 /**
- * @brief DeveloperRobot is a class inheriting from moveit_simple::Robot to test protected methods
+ * @brief DeveloperRobot is a class inheriting from moveit_simple::OnlineRobot to test protected methods
  * Add the protected methods(that are required to be tested) in the following list
 */
-class DeveloperRobot: public moveit_simple::Robot
+class DeveloperRobot: public moveit_simple::OnlineRobot
 {
 public:
-  using moveit_simple::Robot::Robot;
-  using moveit_simple::Robot::addTrajPoint;
-  using moveit_simple::Robot::toJointTrajectory;
-  using moveit_simple::Robot::interpolate;
-  using moveit_simple::Robot::jointInterpolation;
-  using moveit_simple::Robot::cartesianInterpolation;
-  using moveit_simple::Robot::isInCollision;
+  using moveit_simple::OnlineRobot::OnlineRobot;
+  using moveit_simple::OnlineRobot::addTrajPoint;
+  using moveit_simple::OnlineRobot::toJointTrajectory;
+  using moveit_simple::OnlineRobot::interpolate;
+  using moveit_simple::OnlineRobot::jointInterpolation;
+  using moveit_simple::OnlineRobot::cartesianInterpolation;
+  using moveit_simple::OnlineRobot::isInCollision;
 };
   
 /**
- * @brief DeveloperRobotTest is a fixture for testing public methods.
+ * @brief DeveloperRobotTest is a fixture for testing protected methods.
  * Objects that can be directly used inside the test
  - robot pointer for DeveloperRobot
 */
@@ -82,23 +82,28 @@ protected:
 };
 
 
-TEST_F(UserRobotTest, reachability)
+
+TEST(MoveitSimpleTest, construction)
 {
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
+  moveit_simple::Robot robot("robot_description", "manipulator");
+  moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator");
+}
+
+TEST(MoveitSimpleTest, reachability)
+{
+  moveit_simple::Robot robot("robot_description", "manipulator");
 
   ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
-  EXPECT_FALSE(robot->isReachable("unknown_name"));
-  EXPECT_FALSE(robot->isReachable(pose, "random_link"));
-  EXPECT_TRUE(robot->isReachable(pose, "tool0"));
+  EXPECT_FALSE(robot.isReachable("unknown_name"));
 
-
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
   ROS_INFO_STREAM("Testing reach of points");
-  ASSERT_TRUE(robot->isReachable("home"));        //stored in the SRDF
-  ASSERT_TRUE(robot->isReachable("waypoint1"));   //stored in the URDF
-  ASSERT_TRUE(robot->isReachable("waypoint2"));   //stored in the URDF
-  ASSERT_TRUE(robot->isReachable("waypoint3"));   //stored in the URDF
-  ASSERT_TRUE(robot->isReachable("tf_pub1"));     //stored published externally
-  ASSERT_FALSE(robot->isReachable("waypoint4"));  //stored in the URDF
+  ASSERT_TRUE(robot.isReachable("home"));        //stored in the SRDF
+  ASSERT_TRUE(robot.isReachable("waypoint1"));   //stored in the URDF
+  ASSERT_TRUE(robot.isReachable("waypoint2"));   //stored in the URDF
+  ASSERT_TRUE(robot.isReachable("waypoint3"));   //stored in the URDF
+  ASSERT_TRUE(robot.isReachable("tf_pub1"));     //stored published externally
+  ASSERT_FALSE(robot.isReachable("waypoint4"));  //stored in the URDF
 }
 
 
