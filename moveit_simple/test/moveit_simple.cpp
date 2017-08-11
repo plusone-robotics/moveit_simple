@@ -44,7 +44,11 @@ protected:
   {}
 };
 
-// Calling the protected methods from Robot for test
+
+/**
+ * @brief DeveloperRobot is a class inheriting from moveit_simple::Robot to test protected methods
+ * Add the protected methods(that are required to be tested) in the following list
+*/
 class DeveloperRobot: public moveit_simple::Robot
 {
 public:
@@ -54,6 +58,7 @@ public:
   using moveit_simple::Robot::interpolate;
   using moveit_simple::Robot::jointInterpolation;
   using moveit_simple::Robot::cartesianInterpolation;
+  using moveit_simple::Robot::isInCollision;
 };
   
 /**
@@ -481,23 +486,8 @@ TEST_F(UserRobotTest, copy_current_pose)
 }
 
 
-TEST(MoveitSimpleTest, collision)
+TEST_F(DeveloperRobotTest, collision)
 {
-  // Calling the protected methods from Robot for test
-  class RobotTest: public moveit_simple::Robot
-  {
-  public:
-    using moveit_simple::Robot::Robot;
-    using moveit_simple::Robot::addTrajPoint;
-    using moveit_simple::Robot::toJointTrajectory;
-    using moveit_simple::Robot::interpolate;
-    using moveit_simple::Robot::jointInterpolation;
-    using moveit_simple::Robot::cartesianInterpolation;
-    using moveit_simple::Robot::isInCollision;
-  };
-  RobotTest robot2(ros::NodeHandle(), "robot_description", "manipulator");
-  ros::Duration(2.0).sleep();  //wait for tf tree to populate
-
   const std::string TRAJECTORY_NAME("traj1");
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
@@ -520,14 +510,14 @@ TEST(MoveitSimpleTest, collision)
   ROS_INFO_STREAM("joint2: " << joint2);
   ROS_INFO_STREAM("joint3: " << joint3);
   // Add first point to start from a known point
-  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME, joint_point1));
+  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME, joint_point1));
   // joint interpolation between two joint points
-  EXPECT_NO_THROW(robot2.addTrajPoint(TRAJECTORY_NAME,  joint_point2,  joint, 1));
+  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME,  joint_point2,  joint, 1));
 
-  EXPECT_NO_THROW(robot2.execute(TRAJECTORY_NAME));
-  EXPECT_FALSE(robot2.isInCollision(joint1));
-  EXPECT_TRUE(robot2.isInCollision(joint3));
-  EXPECT_THROW(robot2.execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
+  EXPECT_NO_THROW(robot2->execute(TRAJECTORY_NAME));
+  EXPECT_FALSE(robot2->isInCollision(joint1));
+  EXPECT_TRUE(robot2->isInCollision(joint3));
+  EXPECT_THROW(robot2->execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
 }
 
 }
