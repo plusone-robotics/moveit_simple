@@ -92,11 +92,15 @@ TEST(MoveitSimpleTest, construction)
 TEST(MoveitSimpleTest, reachability)
 {
   moveit_simple::Robot robot("robot_description", "manipulator");
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
   ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
   EXPECT_FALSE(robot.isReachable("unknown_name"));
+  EXPECT_FALSE(robot.isReachable(pose, "random_link"));
+  EXPECT_TRUE(robot.isReachable(pose, "tool0"));
 
-  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
   ROS_INFO_STREAM("Testing reach of points");
   ASSERT_TRUE(robot.isReachable("home"));        //stored in the SRDF
   ASSERT_TRUE(robot.isReachable("waypoint1"));   //stored in the URDF
