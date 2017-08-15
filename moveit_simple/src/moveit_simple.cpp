@@ -74,13 +74,13 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
 
 
 
-bool Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
-                  const std::string & frame, double time,
-                  const std::string & point_name)
+void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
+                         const std::string & frame, double time,
+                         const InterpolationType & type, const unsigned int num_steps,
+                         const std::string & point_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  bool success = false;
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << "relative to"
                   << frame << " at time " << time);
   try
@@ -88,53 +88,52 @@ bool Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
     Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
     std::unique_ptr<TrajectoryPoint> point =
       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
-    success = addTrajPoint(traj_name, point);
+    addTrajPoint(traj_name, point, type, num_steps);
   }
-  catch (tf2::TransformException &ex)
+  catch(tf2::TransformException &ex)
   {
-    ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point: " << ex.what());
-    success = false;
+    ROS_ERROR_STREAM("Add to trajectory failed for arbitrary pose point: " << ex.what());
+    throw ex;
   }
-  return success;
-
 }
 
 
 
 
-bool Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
-                         double time)
+void Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
+                         double time, const InterpolationType & type,
+                         const unsigned int num_steps)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name
                  << " at time " << time);
-  std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
-  return addTrajPoint(traj_name, point);
+  try
+  {
+    std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
+    addTrajPoint(traj_name, point, type, num_steps);
+  }
+  catch ( std::invalid_argument &ia )
+  {
+    ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
+    throw ia;
+  }
+  catch ( tf2::TransformException &ex )
+  {
+    ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
+    throw ex;
+  }
 }
 
 
-
-
-bool Robot::addTrajPoint(const std::string & traj_name,
-                         std::unique_ptr<TrajectoryPoint> & point)
+  
+void Robot::addTrajPoint(const std::string & traj_name,
+                         std::unique_ptr<TrajectoryPoint> &point,
+                         const InterpolationType & type,
+                         const unsigned int num_steps)
 {
-  bool success = false;
-  if( point )
-  {
-    traj_map_[traj_name].push_back(std::move(point));
-    success = true;
-  }
-  else
-  {
-    ROS_ERROR_STREAM("Failed to add point for trajectory " << traj_name);
-    success = false;
-  }
-  return success;
+  traj_info_map_[traj_name].push_back({std::move(point), type, num_steps});
 }
-
-
-
 
 std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string & name,
                                                             double time) const
@@ -174,14 +173,14 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
     catch (tf2::TransformException &ex)
     {
       ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
-      return std::unique_ptr<TrajectoryPoint>(nullptr);
+      throw ex;
     }
   }
 
   else
   {
     ROS_ERROR_STREAM("Failed to find point " << name << ", consider implementing more look ups");
-    return std::unique_ptr<TrajectoryPoint>(nullptr);
+    throw std::invalid_argument("Failed to find point: " + name);
   }
 }
 
@@ -204,6 +203,34 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
 }
 
 
+bool Robot::getPose(const std::vector<double> & joint_point,
+                                  Eigen::Affine3d & pose) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  return getFK(joint_point, pose);
+}
+
+
+
+bool Robot::isInCollision(const std::vector<double> & joint_point) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::vector<double> local_joint_point = joint_point;
+
+  if (joint_point.empty())
+  {
+    ROS_DEBUG_STREAM("Empty joint point passed to isIncollision, using current state");
+    // Should be current robot state. Will update after Issue#3
+    robot_state_->copyJointGroupPositions(joint_group_->getName(), local_joint_point);
+  }
+  robot_state_->setJointGroupPositions(joint_group_, local_joint_point);
+  bool inCollision = planning_scene_->isStateColliding(*robot_state_, joint_group_->getName());
+  return inCollision;
+}
+
+
 bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
                    double timeout, std::vector<double> joint_seed) const
 {
@@ -220,7 +247,7 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
   }
   catch (tf2::TransformException &ex)
   {
-    ROS_WARN_STREAM("IsInCollision failed for for arbitrary pose point: " << ex.what());
+    ROS_WARN_STREAM("IsInCollision failed for arbitrary pose point: " << ex.what());
     inCollision = true;
   }
   return inCollision;
@@ -230,10 +257,18 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
 bool Robot::isReachable(const std::string & name, double timeout,
                         std::vector<double> joint_seed) const
 {
+  bool reacheable = false;
   std::lock_guard<std::recursive_mutex> guard(m_);
-
+  try
+  {
   std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(name, 0.0);
   return isReachable(point, timeout, joint_seed );
+  }
+  catch( ... )
+  {
+  ROS_ERROR_STREAM("Invalid point for reach check");
+  return false;
+  }
 }
 
 
@@ -254,7 +289,7 @@ bool Robot::isReachable(const Eigen::Affine3d & pose, const std::string & frame,
   }
   catch (tf2::TransformException &ex)
   {
-    ROS_WARN_STREAM("Reacheabilioty failed for for arbitrary pose point: " << ex.what());
+    ROS_WARN_STREAM("Reacheability failed for arbitrary pose point: " << ex.what());
     reacheable = false;
   }
   return reacheable;
@@ -297,123 +332,332 @@ void Robot::clearTrajectory(const::std::string traj_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  traj_map_.erase(traj_name);
+  traj_info_map_.erase(traj_name);
 }
 
 
 
-bool Robot::execute(const std::string traj_name)
+void Robot::execute(const std::string traj_name, bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   const double TIMEOUT_SCALE = 1.25;  //scales time to wait for action timeout.
   bool success = false;
-  if ( traj_map_.count(traj_name) )
+  if ( traj_info_map_.count(traj_name) )
   {
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory.joint_names = joint_group_->getVariableNames();
-    if ( toJointTrajectory(traj_name, goal.trajectory.points) )
+    try
     {
-      ros::Duration traj_time =
-          goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
-      ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
-      if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
+      if ( toJointTrajectory(traj_name, goal.trajectory.points, collision_check) )
       {
-        ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
-        success = true;
+        ros::Duration traj_time =
+            goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
+        ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
+        if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
+        {
+          ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
+        }
+        else
+        {
+          ROS_ERROR_STREAM("Trajectory " << traj_name << " failed to exectue");
+          throw ExecutionFailureException("Execution failed for "+ traj_name);
+        }
       }
       else
       {
-        ROS_WARN_STREAM("Trajectory " << traj_name << " failed to exectue");
-        success = false;
+        ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
+        throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
       }
     }
-    else
+    catch(CollisionDetected &cd)
     {
-      ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
-      success = false;
+      ROS_ERROR_STREAM("Collision detected in the " << traj_name);
+      throw cd;
     }
-
   }
   else
   {
     ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
-    success = false;
+    throw std::invalid_argument("No trajectory found named " + traj_name);
   }
-  return success;
 }
 
 bool Robot::toJointTrajectory(const std::string traj_name,
-                       std::vector<trajectory_msgs::JointTrajectoryPoint> & points)
+                       std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
+                              bool collision_check)
 {
-  const double IK_TIMEOUT = 0.250;   //250 ms for IK solving
-  const Trajectory & traj = traj_map_[traj_name];
+  const TrajectoryInfo & traj_info = traj_info_map_[traj_name];
 
   // The first point in any trajectory is the current pose
   std::vector<double> current_joint_position;
   robot_state_->copyJointGroupPositions(joint_group_->getName(), current_joint_position);
   points.push_back(toJointTrajPtMsg(current_joint_position, 0.0));
 
-  for(size_t i = 0; i < traj.size(); ++i)
+  for(size_t i = 0; i < traj_info.size(); ++i)
   {
-    const std::unique_ptr<TrajectoryPoint> & traj_point = traj[i];
-    std::vector<double> prev_point = points[i].positions;
-    std::unique_ptr<JointTrajectoryPoint> current_point;
-
-    if( traj_point->type() != TrajectoryPoint::JOINT )
+    const std::unique_ptr<TrajectoryPoint> & traj_point = traj_info[i].point;
+    if (traj_info[i].type == interpolation_type::JOINT)
     {
-      const size_t MAX_IK_ATTEMPTS = 2;
-      size_t num_attempts = 0;
-
-      while(true)
+      if(jointInterpolation(traj_point, points, traj_info[i].num_steps, collision_check))
       {
-        num_attempts++;
-        current_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
-
-        if (current_point)
-        {
-          if( isConfigChange(prev_point, current_point->jointPoint()) )
-          {
-            ROS_WARN_STREAM("Configuration change detected in move to/from cart point: " << i << "("
-                             << traj_point->name() << "), of type: "
-                             << traj_point->type() << " from: " << traj_name << " to joint trajectory");
-          }
-          else
-          {
-            ROS_INFO_STREAM("Found proper IK (no config change) in " << num_attempts
-                            << " attempts");
-            break;
-          }
-        }
-        else
-        {
-          ROS_WARN_STREAM("Failed to convert trajectory point: " << i << "("
-                         << traj_point->name() << "), of type: "
-                         << traj_point->type() << " from: " << traj_name << " to joint trajectory");
-          return false;
-        }
-        if (num_attempts >= MAX_IK_ATTEMPTS)
-        {
-          ROS_ERROR_STREAM("Failed to find proper IK (no config change) in " << num_attempts
-                           << " attempts");
-          return false;
-        }
-      }
-    }
-    else
-    {
-      current_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
-      if (!current_point)
-      {
-        ROS_WARN_STREAM("Failed to convernt joint point - this shouldn't happen");
+        ROS_INFO_STREAM("Trajectory successfully added till " << traj_point->name());
+      }else{
+        ROS_ERROR_STREAM("Conversion to joint trajectory failed for " << traj_name <<
+                        " due to IK failure of " << traj_point->name());
         return false;
       }
     }
-
-    points.push_back(toJointTrajPtMsg(*current_point));
-    ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
+    else if (traj_info[i].type == interpolation_type::CARTESIAN)
+    {
+      if (cartesianInterpolation(traj_point, points, traj_info[i].num_steps, collision_check))
+      {
+        ROS_INFO_STREAM("Trajectory successfully added till " << traj_point->name());
+      }else{
+        ROS_ERROR_STREAM("Conversion to joint trajectory failed for " << traj_name <<
+                        " before adding " << traj_point->name());
+        return false;
+      }
+    }else{
+      ROS_ERROR_STREAM("Unknown interpolation call " << traj_info[i].type);
+      return false;
+    }
   }
   return true;
+}
+
+bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
+           std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
+           unsigned int num_steps, bool collision_check)
+{
+  const double IK_TIMEOUT = 0.250;   //250 ms for IK solving
+  // create a local vector for storing interpolated points
+  std::vector<trajectory_msgs::JointTrajectoryPoint> points_local;
+  trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
+   std::vector<double> prev_point = prev_point_info.positions;
+   double prev_time = prev_point_info.time_from_start.toSec();
+   // Convert the previous point stored in points to Joint Trajectory Point
+  std::unique_ptr<JointTrajectoryPoint>prev_traj_point =
+                               std::unique_ptr<JointTrajectoryPoint>
+                               (new JointTrajectoryPoint(prev_point, prev_time, ""));
+
+  std::unique_ptr<JointTrajectoryPoint> target_point;
+  if( traj_point->type() != TrajectoryPoint::JOINT )
+  {
+    const size_t MAX_IK_ATTEMPTS = 2;
+    size_t num_attempts = 0;
+
+    while(true)
+    {
+      num_attempts++;
+      target_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
+
+      if (target_point)
+      {
+        if( isConfigChange(prev_point, target_point->jointPoint()) )
+        {
+          ROS_WARN_STREAM("Configuration change detected in move to/from cart point: ("
+                           << traj_point->name() << "), of type: "
+                           << traj_point->type() << " to joint trajectory");
+        }
+        else
+        {
+          ROS_INFO_STREAM("Found proper IK (no config change) in " << num_attempts
+                          << " attempts");
+          break;
+        }
+      }
+      else
+      {
+        ROS_WARN_STREAM("Failed to convert trajectory point:  ("
+                       << traj_point->name() << "), of type: "
+                       << traj_point->type() << " to joint trajectory");
+        return false;
+      }
+      if (num_attempts >= MAX_IK_ATTEMPTS)
+      {
+        ROS_ERROR_STREAM("Failed to find proper IK (no config change) in " << num_attempts
+                         << " attempts");
+        return false;
+      }
+    }
+  }
+  else
+  {
+    target_point = traj_point->toJointTrajPoint(*this, IK_TIMEOUT, prev_point);
+    if (!target_point)
+    {
+      ROS_WARN_STREAM("Failed to convert joint point - this shouldn't happen");
+      return false;
+    }
+  }
+
+  unsigned int points_added = 0;
+  for (std::size_t i=1; i<=num_steps+1; ++i)
+  {
+    double t = (double)i / (double)(num_steps+1);
+    std::unique_ptr<JointTrajectoryPoint> new_point;
+    interpolate(prev_traj_point,target_point,t,new_point);
+    if(new_point)
+    {
+      if ((collision_check) && (isInCollision(new_point->jointPoint())))
+      {
+        ROS_WARN_STREAM("Collision detected at " << points_added << " among "
+                        << (num_steps+1) << " points for " << traj_point->name());
+        points_local.clear();
+        throw CollisionDetected("Collision detected while interpolating " + traj_point->name());
+      }else{
+        points_local.push_back(toJointTrajPtMsg(*new_point));
+        points_added++;
+        ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) <<
+                      " successfully interpolated for " << traj_point->name());
+       }
+    }else{
+       ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among "
+                        << (num_steps+1) << "points for " << traj_point->name()
+                        << ". Exiting without interpolation");
+      points_local.clear();
+      return false;
+    }
+  }
+  // Append the global points with local_points
+  points.insert(points.end(), points_local.begin(), points_local.end());
+  ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
+  points_local.clear();
+  return true;
+}
+
+
+bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
+           std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
+           unsigned int num_steps, bool collision_check)
+{
+  // create a local vector for storing interpolated points and append
+  // it with last element of global points to be used for interpolation
+  std::vector<trajectory_msgs::JointTrajectoryPoint> points_local;
+  points_local.clear();
+  points_local.push_back(points.back());
+  
+  trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
+  // Convert the previous point stored in points to Cartesian Trajectory Point
+  std::unique_ptr<TrajectoryPoint>prev_point =  std::unique_ptr<TrajectoryPoint>
+(new JointTrajectoryPoint(prev_point_info.positions, prev_point_info.time_from_start.toSec(), ""));
+  std::unique_ptr<CartTrajectoryPoint>prev_traj_point =
+  prev_point->toCartTrajPoint(*this);
+  std::unique_ptr<CartTrajectoryPoint> target_point;
+  if (prev_traj_point)
+  {
+    target_point = traj_point->toCartTrajPoint(*this);
+    if (!target_point)
+    {
+      ROS_ERROR_STREAM("Failed to find FK for " << traj_point->name());
+      return false;
+    }
+  }else{
+    ROS_ERROR_STREAM("Failed to find FK for already added point. This is unexpected." );
+    return false;
+  }
+  unsigned int points_added = 0;
+  for (std::size_t i=1; i<=num_steps+1; ++i)
+  {
+    double t = (double)i / (double)(num_steps+1);
+    std::unique_ptr<CartTrajectoryPoint> new_point_cart;
+    interpolate(prev_traj_point,target_point,t,new_point_cart);
+
+    std::unique_ptr<TrajectoryPoint> new_point =std::unique_ptr<TrajectoryPoint>
+               ( new CartTrajectoryPoint(new_point_cart->pose(), new_point_cart->time(), ""));
+
+    // Add new point at the end of Joint Trajectory (named points_local)
+    if(jointInterpolation(new_point, points_local,(unsigned int) 0, collision_check))
+    {
+      points_added++;
+      ROS_INFO_STREAM( points_added << " points among " << (num_steps+1) << 
+                                             " added successfullyfor " << traj_point->name());
+    }else{
+      ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among "
+                        << (num_steps+1) << "points for " << traj_point->name()
+                        << ". Exiting without interpolation");
+      points_local.clear();
+      return false;
+    }
+  }
+  // Append the global points with local_points
+  points.insert(points.end(), points_local.begin()+1, points_local.end());
+  ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
+  points_local.clear();
+  return true;
+}
+
+
+void Robot::interpolate( const std::unique_ptr<JointTrajectoryPoint>& from,
+                         const std::unique_ptr<JointTrajectoryPoint>& to,
+                         double t, std::unique_ptr<JointTrajectoryPoint> & point) const
+{
+  std::vector<double> start_joint_point = from->jointPoint();
+  double start_time = from->time();
+
+  std::vector<double> target_joint_point = to->jointPoint();
+  double target_time = to->time();
+
+  if (start_joint_point.size() == target_joint_point.size())
+  {
+  std::vector<double> joint_point =
+   interpolate(start_joint_point, target_joint_point, t);
+  double time = t* target_time + (1-t)*start_time;
+
+  point = std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(joint_point, time, ""));
+  }else{
+  ROS_ERROR_STREAM("Interpolation between these two joint points is not possible" <<
+                  "as start and target points have different sizes with start: "
+                   << start_joint_point.size() << " joints and target: "
+                   << target_joint_point.size() << "joints respectively");
+  point = std::unique_ptr<JointTrajectoryPoint>(nullptr);
+  }
+}
+
+
+std::vector<double> Robot::interpolate( const std::vector<double> & from,
+                                        const std::vector<double> & to,
+                                        double t) const
+{
+  std::vector<double> joint_point(from.size());
+  for (std::size_t i=0; i< from.size(); ++i)
+  {
+    joint_point[i] = t*to[i] + (1-t)*from[i];
+  }
+
+  return joint_point;
+}
+
+
+void Robot::interpolate( const std::unique_ptr<CartTrajectoryPoint>& from,
+                         const std::unique_ptr<CartTrajectoryPoint>& to,
+                         double t, 
+                         std::unique_ptr<CartTrajectoryPoint> & point) const
+{
+  Eigen::Affine3d start_pose = from->pose();
+  double start_time = from->time();
+
+  Eigen::Affine3d target_pose = to->pose();
+  double target_time = to->time();
+
+  Eigen::Affine3d pose =
+   interpolate(start_pose, target_pose, t);
+  double time = t* target_time + (1-t)*start_time;
+
+  point = std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(pose, time, ""));
+}
+
+Eigen::Affine3d Robot::interpolate( const Eigen::Affine3d & from,
+                                    const Eigen::Affine3d & to,
+                                    double t) const
+{
+
+  Eigen::Quaterniond from_quaternion(from.rotation());
+  Eigen::Quaterniond to_quaternion(to.rotation());
+  Eigen::Affine3d pose(from_quaternion.slerp(t, to_quaternion));
+  pose.translation() = t * to.translation() + (1 - t) * from.translation();
+  return pose;
 }
 
 
@@ -482,6 +726,25 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in,
 
 
 
+bool Robot::getFK(const std::vector<double> & joint_point,
+                  Eigen::Affine3d &pose) const
+{
+  robot_state_->setJointGroupPositions(joint_group_, joint_point);
+  const std::vector<std::string> link_names = joint_group_->getLinkModelNames();
+  const std::vector<std::string> active_joints = joint_group_->getActiveJointModelNames();
+  const int vc =  (int)robot_state_->getVariableCount();
+  if ( active_joints.size() == vc)
+  {
+    pose = robot_state_->getFrameTransform(link_names.back());
+    return true;
+  }else{
+    return false;
+  }
+}
+
+
+
+
 bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
                   std::vector<double> & joint_point,
                   double timeout, unsigned int attempts) const
@@ -543,5 +806,54 @@ void Robot::updateState(const sensor_msgs::JointStateConstPtr& msg)
   robot_state_->setVariablePositions(msg->name, msg->position);
 }
 
+
+std::unique_ptr<JointTrajectoryPoint> JointTrajectoryPoint::toJointTrajPoint(
+        const Robot & robot,  double timeout, const std::vector<double> & seed) const
+{
+  ROS_DEBUG_STREAM("JointTrajectoryPoint: passing through joint trajectory point");
+  return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(*this));
+}
+
+std::unique_ptr<CartTrajectoryPoint> JointTrajectoryPoint::toCartTrajPoint(
+                                   const Robot & robot) const
+{
+  Eigen::Affine3d pose;
+
+  ROS_DEBUG_STREAM("JointTrajectoryPoint: Calculating FK for Cartesian trajectory point");
+  if(robot.getPose(joint_point_, pose))
+  {
+    return std::unique_ptr<CartTrajectoryPoint>( new CartTrajectoryPoint(pose, time(), name()));
+  }
+  else
+  {
+    ROS_WARN_STREAM("Failed to find FK for point: " << name_);
+    return std::unique_ptr<CartTrajectoryPoint>(nullptr);
+  }
+}
+
+
+std::unique_ptr<JointTrajectoryPoint> CartTrajectoryPoint::toJointTrajPoint(
+       const Robot & robot,  double timeout, const std::vector<double> & seed) const
+{
+  std::vector<double> joints;
+
+  ROS_DEBUG_STREAM("CartTrajectoryPoint: Calculating IK for joint trajectory point");
+  if( robot.getJointSolution(pose_, timeout, seed, joints) )
+  {
+    return std::unique_ptr<JointTrajectoryPoint>( new JointTrajectoryPoint(joints, time(), name()));
+  }
+  else
+  {
+    ROS_WARN_STREAM("Failed to find joint solution for point: " << name_);
+    return std::unique_ptr<JointTrajectoryPoint>(nullptr);
+  }
+}
+
+std::unique_ptr<CartTrajectoryPoint> CartTrajectoryPoint::toCartTrajPoint(
+    const Robot & robot) const
+{
+  ROS_DEBUG_STREAM("CartTrajectoryPoint: passing through cartesian trajectory point");
+  return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(*this));
+}
 
 }
