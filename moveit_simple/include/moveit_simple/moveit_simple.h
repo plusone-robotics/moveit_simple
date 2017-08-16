@@ -225,14 +225,6 @@ public:
                                   double t) const;
 
 
-  /**
-  * @brief getJointState - Returns a vector<double> of the
-  * robot position from updated from last IK call.
-  *
-  * @return std::vector<double> current_joint_position
-  */
-  virtual std::vector<double> getJointState(void) const;
-
 protected:
   Robot();
 
@@ -304,6 +296,13 @@ protected:
   bool isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout,
                    std::vector<double> joint_seed = std::vector<double>() ) const;
 
+  /**
+  * @brief getJointState - Returns a vector<double> of the
+  * robot position from updated from last IK call.
+  *
+  * @return std::vector<double> current_joint_position
+  */
+  virtual std::vector<double> getJointState(void) const;
 
   bool getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
              std::vector<double> & joint_point, double timeout=1,
