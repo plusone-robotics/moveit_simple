@@ -468,4 +468,23 @@ TEST(MoveitSimpleTest, collision)
   EXPECT_TRUE(robot2.isInCollision(joint3));
   EXPECT_THROW(robot2.execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
 }
+
+TEST(MoveitSimpleTest, Singularity)
+{
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
+  std::vector<trajectory_msgs::JointTrajectoryPoint> points;
+
+  std::vector<double>joint1(6,0);
+  std::vector<double>joint2(6,0);
+  joint1[4] = M_PI/2;
+  joint2[2] = -M_PI/2+M_PI/10;
+
+  ROS_INFO_STREAM("joint1: " << joint1);
+  ROS_INFO_STREAM("joint2: " << joint2);
+
+  EXPECT_FALSE(robot.isNearSingular(joint1));
+  EXPECT_TRUE(robot.isNearSingular(joint2));
+}
 }
