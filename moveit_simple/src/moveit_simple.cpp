@@ -26,10 +26,11 @@ namespace moveit_simple
 
 
 
-Robot::Robot(const std::string &robot_description,
-             const std::string &group_name):
+Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
+                                         const std::string &group_name):
   tf_buffer_(),
-  tf_listener_(tf_buffer_)
+  tf_listener_(tf_buffer_),
+  nh_(nh)
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
                   << ", group name: " << group_name);
@@ -44,6 +45,12 @@ Robot::Robot(const std::string &robot_description,
                   << ", and tool: " << robot_model_ptr_->getLinkModelNames());
   ROS_INFO_STREAM("MoveIt object loaded");
 
+  virtual_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
+                        robot_model_ptr_->getRootLinkName(),
+                        nh_.getNamespace() + "/rviz_visual_tools",
+                        robot_model_ptr_));
+  virtual_visual_tools_->loadRobotStatePub(nh_.getNamespace()
+                                    + "/display_robot_state");
   return;
 }
 
@@ -51,18 +58,18 @@ Robot::Robot(const std::string &robot_description,
 OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
                const std::string &robot_description,
                       const std::string &group_name):
-  action_("joint_trajectory_action", true),
-  Robot(robot_description, group_name),
-  nh_(nh)
+  Robot(nh, robot_description, group_name),
+  action_("joint_trajectory_action", true)
 {
   current_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
   current_robot_state_->setToDefaultValues();
 
-  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
+  online_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
                         robot_model_ptr_->getRootLinkName(),
                         nh_.getNamespace() + "/rviz_visual_tools",
                         robot_model_ptr_));
-  visual_tools_->loadRobotStatePub(nh_.getNamespace() + "/display_robot_state");
+  online_visual_tools_->loadRobotStatePub(nh_.getNamespace()
+                                   + "/display_robot_state");
 
   ROS_INFO_STREAM("Waiting for action servers");
   action_.waitForServer(ros::Duration(30.0));

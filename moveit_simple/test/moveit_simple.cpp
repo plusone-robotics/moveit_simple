@@ -85,13 +85,13 @@ protected:
 
 TEST(MoveitSimpleTest, construction)
 {
-  moveit_simple::Robot robot("robot_description", "manipulator");
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
   moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator");
 }
 
 TEST(MoveitSimpleTest, reachability)
 {
-  moveit_simple::Robot robot("robot_description", "manipulator");
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 

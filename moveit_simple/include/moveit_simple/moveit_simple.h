@@ -83,7 +83,8 @@ typedef std::vector<TrajectoryPointInfo> TrajectoryInfo;
 class Robot
 {
 public:
-   Robot(const std::string &robot_description, const std::string &group_name);
+   Robot(const ros::NodeHandle & nh, const std::string &robot_description,
+                                     const std::string &group_name);
    /**
    * @brief isInCollision  returns true if joint_point results in robot config that is
    * in collision with the environment as defined by the URDF.
@@ -333,6 +334,9 @@ protected:
   robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 
 
+  // Visualizations
+  moveit_visual_tools::MoveItVisualToolsPtr virtual_visual_tools_;
+
   // TF for looking up waypoints
   // TODO: Consider swapping out the listener for an action based lookup - much
   // less overhead
@@ -340,6 +344,7 @@ protected:
   tf2_ros::TransformListener tf_listener_;
 
   // ROS objects
+  ros::NodeHandle nh_;
   mutable std::recursive_mutex m_;
 
 };
@@ -389,13 +394,12 @@ protected:
 
 
   // Visualizations
-  moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
+  moveit_visual_tools::MoveItVisualToolsPtr online_visual_tools_;
 
   // Move robot action
   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> action_;
 
   // ROS objects
-  ros::NodeHandle nh_;
   ros::Subscriber j_state_sub_;
 };
 
