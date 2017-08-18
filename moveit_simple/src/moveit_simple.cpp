@@ -778,7 +778,8 @@ bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> & joint_point,
 bool Robot::isNearSingular(const std::vector<double> & joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
-  double threshold = 1e-10; // How to determine this threshold?
+  // Threshold determined by keeping axes 4 and 6 at 3 degrees of being aligned
+  double threshold = 5e-2;
   std::vector<double> local_joint_point = joint_point;
 
   // reference point for Jacobian
@@ -786,7 +787,7 @@ bool Robot::isNearSingular(const std::vector<double> & joint_point) const
   if (joint_point.empty())
   {
     ROS_DEBUG_STREAM("Empty joint point passed to isNearSingular, using current state");
-//    local_joint_point = getJointState(); // Update after PR#21
+    //  local_joint_point = getJointState(); // Update after PR#21
     robot_state_->copyJointGroupPositions(joint_group_->getName(), local_joint_point);
   }
   robot_state_->setJointGroupPositions(joint_group_, local_joint_point);
@@ -795,23 +796,31 @@ bool Robot::isNearSingular(const std::vector<double> & joint_point) const
   if (robot_state_->getJacobian(joint_group_, joint_group_->getLinkModels().back(),
                                   reference_point, jacobian, false))
   {
+    ROS_INFO_STREAM("jacobian" << jacobian.matrix());
+    ROS_INFO_STREAM("determinant" << fabs((jacobian*jacobian.transpose()).determinant()));
     // Check for determinant of J*J'
     if (fabs((jacobian*jacobian.transpose()).determinant()) <= threshold)
-      {
-        ROS_WARN_STREAM("Given configuration " <<local_joint_point <<
-                                                        " is near Singularity");
-        return true;
-      }else{
-        ROS_INFO_STREAM("Given configuration " <<local_joint_point <<
-                                               " is away from any Singularity");
-        return false;
-      }
-  }else{
-    ROS_ERROR_STREAM("Jacobian not found for " << local_joint_point);
-    throw std::invalid_argument("joint_group " + joint_group_->getName() +
-                                                             " is not a chain");
+    {
+      ROS_WARN_STREAM("Given configuration " <<local_joint_point <<
+                                                      " is near Singularity");
+      return true;
+    }
+    else
+    {
+      ROS_INFO_STREAM("Given configuration " <<local_joint_point <<
+                                             " is away from any Singularity");
+      return false;
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Jacobian not found for " << local_joint_point <<
+                      "joint group " << joint_group_->getName() << "is not a chain");
+    return false;
   }
 }
+
+
 
 trajectory_msgs::JointTrajectoryPoint Robot::toJointTrajPtMsg(
     const JointTrajectoryPoint & joint_point) const
