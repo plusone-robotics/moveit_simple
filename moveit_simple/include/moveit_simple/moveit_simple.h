@@ -237,6 +237,16 @@ public:
                                   const std::vector<double> & to,
                                   double t) const;
 
+  /**
+   * @brief isNearSingular: returns true if joint_point results in robot config that
+   * is near a singularity configuration.
+   * @param joint_point(optional) - joint position of the robot to check
+   * If no joint point is provided current position is checked for singularity
+   * @throws <std::invalid_argument> (joint_group is not a chain)
+   */
+
+  bool isNearSingular(const std::vector<double> & joint_point = std::vector<double>() ) const;
+
 protected:
   Robot();
 
