@@ -529,4 +529,48 @@ TEST_F(DeveloperRobotTest, collision)
   EXPECT_THROW(robot2->execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
 }
 
+TEST(MoveitSimpleTest, Singularity)
+{
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
+  const std::string TRAJECTORY_NAME("traj1");
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
+  std::vector<double>joint1(6,0);
+  std::vector<double>joint2(6,0);
+  std::vector<double>joint3(6,0);
+  std::vector<double>joint4(6,0);
+  std::vector<double>joint5(6,0);
+
+  joint1[4] = M_PI/2;
+
+  joint2[4] = M_PI/60;
+
+  joint3[2] = -M_PI/2 + M_PI/90;
+  joint3[4] = M_PI/2;
+
+  joint4[1] = 3*M_PI/8 + M_PI/60;
+  joint4[2] = 5*M_PI/8 - M_PI/90;
+  joint4[4] = M_PI/2+M_PI/60;
+
+  joint5[1] = M_PI/4;
+  joint5[2] = -M_PI/2+M_PI/60;
+  joint5[4] = M_PI/60;
+
+
+  ROS_INFO_STREAM("joint1: " << joint1);
+  ROS_INFO_STREAM("joint2: " << joint2);
+  ROS_INFO_STREAM("joint3: " << joint3);
+  ROS_INFO_STREAM("joint4: " << joint4);
+  ROS_INFO_STREAM("joint5: " << joint5);
+
+  EXPECT_FALSE(robot.isNearSingular(joint1));
+  // Axes 4 and 6 aligned (wrist singularity)
+  EXPECT_TRUE(robot.isNearSingular(joint2));
+  // Elbow is straight (Elbow Singularity)
+  EXPECT_TRUE(robot.isNearSingular(joint3));
+  // Axes 1 and 6 are parallel (Alignment Singularity)
+  EXPECT_TRUE(robot.isNearSingular(joint4));
+  // Boundary Singularity (occurs because of elbow and wrist singularity)
+  EXPECT_TRUE(robot.isNearSingular(joint5));
+}
 }
