@@ -27,8 +27,7 @@ namespace moveit_simple
 
 
 Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
-             const std::string &group_name):
-  action_("joint_trajectory_action", true),
+                                         const std::string &group_name):
   tf_buffer_(),
   tf_listener_(tf_buffer_),
   nh_(nh)
@@ -38,27 +37,46 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader
                             (robot_description));
   robot_model_ptr_ = robot_model_loader_->getModel();
-  robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
-  robot_state_->setToDefaultValues();
+  virtual_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
+  virtual_robot_state_->setToDefaultValues();
   planning_scene_.reset(new planning_scene::PlanningScene(robot_model_ptr_));
   joint_group_ = robot_model_ptr_->getJointModelGroup(group_name);
-
-  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
-                        robot_model_ptr_->getRootLinkName(),
-                        nh_.getNamespace() + "/rviz_visual_tools",
-                        robot_model_ptr_));
-  visual_tools_->loadRobotStatePub(nh_.getNamespace() + "/display_robot_state");
-
   ROS_INFO_STREAM("Calculating all positions assuming, root: " << robot_model_ptr_->getRootLinkName()
                   << ", and tool: " << robot_model_ptr_->getLinkModelNames());
   ROS_INFO_STREAM("MoveIt object loaded");
+
+  virtual_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
+                        robot_model_ptr_->getRootLinkName(),
+                        nh_.getNamespace() + "/rviz_visual_tools",
+                        robot_model_ptr_));
+  virtual_visual_tools_->loadRobotStatePub(nh_.getNamespace()
+                                    + "/display_robot_state");
+  return;
+}
+
+
+OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
+               const std::string &robot_description,
+                      const std::string &group_name):
+  Robot(nh, robot_description, group_name),
+  action_("joint_trajectory_action", true)
+{
+  current_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
+  current_robot_state_->setToDefaultValues();
+
+  online_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
+                        robot_model_ptr_->getRootLinkName(),
+                        nh_.getNamespace() + "/rviz_visual_tools",
+                        robot_model_ptr_));
+  online_visual_tools_->loadRobotStatePub(nh_.getNamespace()
+                                   + "/display_robot_state");
 
   ROS_INFO_STREAM("Waiting for action servers");
   action_.waitForServer(ros::Duration(30.0));
   ROS_INFO_STREAM("Done waiting for action servers");
 
   ROS_INFO_STREAM("Loading ROS pubs/subs");
-  j_state_sub_ = nh_.subscribe("joint_states", 1, &Robot::updateState, this);
+  j_state_sub_ = nh_.subscribe("joint_states", 1, &OnlineRobot::updateCurrentState, this);
 
   //TODO: How to handle action server and other failures in the constructor
   // Perhaps move any items that can fail our of the constructor into an init
@@ -71,7 +89,6 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
 
   return;
 }
-
 
 
 void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
@@ -140,19 +157,19 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
 {
   ROS_INFO_STREAM("Looking up trajectory point: " << name);
 
-  if ( robot_state_->setToDefaultValues(joint_group_, name) )
+  if ( virtual_robot_state_->setToDefaultValues(joint_group_, name) )
   {
     ROS_INFO_STREAM("Looked up named joint target from robot model: " << name);
     std::vector<double> joint_point;
-    robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
+  virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     return std::unique_ptr<TrajectoryPoint>(new JointTrajectoryPoint(joint_point, time, name));
   }
 
   else if (robot_model_ptr_->hasLinkModel(name) )
   {
     ROS_INFO_STREAM("Looked up named cart target from robot model: " << name);
-    robot_state_->update();  //Updating state for frame tansform below
-    Eigen::Affine3d pose = robot_state_->getFrameTransform(name);
+  virtual_robot_state_->update();  //Updating state for frame tansform below
+    Eigen::Affine3d pose =  virtual_robot_state_->getFrameTransform(name);
     ROS_INFO_STREAM("Getting urdf/robot_state target: " << name << " frame: " << std::endl << pose.matrix());
     return std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose, time, name));
   }
@@ -197,7 +214,7 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
   if (seed.empty())
   {
     ROS_INFO_STREAM("Empty seed passed to getJointSolution, using current state");
-    robot_state_->copyJointGroupPositions(joint_group_->getName(), local_seed);
+    local_seed =  getJointState();
   }
   return getIK(pose, local_seed, joint_point, timeout);
 }
@@ -222,11 +239,10 @@ bool Robot::isInCollision(const std::vector<double> & joint_point) const
   if (joint_point.empty())
   {
     ROS_DEBUG_STREAM("Empty joint point passed to isIncollision, using current state");
-    // Should be current robot state. Will update after Issue#3
-    robot_state_->copyJointGroupPositions(joint_group_->getName(), local_joint_point);
+    local_joint_point = getJointState();
   }
-  robot_state_->setJointGroupPositions(joint_group_, local_joint_point);
-  bool inCollision = planning_scene_->isStateColliding(*robot_state_, joint_group_->getName());
+  virtual_robot_state_->setJointGroupPositions(joint_group_, local_joint_point);
+  bool inCollision = planning_scene_->isStateColliding(*virtual_robot_state_, joint_group_->getName());
   return inCollision;
 }
 
@@ -242,8 +258,8 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
     Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
     std::unique_ptr<TrajectoryPoint> point =
       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
-    robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
-    inCollision = planning_scene_->isStateColliding(*robot_state_, joint_group_->getName());
+  virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
+    inCollision = planning_scene_->isStateColliding(*virtual_robot_state_, joint_group_->getName());
   }
   catch (tf2::TransformException &ex)
   {
@@ -308,7 +324,7 @@ bool Robot::isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout
     if (joint_seed.empty())
     {
       ROS_DEBUG_STREAM("Empty seed passed to reach check, using current state");
-      robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
+  virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
 
     }
     std::unique_ptr<JointTrajectoryPoint> dummy =
@@ -337,7 +353,7 @@ void Robot::clearTrajectory(const::std::string traj_name)
 
 
 
-void Robot::execute(const std::string traj_name, bool collision_check)
+void OnlineRobot::execute(const std::string traj_name, bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -390,8 +406,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
   const TrajectoryInfo & traj_info = traj_info_map_[traj_name];
 
   // The first point in any trajectory is the current pose
-  std::vector<double> current_joint_position;
-  robot_state_->copyJointGroupPositions(joint_group_->getName(), current_joint_position);
+  std::vector<double> current_joint_position = getJointState();
   points.push_back(toJointTrajPtMsg(current_joint_position, 0.0));
 
   for(size_t i = 0; i < traj_info.size(); ++i)
@@ -434,9 +449,9 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_poi
   // create a local vector for storing interpolated points
   std::vector<trajectory_msgs::JointTrajectoryPoint> points_local;
   trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
-   std::vector<double> prev_point = prev_point_info.positions;
-   double prev_time = prev_point_info.time_from_start.toSec();
-   // Convert the previous point stored in points to Joint Trajectory Point
+  std::vector<double> prev_point = prev_point_info.positions;
+  double prev_time = prev_point_info.time_from_start.toSec();
+  // Convert the previous point stored in points to Joint Trajectory Point
   std::unique_ptr<JointTrajectoryPoint>prev_traj_point =
                                std::unique_ptr<JointTrajectoryPoint>
                                (new JointTrajectoryPoint(prev_point, prev_time, ""));
@@ -729,13 +744,12 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in,
 bool Robot::getFK(const std::vector<double> & joint_point,
                   Eigen::Affine3d &pose) const
 {
-  robot_state_->setJointGroupPositions(joint_group_, joint_point);
+  virtual_robot_state_->setJointGroupPositions(joint_group_, joint_point);
   const std::vector<std::string> link_names = joint_group_->getLinkModelNames();
-  const std::vector<std::string> active_joints = joint_group_->getActiveJointModelNames();
-  const int vc =  (int)robot_state_->getVariableCount();
-  if ( active_joints.size() == vc)
+  const int vc =  (int) virtual_robot_state_->getVariableCount();
+  if ( joint_point.size() == vc)
   {
-    pose = robot_state_->getFrameTransform(link_names.back());
+    pose = virtual_robot_state_->getFrameTransform(link_names.back());
     return true;
   }else{
     return false;
@@ -749,7 +763,7 @@ bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
                   std::vector<double> & joint_point,
                   double timeout, unsigned int attempts) const
 {
-  robot_state_->setJointGroupPositions(joint_group_, seed);
+  virtual_robot_state_->setJointGroupPositions(joint_group_, seed);
   return getIK(pose, joint_point, timeout, attempts);
 }
 
@@ -759,13 +773,10 @@ bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
 bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> & joint_point,
                   double timeout, unsigned int attempts) const
 {
-  if ( robot_state_->setFromIK(joint_group_, pose, attempts, timeout) )
+  if ( virtual_robot_state_->setFromIK(joint_group_, pose, attempts, timeout) )
   {
-    robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
-    visual_tools_->deleteAllMarkers();
-    robot_state_->update();
-    visual_tools_->publishRobotState(robot_state_, rviz_visual_tools::PURPLE);
-    visual_tools_->publishContactPoints(*robot_state_, &(*planning_scene_));
+  virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
+  virtual_robot_state_->update();
     ros::spinOnce();
     return true;
   }
@@ -846,13 +857,33 @@ trajectory_msgs::JointTrajectoryPoint Robot::toJointTrajPtMsg(
 
 
 
-
-void Robot::updateState(const sensor_msgs::JointStateConstPtr& msg)
+std::vector<double> Robot::getJointState(void) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
-  robot_state_->setVariablePositions(msg->name, msg->position);
+  ros::spinOnce();
+  std::vector<double> current_joint_positions;
+  virtual_robot_state_->update();
+  virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), current_joint_positions);
+  return current_joint_positions;
 }
 
+
+
+std::vector<double> OnlineRobot::getJointState(void) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  ros::spinOnce();
+  std::vector<double> current_joint_positions;
+  current_robot_state_->update();
+  current_robot_state_->copyJointGroupPositions(joint_group_->getName(), current_joint_positions);
+  return current_joint_positions;
+}
+
+
+void OnlineRobot::updateCurrentState(const sensor_msgs::JointStateConstPtr& msg)
+{
+  current_robot_state_->setVariablePositions(msg->name, msg->position);
+}
 
 std::unique_ptr<JointTrajectoryPoint> JointTrajectoryPoint::toJointTrajPoint(
         const Robot & robot,  double timeout, const std::vector<double> & seed) const

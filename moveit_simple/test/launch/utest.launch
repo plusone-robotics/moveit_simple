@@ -22,7 +22,8 @@
 
   <!-- Test Node -->
   <test test-name="utest" pkg="moveit_simple" type="moveit_simple_utest"
-  launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit="200.0" >
+  launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit = "200.0">
+
   </test>
   
 </launch>

@@ -50,6 +50,7 @@ class TrajectoryPoint;
 class JointTrajectoryPoint;
 class CartTrajectoryPoint;
 class Robot;
+class OnlineRobot;
 class ExecutionFailureException;
 class IKFailException;
 
@@ -77,15 +78,14 @@ typedef std::vector<TrajectoryPointInfo> TrajectoryInfo;
  - single arm manipulator (one joint group)
  - all cartesian poses are of the tool of the robot (could be fixed in the future)
  - point names are stored as joint positions in the SRDF or frame names in the URDF
- - motion is executed via a "JointTrajectoryAction" interface
  - frame transformations outside the URDF are provided by TF
 */
 class Robot
 {
 public:
-  Robot(const ros::NodeHandle & nh, const std::string &robot_description,
-        const std::string &group_name);
-  /**
+   Robot(const ros::NodeHandle & nh, const std::string &robot_description,
+                                     const std::string &group_name);
+   /**
    * @brief isInCollision  returns true if joint_point results in robot config that is
    * in collision with the environment as defined by the URDF.
    * @param joint_point(optional) - joint position of the robot to check
@@ -187,18 +187,6 @@ public:
   bool getPose(const std::vector<double> & joint_point,
              Eigen::Affine3d & pose) const;
 
-  /**
-   * @brief execute a given trajectory
-   * @param traj_name - name of trajectory to be executed (must be filled with
-   * prior calls to "addTrajPoint".
-   * @param collision_check - bool to turn check for collision on\off
-   * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
-   * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
-   * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
-   * @throws <moveit_simple::CollisionDetected> (One of interpolated point is 
-   * in Collision with itself or envieronment)
-   */
-  void execute(const std::string traj_name, bool collision_check = false);
   /**
    * @brief clearTrajectory - clears stored trajectory
    * @param traj_name - trajectory to clear
@@ -318,6 +306,13 @@ protected:
   bool isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout,
                    std::vector<double> joint_seed = std::vector<double>() ) const;
 
+  /**
+  * @brief getJointState - Returns a vector<double> of the
+  * robot position from updated from last IK call.
+  *
+  * @return std::vector<double> current_joint_position
+  */
+  virtual std::vector<double> getJointState(void) const;
 
   bool getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
              std::vector<double> & joint_point, double timeout=1,
@@ -337,24 +332,19 @@ protected:
   trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
       const JointTrajectoryPoint & joint_point) const;
 
-  void updateState(const sensor_msgs::JointStateConstPtr& msg);
-
-
   // Robot internal objects
   std::map<std::string, TrajectoryInfo> traj_info_map_;
 
   // MoveIt objects
-  mutable moveit::core::RobotStatePtr robot_state_;
+  mutable moveit::core::RobotStatePtr virtual_robot_state_; // for IK calls
   planning_scene::PlanningScenePtr planning_scene_;
   const moveit::core::JointModelGroup *joint_group_;
   robot_model::RobotModelConstPtr robot_model_ptr_;
   robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 
-  // Visualizations
-  moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
 
-  // Move robot action
-  actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> action_;
+  // Visualizations
+  moveit_visual_tools::MoveItVisualToolsPtr virtual_visual_tools_;
 
   // TF for looking up waypoints
   // TODO: Consider swapping out the listener for an action based lookup - much
@@ -364,9 +354,62 @@ protected:
 
   // ROS objects
   ros::NodeHandle nh_;
-  ros::Subscriber j_state_sub_;
   mutable std::recursive_mutex m_;
 
+};
+
+
+
+
+/**
+ * @brief OnlineRobot is a wrapper around standard MoveIt objects.
+ It inherits from Robot. Added assumption:
+ - motion is executed via a "JointTrajectoryAction" interface
+*/
+
+class OnlineRobot : public Robot
+{
+public:
+  OnlineRobot(const ros::NodeHandle & nh, const std::string &robot_description,
+        const std::string &group_name);
+
+  /**
+   * @brief execute a given trajectory
+   * @param traj_name - name of trajectory to be executed (must be filled with
+   * prior calls to "addTrajPoint".
+   * @param collision_check - bool to turn check for collision on\off
+   * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
+   * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
+   * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
+   * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
+   * in Collision with itself or environment)
+   */
+  void execute(const std::string traj_name, bool collision_check = false);
+
+
+  /**
+  * @brief getJointState - Returns a vector<double> of the
+  * current joint positions of the robot from current_robot_state_.
+  *
+  * @return std::vector<double> current_joint_position
+  */
+  virtual std::vector<double> getJointState(void) const;
+
+protected:
+  OnlineRobot();
+
+  void updateCurrentState(const sensor_msgs::JointStateConstPtr& msg);
+  mutable moveit::core::RobotStatePtr current_robot_state_;
+
+
+  // Visualizations
+  moveit_visual_tools::MoveItVisualToolsPtr online_visual_tools_;
+
+  // Move robot action
+  actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> action_;
+
+  // ROS objects
+  ros::Subscriber j_state_sub_;
 };
 
 
