@@ -798,13 +798,12 @@ bool Robot::isNearSingular(const std::vector<double> & joint_point) const
   if (joint_point.empty())
   {
     ROS_DEBUG_STREAM("Empty joint point passed to isNearSingular, using current state");
-    //  local_joint_point = getJointState(); // Update after PR#21
-    robot_state_->copyJointGroupPositions(joint_group_->getName(), local_joint_point);
+    local_joint_point = getJointState();
   }
-  robot_state_->setJointGroupPositions(joint_group_, local_joint_point);
+  virtual_robot_state_->setJointGroupPositions(joint_group_, local_joint_point);
 
   Eigen::MatrixXd jacobian;
-  if (robot_state_->getJacobian(joint_group_, joint_group_->getLinkModels().back(),
+  if (virtual_robot_state_->getJacobian(joint_group_, joint_group_->getLinkModels().back(),
                                   reference_point, jacobian, false))
   {
     ROS_INFO_STREAM("jacobian" << jacobian.matrix());
