@@ -41,8 +41,6 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <sensor_msgs/JointState.h>
 
-
-
 namespace moveit_simple
 {
 
@@ -177,6 +175,27 @@ public:
   bool getJointSolution(const Eigen::Affine3d & pose, double timeout,
                         const std::vector<double> & seed,
                         std::vector<double> & joint_point) const;
+
+  /**
+   * @brief getJointSolution returns joint solution for cartesian pose.
+   * @param pose - desired pose
+   * @param custom_tool_frame - custom frame id
+   * @param timeout - ik solver timeout
+   * @param attempts - number of IK solve attem
+   * @param seed - ik seed
+   * @param joint_point - joint solution for pose
+   * @return true if joint solution found
+   */
+  bool getJointSolution(const Eigen::Affine3d &pose, const std::string& custom_tool_frame,
+                        double timeout, const std::vector<double> & seed,
+                        std::vector<double> & joint_point) const;
+
+  /**
+   * @brief customToolFrameTF transforms custom frame to moveit_end_link.
+   * @param frame - custom frame id
+   */
+  Eigen::Affine3d customToolFrameTF(const Eigen::Affine3d &target_pose, 
+                                    const std::string& frame) const;
 
   /**
    * @brief getPose finds cartesian pose for the given joint positions.
@@ -323,6 +342,7 @@ protected:
   bool getFK(const std::vector<double> & joint_point,
                                Eigen::Affine3d &pose) const;
 
+  /*Lookup Trajectory Point in the Robot Model*/
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & name,
                                                               double time) const;
 

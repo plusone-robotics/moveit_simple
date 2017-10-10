@@ -152,6 +152,7 @@ void Robot::addTrajPoint(const std::string & traj_name,
   traj_info_map_[traj_name].push_back({std::move(point), type, num_steps});
 }
 
+/*Lookup Trajectory Point in the Robot Model*/
 std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string & name,
                                                             double time) const
 {
@@ -168,7 +169,7 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
   else if (robot_model_ptr_->hasLinkModel(name) )
   {
     ROS_INFO_STREAM("Looked up named cart target from robot model: " << name);
-  virtual_robot_state_->update();  //Updating state for frame tansform below
+  	virtual_robot_state_->update();  //Updating state for frame tansform below
     Eigen::Affine3d pose =  virtual_robot_state_->getFrameTransform(name);
     ROS_INFO_STREAM("Getting urdf/robot_state target: " << name << " frame: " << std::endl << pose.matrix());
     return std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose, time, name));
@@ -202,8 +203,6 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
 }
 
 
-
-
 bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
                              const std::vector<double> & seed,
                              std::vector<double> & joint_point) const
@@ -219,9 +218,67 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
   return getIK(pose, local_seed, joint_point, timeout);
 }
 
+/*ISSUE #20 -- CUSTOM TOOL FRAME FOR SOLVING IK*/
+bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& custom_tool_frame,
+							 double timeout, const std::vector<double> & seed,
+                             std::vector<double> & joint_point) const
+{
+
+  /*Transform Target/Goal Point from custom tool frame to moveit_end_link*/
+  const Eigen::Affine3d custom_frame_goal_pose = customToolFrameTF(pose, custom_tool_frame);
+
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::vector<double> local_seed = seed;
+  if (seed.empty())
+  {
+    ROS_INFO_STREAM("Empty seed passed to getJointSolution, using current state");
+    local_seed =  getJointState();
+  }
+  return getIK(custom_frame_goal_pose, local_seed, joint_point, timeout);
+}
+
+Eigen::Affine3d Robot::customToolFrameTF(const Eigen::Affine3d &target_pose,
+										 const std::string& custom_tool_frame) const
+{
+  
+  if(custom_tool_frame.compare(robot_model_ptr_->getRootLinkName()) == 0)	{
+  		ROS_INFO_STREAM("Custom Tool Frame is same as moveit end_link");
+
+  		return target_pose;
+  	}
+
+  if (robot_model_ptr_->hasLinkModel(custom_tool_frame) )	{
+  	
+  	if( tf_buffer_.canTransform(robot_model_ptr_->getRootLinkName(), custom_tool_frame, ros::Time::now(), ros::Duration(0.1)) )	{
+  		try
+    	{
+      		ROS_INFO_STREAM("Looked up tf named frame: " << custom_tool_frame);
+
+      		geometry_msgs::TransformStamped trans_msg;
+      		Eigen::Affine3d pose_buffer = target_pose;
+      		trans_msg = tf_buffer_.lookupTransform(robot_model_ptr_->getRootLinkName(), 
+      											   custom_tool_frame, ros::Time::now(), 
+      											   ros::Duration(5.0));
+      		
+      		tf::transformMsgToEigen(trans_msg.transform, pose_buffer);
+      		ROS_INFO_STREAM("Using TF to lookup transform " << custom_tool_frame << " frame: " << std::endl << pose_buffer.matrix());
+      		
+      		return pose_buffer;
+    	}
+    	catch (tf2::TransformException &ex)
+    	{
+      		ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
+      		throw ex;
+    	}
+  	} 	
+  }
+}
+
+/*------------------------------------------------------------------------------------------------------------------------------*/
 
 bool Robot::getPose(const std::vector<double> & joint_point,
-                                  Eigen::Affine3d & pose) const
+                                   Eigen::Affine3d & pose) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
