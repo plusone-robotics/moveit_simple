@@ -227,7 +227,8 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
 {
 
   /*Transform Target/Goal Point from custom tool frame to moveit_end_link*/
-  const Eigen::Affine3d custom_frame_goal_pose = customToolFrameTF(pose, custom_tool_frame);
+  const Eigen::Affine3d custom_frame_goal_pose = 
+                        transformToolToEndLink(pose, custom_tool_frame);
 
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -241,42 +242,40 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
 }
 
 /* Returns the goal pose transformed to moveit_end_link from Custom tool frame*/
-Eigen::Affine3d Robot::customToolFrameTF(const Eigen::Affine3d &target_pose,
-                                         const std::string& custom_tool_frame) const
+Eigen::Affine3d Robot::transformToolToEndLink(const Eigen::Affine3d &target_pose,
+                                              const std::string& custom_tool_frame) const
 {
   
-  if(custom_tool_frame.compare(joint_group_->getEndEffectorName()) == 0) {
+  if(custom_tool_frame.compare(joint_group_->getEndEffectorName()) == 0 &&
+     robot_model_ptr_->hasLinkModel(custom_tool_frame)) {
+
       ROS_INFO_STREAM("Custom Tool Frame is same as moveit end_link");
 
       return target_pose;
     }
 
-  // This condition only holds if our tool_frame is under the same 'robot_description'
-  // if (robot_model_ptr_->hasLinkModel(custom_tool_frame) ) {
-    
-    if( tf_buffer_.canTransform(joint_group_->getEndEffectorName(), custom_tool_frame, ros::Time::now(), ros::Duration(0.1)) ) {
-      try
-      {
-          ROS_INFO_STREAM("Looked up tf named frame: " << custom_tool_frame);
+  if( tf_buffer_.canTransform(joint_group_->getEndEffectorName(), custom_tool_frame, ros::Time::now(), ros::Duration(0.1)) ) {
+    try
+    {
+        ROS_INFO_STREAM("Looked up tf named frame: " << custom_tool_frame);
 
-          geometry_msgs::TransformStamped trans_msg;
-          Eigen::Affine3d pose_buffer = target_pose;
-          trans_msg = tf_buffer_.lookupTransform(joint_group_->getEndEffectorName(), 
-                                                 custom_tool_frame, ros::Time::now(), 
-                                                 ros::Duration(5.0));
+        geometry_msgs::TransformStamped trans_msg;
+        Eigen::Affine3d pose_buffer = target_pose;
+        trans_msg = tf_buffer_.lookupTransform(joint_group_->getEndEffectorName(), 
+                                               custom_tool_frame, ros::Time::now(), 
+                                               ros::Duration(5.0));
           
-          tf::transformMsgToEigen(trans_msg.transform, pose_buffer);
-          ROS_INFO_STREAM("Using TF to lookup transform " << custom_tool_frame << " frame: " << std::endl << pose_buffer.matrix());
+        tf::transformMsgToEigen(trans_msg.transform, pose_buffer);
+        ROS_INFO_STREAM("Using TF to lookup transform " << custom_tool_frame << " frame: " << std::endl << pose_buffer.matrix());
           
-          return pose_buffer;
-      }
-      catch (tf2::TransformException &ex)
-      {
-          ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
-          throw ex;
-      }
-    }   
-  //}
+        return pose_buffer;
+    }
+    catch (tf2::TransformException &ex)
+    {
+        ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
+        throw ex;
+    }
+  }   
 }
 
 /*------------------------------------------------------------------------------------------------------------------------------*/

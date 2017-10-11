@@ -192,14 +192,6 @@ public:
                         std::vector<double> & joint_point) const;
 
   /**
-   * @brief customToolFrameTF transforms custom frame to moveit_end_link.
-   * @param target_pose - goal pose for IK 
-   * @param frame - custom frame id
-   */
-  Eigen::Affine3d customToolFrameTF(const Eigen::Affine3d &target_pose, 
-                                    const std::string& frame) const;
-
-  /**
    * @brief getPose finds cartesian pose for the given joint positions.
    * @param joint_point - joint positions
    * @param pose - pose corresponding to joint_pose
@@ -261,6 +253,14 @@ protected:
 
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in,
                                          const std::string &in_frame) const;
+
+    /**
+   * @brief customToolFrameTF transforms custom frame to moveit_end_link.
+   * @param target_pose - goal pose for IK 
+   * @param frame - custom frame id
+   */
+  Eigen::Affine3d transformToolToEndLink(const Eigen::Affine3d &target_pose, 
+                                         const std::string& frame) const;
 
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
