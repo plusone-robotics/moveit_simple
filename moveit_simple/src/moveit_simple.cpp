@@ -245,24 +245,25 @@ Eigen::Affine3d Robot::customToolFrameTF(const Eigen::Affine3d &target_pose,
                                          const std::string& custom_tool_frame) const
 {
   
-  if(custom_tool_frame.compare(robot_model_ptr_->getRootLinkName()) == 0) {
+  if(custom_tool_frame.compare(joint_group_->getEndEffectorName()) == 0) {
       ROS_INFO_STREAM("Custom Tool Frame is same as moveit end_link");
 
       return target_pose;
     }
 
-  if (robot_model_ptr_->hasLinkModel(custom_tool_frame) ) {
+  // This condition only holds if our tool_frame is under the same 'robot_description'
+  // if (robot_model_ptr_->hasLinkModel(custom_tool_frame) ) {
     
-    if( tf_buffer_.canTransform(robot_model_ptr_->getRootLinkName(), custom_tool_frame, ros::Time::now(), ros::Duration(0.1)) ) {
+    if( tf_buffer_.canTransform(joint_group_->getEndEffectorName(), custom_tool_frame, ros::Time::now(), ros::Duration(0.1)) ) {
       try
       {
           ROS_INFO_STREAM("Looked up tf named frame: " << custom_tool_frame);
 
           geometry_msgs::TransformStamped trans_msg;
           Eigen::Affine3d pose_buffer = target_pose;
-          trans_msg = tf_buffer_.lookupTransform(robot_model_ptr_->getRootLinkName(), 
-                               custom_tool_frame, ros::Time::now(), 
-                               ros::Duration(5.0));
+          trans_msg = tf_buffer_.lookupTransform(joint_group_->getEndEffectorName(), 
+                                                 custom_tool_frame, ros::Time::now(), 
+                                                 ros::Duration(5.0));
           
           tf::transformMsgToEigen(trans_msg.transform, pose_buffer);
           ROS_INFO_STREAM("Using TF to lookup transform " << custom_tool_frame << " frame: " << std::endl << pose_buffer.matrix());
@@ -275,7 +276,7 @@ Eigen::Affine3d Robot::customToolFrameTF(const Eigen::Affine3d &target_pose,
           throw ex;
       }
     }   
-  }
+  //}
 }
 
 /*------------------------------------------------------------------------------------------------------------------------------*/
