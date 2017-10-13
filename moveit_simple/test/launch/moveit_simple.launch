@@ -8,6 +8,9 @@
   <!-- URDF file (including path) -->
   <arg name="urdf_file" default="$(find moveit_simple)/test/resources/kuka_kr210/kr210l150.urdf"/>
 
+  <!-- URDF file for Custom Tool  -->
+  <arg name="urdf_file_custom_tool" default="$(find moveit_simple)/test/resources/kuka_kr210/kuka_custom_tool.urdf"/>
+
   <!-- Launch test node -->
   <arg name="run_test_node" default="true"/>
 
@@ -31,6 +34,13 @@
   <node name="joint_trajectory_action" type="joint_trajectory_action" pkg="industrial_robot_client"/>
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
   <node name="robot_simulator" pkg="industrial_robot_simulator" type="industrial_robot_simulator"/>
+
+  <!-- Load up Custom Tool Frame from URDF and pubish it to TF -->
+  <group ns="tool_frame">
+    <!-- Load universal robot description format (URDF) for Custom Tool -->
+    <param name="$(arg robot_description)" textfile="$(arg urdf_file_custom_tool)"/>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+  </group>
 
   <!-- Static tranform publisher for testing tf lookup -->
   <node name="tf_pub1" type="static_transform_publisher" pkg="tf" args="1.9 0 2.2 0 -0.5 0 base_link tf_pub1 100"/>
