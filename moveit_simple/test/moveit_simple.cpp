@@ -453,6 +453,57 @@ TEST_F(UserRobotTest, kinematics)
 }
 
 
+TEST_F(UserRobotTest, custom_tool_link)
+{
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
+  Eigen::Affine3d pose1;
+  Eigen::Affine3d pose2;
+  Eigen::Affine3d pose3;
+  std::vector<double> joint_point1(6,M_PI/6);
+  std::vector<double> joint_point2;
+  std::vector<double> joint_point3;
+  std::vector<double> joint_point4;
+  std::vector<double> seed = joint_point1;
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
+  std::string custom_tool_frame = "tool_custom";
+  EXPECT_TRUE(robot->getPose(joint_point1, pose1));
+  EXPECT_TRUE(robot->getJointSolution(pose1, custom_tool_frame, 3.0, seed, joint_point2));
+  EXPECT_TRUE(robot->getPose(joint_point2, pose2));
+  EXPECT_TRUE(robot->getJointSolution(pose2, custom_tool_frame, 3.0, seed, joint_point3));
+  EXPECT_TRUE(robot->getPose(joint_point3, pose3));
+  EXPECT_FALSE(robot->getJointSolution(pose, custom_tool_frame, 3.0, seed, joint_point3));
+
+  // Check for error in getJointSolution
+  ROS_INFO_STREAM(" joint_point1: " << joint_point1);
+  ROS_INFO_STREAM(" joint_point2: " << joint_point2);
+  ROS_INFO_STREAM(" joint_point3: " << joint_point3);
+
+  double error_joint1 = 0.0;
+  for (std::size_t i = 0; i < joint_point1.size(); ++i)
+  {
+    error_joint1 += fabs(joint_point1[i] - joint_point2[i]);
+  }
+  EXPECT_NEAR(error_joint1, 0.0, 1e-2);
+
+  double error_joint2 = 0.0;
+  for (std::size_t i = 0; i < joint_point1.size(); ++i)
+  {
+    error_joint2 += fabs(joint_point1[i] - joint_point3[i]);
+  }
+  EXPECT_NEAR(error_joint2, 0.0, 1e-2);
+
+  // Check for error in getPose
+  ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
+  ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
+  ROS_INFO_STREAM(" pose3: " << std::endl << pose3.matrix());
+
+  EXPECT_TRUE(pose1.isApprox(pose2,1e-3));
+  EXPECT_TRUE(pose1.isApprox(pose3,1e-3));
+
+}
+
+
 TEST_F(UserRobotTest, copy_current_pose)
 {
   const std::string TRAJECTORY_NAME("traj1");

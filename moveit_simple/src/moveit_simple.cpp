@@ -238,44 +238,60 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
     ROS_INFO_STREAM("Empty seed passed to getJointSolution, using current state");
     local_seed =  getJointState();
   }
+
   return getIK(custom_frame_goal_pose, local_seed, joint_point, timeout);
 }
+
 
 /* Returns the goal pose transformed to moveit_end_link from Custom tool frame*/
 Eigen::Affine3d Robot::transformToolToEndLink(const Eigen::Affine3d &target_pose,
                                               const std::string& custom_tool_frame) const
 {
   
-  if(custom_tool_frame.compare(joint_group_->getEndEffectorName()) == 0 &&
-     robot_model_ptr_->hasLinkModel(custom_tool_frame)) {
+  if(custom_tool_frame.compare(joint_group_->getEndEffectorName()) == 0 && 
+    robot_model_ptr_->hasLinkModel(custom_tool_frame)) {
 
-      ROS_INFO_STREAM("Custom Tool Frame is same as moveit end_link");
+      ROS_INFO_STREAM("Returning same target_pose");
 
       return target_pose;
-    }
+  }
 
-  if( tf_buffer_.canTransform(joint_group_->getEndEffectorName(), custom_tool_frame, ros::Time::now(), ros::Duration(0.1)) ) {
+  //if( tf_buffer_.canTransform(joint_group_->getEndEffectorName(), ros::Time::now(), ros::Duration(0.1)) ) {
     try
     {
         ROS_INFO_STREAM("Looked up tf named frame: " << custom_tool_frame);
 
+        /*Create buffers for holding Pose and transforms*/
+        geometry_msgs::PoseStamped pose_stamped_buffer;
+        geometry_msgs::PoseStamped transformed_pose;
         geometry_msgs::TransformStamped trans_msg;
-        Eigen::Affine3d pose_buffer = target_pose;
-        trans_msg = tf_buffer_.lookupTransform(joint_group_->getEndEffectorName(), 
-                                               custom_tool_frame, ros::Time::now(), 
+        Eigen::Affine3d target_pose_buffer = target_pose;
+
+        /*Calculate the transforms from custom tool to moveit_end_link*/
+        trans_msg = tf_buffer_.lookupTransform("tool0",
+                                               custom_tool_frame, 
+                                               ros::Time::now(), 
                                                ros::Duration(5.0));
-          
-        tf::transformMsgToEigen(trans_msg.transform, pose_buffer);
-        ROS_INFO_STREAM("Using TF to lookup transform " << custom_tool_frame << " frame: " << std::endl << pose_buffer.matrix());
-          
-        return pose_buffer;
+
+        /*Load up the Pose stamp headers from the the above transforms*/
+        /*Convert an Eigen transform into a geometry_msgs::Pose message*/
+        pose_stamped_buffer.header = trans_msg.header;
+        tf::poseEigenToMsg(target_pose, pose_stamped_buffer.pose);
+        
+        /*Transform the target pose from custom frame to moveit_end_link frame*/
+        tf2::doTransform(pose_stamped_buffer, transformed_pose, trans_msg);
+
+        /*Convert a Pose message into an Eigen Transform*/
+        tf::poseMsgToEigen(transformed_pose.pose, target_pose_buffer);
+
+        return target_pose_buffer;
     }
     catch (tf2::TransformException &ex)
     {
         ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
         throw ex;
     }
-  }   
+  //}  
 }
 
 /*------------------------------------------------------------------------------------------------------------------------------*/

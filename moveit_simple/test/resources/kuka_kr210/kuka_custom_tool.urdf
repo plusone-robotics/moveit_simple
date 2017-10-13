@@ -1,0 +1,43 @@
+<?xml version="1.0" ?>
+<robot name="kuka_custom_tool" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <link name="tool0"/>
+
+  <link name="tool_custom"/>
+  
+  <joint name="tool0-tool_custom" type="fixed">
+    <parent link="tool0"/>
+    <child link="tool_custom"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+  </joint>
+
+  <!-- Adding some waypoints for testing purposes -->
+  <!-- link name="waypoint1"/>
+  <joint name="base-waypoint1" type="fixed">
+    <parent link="base_link"/>
+    <child link="waypoint1"/>
+    <origin xyz="1.904 0.000 2.762" rpy="0.000 -0.488 0.000"/>
+  </joint>
+
+  <link name="waypoint2"/>
+  <joint name="base-waypoint2" type="fixed">
+    <parent link="base_link"/>
+    <child link="waypoint2"/>
+    <origin xyz="-0.592 -0.000 3.452" rpy="3.142 -0.964 3.142"/>
+  </joint>
+
+  <link name="waypoint3"/>
+  <joint name="base-waypoint3" type="fixed">
+    <parent link="base_link"/>
+    <child link="waypoint3"/>
+    <origin xyz="0.699 1.962 1.945" rpy="0.000 0.000 1.228"/>
+  </joint>
+
+  <link name="waypoint4"/>
+  <joint name="base-waypoint4" type="fixed">
+    <parent link="base_link"/>
+    <child link="waypoint4"/>
+    <origin xyz="3.0 3.0 0" rpy="0.000 0.000 0.000"/>
+  </joint -->
+
+</robot>
