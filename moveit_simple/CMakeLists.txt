@@ -18,7 +18,8 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Boost REQUIRED)
-find_package(Eigen REQUIRED)
+find_package(Eigen3 REQUIRED)
+# find_package(Eigen REQUIRED) --> FindEigen.cmake Module has been depricated in Kinetic, please use FindEigen3.cmake Module [find_package(Eigen3)]
 
 catkin_package(
   INCLUDE_DIRS
@@ -28,6 +29,7 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     geometry_msgs
+    tf2_geometry_msgs
     eigen_conversions
     tf2
     tf2_ros
