@@ -152,7 +152,6 @@ void Robot::addTrajPoint(const std::string & traj_name,
   traj_info_map_[traj_name].push_back({std::move(point), type, num_steps});
 }
 
-/*Lookup Trajectory Point in the Robot Model*/
 std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string & name,
                                                             double time) const
 {
@@ -218,17 +217,18 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
   return getIK(pose, local_seed, joint_point, timeout);
 }
 
-/*------------------------------------------------------------------------------------------------------------------------------*/
-
-/*ISSUE #20 -- getJointSolution() WITH CUSTOM TOOL FRAME FOR SOLVING IK*/
 bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& custom_tool_frame,
                              double timeout, const std::vector<double> & seed,
                              std::vector<double> & joint_point) const
 {
 
-  /*Transform Target/Goal Point from custom tool frame to moveit_end_link*/
+  // Ideally "tool0" should be replaced with joint_group_->getEndEffectorName()
+  std::string moveit_tool_link = "tool0";
+
+  // Transform Target/Goal Point from custom tool frame to moveit_end_link
   const Eigen::Affine3d custom_frame_goal_pose = 
-                        transformToolToEndLink(pose, custom_tool_frame);
+                        transformPoseBetweenFrames(pose, custom_tool_frame, 
+                                                   moveit_tool_link);
 
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -243,13 +243,14 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
 }
 
 
-/* Returns the goal pose transformed to moveit_end_link from Custom tool frame*/
-Eigen::Affine3d Robot::transformToolToEndLink(const Eigen::Affine3d &target_pose,
-                                              const std::string& custom_tool_frame) const
+Eigen::Affine3d Robot::transformPoseBetweenFrames(const Eigen::Affine3d &target_pose,
+                                              const std::string& frame_in,
+                                              const std::string& frame_out) const
 {
-  
-  if(custom_tool_frame.compare(joint_group_->getEndEffectorName()) == 0 && 
-    robot_model_ptr_->hasLinkModel(custom_tool_frame)) {
+
+  if(frame_in.compare(frame_out) == 0 && 
+    robot_model_ptr_->hasLinkModel(frame_in) &&
+    robot_model_ptr_->hasLinkModel(frame_out)) {
 
       ROS_INFO_STREAM("Returning same target_pose");
 
@@ -259,30 +260,26 @@ Eigen::Affine3d Robot::transformToolToEndLink(const Eigen::Affine3d &target_pose
   //if( tf_buffer_.canTransform(joint_group_->getEndEffectorName(), ros::Time::now(), ros::Duration(0.1)) ) {
     try
     {
-        ROS_INFO_STREAM("Looked up tf named frame: " << custom_tool_frame);
+        ROS_INFO_STREAM("Looked up tf named frame: " << frame_in);
 
-        /*Create buffers for holding Pose and transforms*/
         geometry_msgs::PoseStamped pose_stamped_buffer;
         geometry_msgs::PoseStamped transformed_pose;
         geometry_msgs::TransformStamped trans_msg;
         Eigen::Affine3d target_pose_buffer = target_pose;
 
-        /*Calculate the transforms from custom tool to moveit_end_link*/
-        trans_msg = tf_buffer_.lookupTransform("tool0",
-                                               custom_tool_frame, 
+        trans_msg = tf_buffer_.lookupTransform(frame_out,
+                                               frame_in, 
                                                ros::Time::now(), 
                                                ros::Duration(5.0));
 
-        /*Load up the Pose stamp headers from the the above transforms*/
-        /*Convert an Eigen transform into a geometry_msgs::Pose message*/
         pose_stamped_buffer.header = trans_msg.header;
         tf::poseEigenToMsg(target_pose, pose_stamped_buffer.pose);
         
-        /*Transform the target pose from custom frame to moveit_end_link frame*/
         tf2::doTransform(pose_stamped_buffer, transformed_pose, trans_msg);
 
-        /*Convert a Pose message into an Eigen Transform*/
         tf::poseMsgToEigen(transformed_pose.pose, target_pose_buffer);
+
+        ROS_INFO_STREAM("Using TF to lookup transform " << frame_out << " frame: " << std::endl << target_pose_buffer.matrix());
 
         return target_pose_buffer;
     }
@@ -294,16 +291,40 @@ Eigen::Affine3d Robot::transformToolToEndLink(const Eigen::Affine3d &target_pose
   //}  
 }
 
-/*------------------------------------------------------------------------------------------------------------------------------*/
 
 bool Robot::getPose(const std::vector<double> & joint_point,
-                                   Eigen::Affine3d & pose) const
+                    Eigen::Affine3d & pose) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   return getFK(joint_point, pose);
 }
 
+
+bool Robot::getPose(const std::vector<double> & joint_point,
+                    const std::string& custom_tool_frame,
+                    Eigen::Affine3d & pose) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  
+  Eigen::Affine3d pose_buffer;
+
+  // Ideally "tool0" should be replaced with joint_group_->getEndEffectorName()
+  std::string moveit_tool_link = "tool0";
+
+  if(getFK(joint_point, pose_buffer) == true)  
+  {
+    // Transform Target/Goal Point from moveit_end_link to custom tool frame
+    pose = transformPoseBetweenFrames(pose_buffer, moveit_tool_link, 
+                                      custom_tool_frame);
+
+    return true;
+  }                        
+  else  
+  {
+    return false;  
+  }
+}
 
 
 bool Robot::isInCollision(const std::vector<double> & joint_point) const
