@@ -467,11 +467,11 @@ TEST_F(UserRobotTest, custom_tool_link)
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
   std::string custom_tool_frame = "tool_custom";
-  EXPECT_TRUE(robot->getPose(joint_point1, pose1));
+  EXPECT_TRUE(robot->getPose(joint_point1, custom_tool_frame, pose1));
   EXPECT_TRUE(robot->getJointSolution(pose1, custom_tool_frame, 3.0, seed, joint_point2));
-  EXPECT_TRUE(robot->getPose(joint_point2, pose2));
+  EXPECT_TRUE(robot->getPose(joint_point2, custom_tool_frame, pose2));
   EXPECT_TRUE(robot->getJointSolution(pose2, custom_tool_frame, 3.0, seed, joint_point3));
-  EXPECT_TRUE(robot->getPose(joint_point3, pose3));
+  EXPECT_TRUE(robot->getPose(joint_point3, custom_tool_frame, pose3));
   EXPECT_FALSE(robot->getJointSolution(pose, custom_tool_frame, 3.0, seed, joint_point3));
 
   // Check for error in getJointSolution

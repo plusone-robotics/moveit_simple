@@ -202,6 +202,17 @@ public:
              Eigen::Affine3d & pose) const;
 
   /**
+   * @brief getPose finds cartesian pose for the given joint positions.
+   * @param joint_point - joint positions
+   * @param pose - pose corresponding to joint_pose
+   * @param custom_tool_frame - custom frame id
+   * @return true if pose is found
+   */
+  bool getPose(const std::vector<double> & joint_point,
+             const std::string& custom_tool_frame,
+             Eigen::Affine3d & pose) const;
+
+  /**
    * @brief clearTrajectory - clears stored trajectory
    * @param traj_name - trajectory to clear
    */
@@ -258,10 +269,13 @@ protected:
     /**
    * @brief customToolFrameTF transforms custom frame to moveit_end_link.
    * @param target_pose - goal pose for IK 
-   * @param frame - custom frame id
+   * @param frame_in - Current Frame of Reference as Input
+   * @param frame_out - Target Frame of Reference for Transform
+   * @param
    */
-  Eigen::Affine3d transformToolToEndLink(const Eigen::Affine3d &target_pose, 
-                                         const std::string& frame) const;
+  Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose, 
+                                         const std::string& frame_in,
+                                         const std::string& frame_out) const;
 
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
@@ -345,7 +359,6 @@ protected:
   bool getFK(const std::vector<double> & joint_point,
                                Eigen::Affine3d &pose) const;
 
-  /*Lookup Trajectory Point in the Robot Model*/
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & name,
                                                               double time) const;
 
