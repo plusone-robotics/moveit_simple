@@ -164,6 +164,44 @@ public:
                     const unsigned int num_steps = 0,
                     const std::string & point_name = std::string());
 
+
+  /**
+   * @brief addTrajPoint - add point to trajectory
+   * @param traj_name - name of trajectory buffer to add point to
+   * @param point_name - name of point to add
+   * @param time - time from start of trajectory to reach point
+   * @param type - Type of interpolation from last point to this point
+   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * @param num_steps - number of points to be interpolated
+   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * @throws <std::invalid_argument> (point_name is not found)
+   * @throws <tf2::TransformException> (transform of TF named point_name fails)
+   */
+  void addTrajPoint(const std::string & traj_name, const std::string & point_name,
+                    const std::string & custom_tool_frame, 
+                    double time, const InterpolationType & type = interpolation_type::JOINT,
+                    const unsigned int num_steps = 0);
+  /**
+   * @brief Add trajectory point to motion buffer
+   *
+   * @param traj_name - name of trajectory buffer to add point to
+   * @param pose - pose of point to add
+   * @param frame - frame (must be a TF accessible frame) in which pose is defined
+   * @param time - time from start of trajectory to reach point
+   * @param type - Type of interpolation from last point to this point
+   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * @param num_steps - number of points to be interpolated
+   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * @param point_name - (optional) name of point (used in log messages)
+   * @throws <tf2::TransformException> (Transform from frame to robot base failed)
+  */
+  void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
+                    const std::string & pose_frame, const std::string & custom_tool_frame, 
+                    double time, const InterpolationType & type = interpolation_type::JOINT,
+                    const unsigned int num_steps = 0,
+                    const std::string & point_name = std::string());
+
+
   /**
    * @brief getJointSolution returns joint solution for cartesian pose.
    * @param pose - desired pose
@@ -360,7 +398,12 @@ protected:
                                Eigen::Affine3d &pose) const;
 
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & name,
-                                                              double time) const;
+                                                         double time) const;
+
+  std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & traj_name,
+                                                         const std::string & name,
+                                                         const std::string & custom_tool_frame, 
+                                                         double time) const;
 
   bool isConfigChange(const std::vector<double> jp1,
                       const std::vector<double> jp2) const;

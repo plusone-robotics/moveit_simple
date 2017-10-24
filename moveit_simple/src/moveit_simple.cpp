@@ -117,6 +117,75 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
 }
 
 
+/*EDITING THIS SECTION*/
+void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
+                         const std::string & pose_frame, const std::string & custom_tool_frame,  
+                         double time, const InterpolationType & type, const unsigned int num_steps,
+                         const std::string & point_name)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
+
+  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << 
+                  " relative to " << pose_frame << " at time " << time << 
+                  " and custom_tool_frame [" << custom_tool_frame << "]");
+  
+    geometry_msgs::Pose pose_buffer;
+    tf::poseEigenToMsg(pose, pose_buffer);
+
+    ROS_ERROR_STREAM("*********");
+    ROS_ERROR_STREAM("x: " << pose_buffer.position.x);
+    ROS_ERROR_STREAM("y: " << pose_buffer.position.y);
+    ROS_ERROR_STREAM("z: " << pose_buffer.position.z);
+    ROS_ERROR_STREAM("---------");
+    ROS_ERROR_STREAM("w: " << pose_buffer.orientation.w);
+    ROS_ERROR_STREAM("x: " << pose_buffer.orientation.x);
+    ROS_ERROR_STREAM("y: " << pose_buffer.orientation.y);
+    ROS_ERROR_STREAM("z: " << pose_buffer.orientation.z);
+
+  try
+  {
+      ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" << 
+                         custom_tool_frame << "] to moveit_end_link [" << 
+                         moveit_tool_link << "]");
+
+      const Eigen::Affine3d target_pose_buffer = 
+                               transformPoseBetweenFrames(pose, moveit_tool_link,
+                                                          custom_tool_frame);
+
+    
+
+      Eigen::Affine3d pose_rel_robot = transformToBase(target_pose_buffer, pose_frame);
+
+        geometry_msgs::Pose pose_buffer1;
+      tf::poseEigenToMsg(pose_rel_robot, pose_buffer1);
+
+    ROS_ERROR_STREAM("*********");
+    ROS_ERROR_STREAM("x: " << pose_buffer1.position.x);
+    ROS_ERROR_STREAM("y: " << pose_buffer1.position.y);
+    ROS_ERROR_STREAM("z: " << pose_buffer1.position.z);
+    ROS_ERROR_STREAM("---------");
+    ROS_ERROR_STREAM("w: " << pose_buffer1.orientation.w);
+    ROS_ERROR_STREAM("x: " << pose_buffer1.orientation.x);
+    ROS_ERROR_STREAM("y: " << pose_buffer1.orientation.y);
+    ROS_ERROR_STREAM("z: " << pose_buffer1.orientation.z);
+    ROS_ERROR_STREAM("=====================================");
+
+      std::unique_ptr<TrajectoryPoint> point =
+          std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
+    
+      addTrajPoint(traj_name, point, type, num_steps);
+  }
+  catch(tf2::TransformException &ex)
+  {
+      ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point in Frame[" << 
+          custom_tool_frame << "]: " << ex.what());
+      throw ex;
+  }
+}
+
+
 
 void Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
                          double time, const InterpolationType & type,
@@ -140,6 +209,81 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
   {
     ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
     throw ex;
+  }
+}
+
+
+/*EDITING THIS SECTION*/
+void Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
+                         const std::string & custom_tool_frame, 
+                         double time, const InterpolationType & type,
+                         const unsigned int num_steps)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name <<
+                 " at time " << time <<
+                 " and custom_tool_frame [" << custom_tool_frame << "]");
+
+  if(robot_model_ptr_->hasLinkModel(point_name) || 
+       tf_buffer_.canTransform(robot_model_ptr_->getRootLinkName(), point_name, ros::Time::now(), ros::Duration(0.1)) )
+  {
+    try
+    {
+      ROS_ERROR_STREAM("____________#####____________" << point_name);
+      std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(traj_name, point_name, custom_tool_frame, time);
+      addTrajPoint(traj_name, point, type, num_steps);
+
+      /*ROS_INFO_STREAM("Looked up named cart target from robot model: " << point_name);
+
+      Eigen::Affine3d pose_msg_to_eigen;
+      geometry_msgs::Pose pose_buffer;
+
+      pose_buffer.position.x = 0.000;
+      pose_buffer.position.y = 0.000;
+      pose_buffer.position.z = 0.000;
+
+      pose_buffer.orientation.w = 1.000;
+      pose_buffer.orientation.x = 0.000;
+      pose_buffer.orientation.y = 0.000;
+      pose_buffer.orientation.z = 0.000;
+
+      tf::poseMsgToEigen(pose_buffer, pose_msg_to_eigen);
+      const Eigen::Affine3d pose_eigen = pose_msg_to_eigen;
+
+      addTrajPoint(traj_name, pose_eigen, point_name, custom_tool_frame, 
+                   time, type, num_steps, point_name);*/
+    }
+    catch ( std::invalid_argument &ia )
+    {
+      ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
+      throw ia;
+    }
+    catch ( tf2::TransformException &ex )
+    {
+      ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
+      throw ex;
+    }
+  }
+
+  else if ( type == interpolation_type::JOINT )
+  {
+    try
+    {
+      ROS_ERROR_STREAM("___________@#R@#$@____________");
+      std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
+      addTrajPoint(traj_name, point, type, num_steps); 
+    }
+    catch ( std::invalid_argument &ia )
+    {
+      ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
+      throw ia;
+    }
+    catch ( tf2::TransformException &ex )
+    {
+      ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
+      throw ex;
+    }
   }
 }
 
@@ -203,6 +347,126 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
 }
 
 
+/*EDITING THIS SECTION*/
+std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string & traj_name,
+                                                            const std::string & name,
+                                                            const std::string & custom_tool_frame, 
+                                                            double time) const
+{
+  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
+
+  ROS_INFO_STREAM("Looking up trajectory point: " << name);
+
+  if (robot_model_ptr_->hasLinkModel(name) )
+  {
+    ROS_INFO_STREAM("Looked up named cart target from robot model: " << name);
+
+    /*Eigen::Affine3d pose_msg_to_eigen;
+    geometry_msgs::Pose pose_buffer;
+
+    pose_buffer.position.x = 0.000;
+    pose_buffer.position.y = 0.000;
+    pose_buffer.position.z = 0.000;
+
+    pose_buffer.orientation.w = 1.000;
+    pose_buffer.orientation.x = 0.000;
+    pose_buffer.orientation.y = 0.000;
+    pose_buffer.orientation.z = 0.000;
+
+    tf::poseMsgToEigen(pose_buffer, pose_msg_to_eigen);*/
+    
+    //addTrajPoint(traj_name, pose_msg_to_eigen, name, "tool_custom", 1.0);
+
+    // WHY ISNT THIS WORKING!!!!!!!!!!!!
+    virtual_robot_state_->update();  //Updating state for frame tansform below
+    Eigen::Affine3d pose =  virtual_robot_state_->getFrameTransform(name);
+
+    const Eigen::Affine3d target_pose_buffer2 = 
+                               transformPoseBetweenFrames(pose, 
+                                                          moveit_tool_link,
+                                                          custom_tool_frame);
+    //Eigen::Affine3d pose;
+    Eigen::Affine3d target_pose_buffer = transformToBase(target_pose_buffer2, name);
+    
+    // This above "pose" is already with respect to the base_link -- Check INFO_STREAM
+    
+
+    //const Eigen::Affine3d target_pose_buffer1 = 
+                               //transformPoseBetweenFrames(pose, name,
+                                                          //"base_link");
+    /*geometry_msgs::Pose pose_buffer;
+    tf::poseEigenToMsg(target_pose_buffer, pose_buffer);
+
+    ROS_ERROR_STREAM("*********");
+    ROS_ERROR_STREAM("x: " << pose_buffer.position.x);
+    ROS_ERROR_STREAM("y: " << pose_buffer.position.y);
+    ROS_ERROR_STREAM("z: " << pose_buffer.position.z);
+    ROS_ERROR_STREAM("---------");
+    ROS_ERROR_STREAM("w: " << pose_buffer.orientation.w);
+    ROS_ERROR_STREAM("x: " << pose_buffer.orientation.x);
+    ROS_ERROR_STREAM("y: " << pose_buffer.orientation.y);
+    ROS_ERROR_STREAM("z: " << pose_buffer.orientation.z);*/
+
+    geometry_msgs::Pose pose_buffer1;
+    tf::poseEigenToMsg(target_pose_buffer2, pose_buffer1);
+
+    
+    ROS_ERROR_STREAM("*********");
+    ROS_ERROR_STREAM("x: " << pose_buffer1.position.x);
+    ROS_ERROR_STREAM("y: " << pose_buffer1.position.y);
+    ROS_ERROR_STREAM("z: " << pose_buffer1.position.z);
+    ROS_ERROR_STREAM("---------");
+    ROS_ERROR_STREAM("w: " << pose_buffer1.orientation.w);
+    ROS_ERROR_STREAM("x: " << pose_buffer1.orientation.x);
+    ROS_ERROR_STREAM("y: " << pose_buffer1.orientation.y);
+    ROS_ERROR_STREAM("z: " << pose_buffer1.orientation.z);
+    ROS_ERROR_STREAM("=====================================");
+
+    ROS_ERROR_STREAM("CHECK!!!!!!!");                              
+    ROS_INFO_STREAM("Getting urdf/robot_state target: " << name << " frame: " << std::endl << pose.matrix());
+
+
+
+    return std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(target_pose_buffer2, time, name));
+  }
+
+  else if( tf_buffer_.canTransform(name, robot_model_ptr_->getRootLinkName(), ros::Time::now(), ros::Duration(0.1)) )
+  {
+    try
+    {
+      ROS_INFO_STREAM("Looked up tf named frame: " << name);
+      geometry_msgs::TransformStamped trans_msg;
+      Eigen::Affine3d pose;
+      //trans_msg = tf_buffer_.lookupTransform(robot_model_ptr_->getRootLinkName(), name,
+                                           //ros::Time::now(), ros::Duration(5.0));
+      //tf::transformMsgToEigen(trans_msg.transform,pose);
+
+      ROS_ERROR_STREAM("CHECK 2!!!!!!!");
+
+      const Eigen::Affine3d target_pose_buffer = 
+                               transformPoseBetweenFrames(pose, moveit_tool_link,
+                                                          custom_tool_frame);
+
+      //Eigen::Affine3d pose_rel_robot = transformToBase(target_pose_buffer, name);
+
+      ROS_INFO_STREAM("Using TF to lookup transform " << name << " frame: " << std::endl << pose.matrix());
+      return std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(target_pose_buffer, time, name));
+    }
+    catch (tf2::TransformException &ex)
+    {
+      ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
+      throw ex;
+    }
+  }
+
+  else
+  {
+    ROS_ERROR_STREAM("Failed to find point " << name << ", consider implementing more look ups");
+    throw std::invalid_argument("Failed to find point: " + name);
+  }
+}
+
+
 
 bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
                              const std::vector<double> & seed,
@@ -225,20 +489,22 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
                              double timeout, const std::vector<double> & seed,
                              std::vector<double> & joint_point) const
 {
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  bool GET_JOINTS_FLAG = false;
+
   std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   try
   {
       ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" << 
-                         moveit_tool_link << "] to moveit_end_link [" << 
-                         custom_tool_frame << "] before performing IK");
+                         custom_tool_frame << "] to moveit_end_link [" << 
+                         moveit_tool_link << "] before performing IK");
 
       // Transform Target/Goal Point from custom tool frame to moveit_end_link
       const Eigen::Affine3d custom_frame_goal_pose = 
                                transformPoseBetweenFrames(pose, custom_tool_frame, 
                                                           moveit_tool_link);
-      
-      std::lock_guard<std::recursive_mutex> guard(m_);
 
       std::vector<double> local_seed = seed;
       if (seed.empty())
@@ -247,14 +513,15 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
         local_seed =  getJointState();
       }
 
-      return getIK(custom_frame_goal_pose, local_seed, joint_point, timeout);
+      GET_JOINTS_FLAG = getIK(custom_frame_goal_pose, local_seed, joint_point, timeout);
   }
   catch(tf2::TransformException &ex)
   {
       ROS_WARN_STREAM("getJointSolution failed for arbitrary pose in Frame[" << 
           custom_tool_frame << "]: " << ex.what());
-      throw ex;
   }
+
+  return GET_JOINTS_FLAG;
 }
 
 
@@ -327,6 +594,8 @@ bool Robot::getPose(const std::vector<double> & joint_point,
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
   
+  bool GET_POSE_FLAG = false;
+
   Eigen::Affine3d pose_buffer;
 
   std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
@@ -343,20 +612,20 @@ bool Robot::getPose(const std::vector<double> & joint_point,
         pose = transformPoseBetweenFrames(pose_buffer, moveit_tool_link, 
                                           custom_tool_frame);
 
-        return true;
+        GET_POSE_FLAG = true;
     }
     catch(tf2::TransformException &ex)
     {
         ROS_WARN_STREAM("getPose failed for arbitrary Joint Point in Frame[" << 
             custom_tool_frame << "]: " << ex.what());
-        throw ex;
     }    
   }                        
   else  
   {
     ROS_ERROR_STREAM("Robot State failed to find FK for given joint point");
-    return false;
   }
+
+  return GET_POSE_FLAG;
 }
 
 
