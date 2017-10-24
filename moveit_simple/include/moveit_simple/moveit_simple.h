@@ -106,7 +106,7 @@ public:
                      double timeout = 10.0,
                      std::vector<double> joint_seed = std::vector<double>() ) const;
   /**
-   * @brief isReachable - check if point is reacheable
+   * @brief isReachable - check if point is reacheable.
    * @param name - name of point to check
    * @param joint_seed - (optional) tries to find joint solutions closest to seed
    * @param timeout - (optional) timeout for IK
@@ -117,7 +117,7 @@ public:
 
 
   /**
-   * @brief isReachable - check if pose (relative to named frame) is reacheable
+   * @brief isReachable - check if pose (relative to named frame) is reacheable.
    * @param pose - pose to check
    * @param frame - frame in which pose is expressed
    * @param timeout - (optional) timeout for IK
@@ -130,7 +130,7 @@ public:
 
 
   /**
-   * @brief addTrajPoint - add point to trajectory
+   * @brief addTrajPoint - add point to trajectory.
    * @param traj_name - name of trajectory buffer to add point to
    * @param point_name - name of point to add
    * @param time - time from start of trajectory to reach point
@@ -145,8 +145,7 @@ public:
                     double time, const InterpolationType & type = interpolation_type::JOINT,
                     const unsigned int num_steps = 0);
   /**
-   * @brief Add trajectory point to motion buffer
-   *
+   * @brief Add trajectory point to motion buffer.
    * @param traj_name - name of trajectory buffer to add point to
    * @param pose - pose of point to add
    * @param frame - frame (must be a TF accessible frame) in which pose is defined
@@ -166,9 +165,11 @@ public:
 
 
   /**
-   * @brief addTrajPoint - add point to trajectory
+   * @brief addTrajPoint - add point to trajectory.
+   * @brief This function supports custom tool frame for adding traj points.
    * @param traj_name - name of trajectory buffer to add point to
    * @param point_name - name of point to add
+   * @param custom_tool_frame - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
    * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
@@ -182,11 +183,12 @@ public:
                     double time, const InterpolationType & type = interpolation_type::JOINT,
                     const unsigned int num_steps = 0);
   /**
-   * @brief Add trajectory point to motion buffer
-   *
+   * @brief Add trajectory point to motion buffer.
+   * @brief This function supports custom tool frame for adding traj points.
    * @param traj_name - name of trajectory buffer to add point to
    * @param pose - pose of point to add
-   * @param frame - frame (must be a TF accessible frame) in which pose is defined
+   * @param pose_frame - frame (must be a TF accessible frame) in which pose is defined
+   * @param custom_tool_frame - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
    * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
@@ -219,7 +221,7 @@ public:
    * @brief getJointSolution returns joint solution for cartesian pose.
    * @brief This function supports custom tool frame for solving IK.
    * @param pose - desired pose
-   * @param custom_tool_frame - custom frame id
+   * @param custom_tool_frame - frame (must be a TF accessible frame) in which pose is defined
    * @param timeout - ik solver timeout
    * @param attempts - number of IK solve attem
    * @param seed - ik seed
@@ -241,9 +243,10 @@ public:
 
   /**
    * @brief getPose finds cartesian pose for the given joint positions.
+   * @brief This function supports custom tool frame for solving FK.
    * @param joint_point - joint positions
    * @param pose - pose corresponding to joint_pose
-   * @param custom_tool_frame - custom frame id
+   * @param custom_tool_frame - frame (must be a TF accessible frame) in which pose is defined
    * @return true if pose is found
    */
   bool getPose(const std::vector<double> & joint_point,

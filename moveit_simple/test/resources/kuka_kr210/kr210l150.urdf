@@ -209,7 +209,6 @@
     <parent link="base_link"/>
     <child link="waypoint1"/>
     <origin xyz="1.904 0.000 2.762" rpy="0.000 -0.488 0.000"/>
-    <!--origin xyz="0.399 1.962 1.945" rpy="0.000 0.000 1.228"/-->
   </joint>
 
   <link name="waypoint2"/>
