@@ -230,12 +230,16 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
   {
     try
     {
-      ROS_ERROR_STREAM("____________#####____________" << point_name);
+      // WHY ISN'T THIS WORKING!!!!!!!!!!!!!! RESOLVED BY COMMENTING THIS PART
+      /*ROS_ERROR_STREAM("____________#####____________" << point_name);
       std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(traj_name, point_name, custom_tool_frame, time);
-      addTrajPoint(traj_name, point, type, num_steps);
+      addTrajPoint(traj_name, point, type, num_steps);*/
 
-      /*ROS_INFO_STREAM("Looked up named cart target from robot model: " << point_name);
+      ROS_INFO_STREAM("Looked up named cart target from robot model: " << point_name);
 
+      // THE ABOVE ISSUE IS RESOLVED BY THIS NOT-SO-ELEGANT SOLUTION,, BUT IT WORKS JUST FINE
+      // AND IT DOES NOT BREAK, NOR REDUCE EFFICIENCY -- USE THIS FOR NOW
+      // TODO -- FIGURE OUT WHY THE ABOVE COMMENTED IMPLEMENTATION DOESN'T WORK 
       Eigen::Affine3d pose_msg_to_eigen;
       geometry_msgs::Pose pose_buffer;
 
@@ -252,7 +256,7 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
       const Eigen::Affine3d pose_eigen = pose_msg_to_eigen;
 
       addTrajPoint(traj_name, pose_eigen, point_name, custom_tool_frame, 
-                   time, type, num_steps, point_name);*/
+                   time, type, num_steps, point_name);
     }
     catch ( std::invalid_argument &ia )
     {
