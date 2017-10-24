@@ -158,8 +158,8 @@ TEST_F(UserRobotTest, add_trajectory)
   const std::string TRAJECTORY_NAME_2("traj3");
 
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME_2, pose_eigen, "waypoint1", "tool_custom", 1.0));
-  //EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME_2, "tf_pub1", "tool_custom", 2.0, cart, 8));
-  //EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME_2, "waypoint2", "tool0", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME_2, "tf_pub1", "tool_custom", 2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME_2, "waypoint2", "tool0", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME_2, "waypoint3", "tool_custom", 4.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME_2, "waypoint1", "tool_custom", 5.0, cart, 5));
   //EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME_2, pose_eigen, "tool0", 6.0));
