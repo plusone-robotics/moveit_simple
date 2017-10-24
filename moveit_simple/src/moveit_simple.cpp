@@ -345,7 +345,7 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  bool GET_JOINTS_FLAG = false;
+  bool get_joints = false;
 
   std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
@@ -367,15 +367,17 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
         local_seed =  getJointState();
       }
 
-      GET_JOINTS_FLAG = getIK(custom_frame_goal_pose, local_seed, joint_point, timeout);
+      get_joints = getIK(custom_frame_goal_pose, local_seed, joint_point, timeout);
   }
   catch(tf2::TransformException &ex)
   {
       ROS_WARN_STREAM("getJointSolution failed for arbitrary pose in Frame[" << 
           custom_tool_frame << "]: " << ex.what());
+
+      get_joints = false;
   }
 
-  return GET_JOINTS_FLAG;
+  return get_joints;
 }
 
 
@@ -448,7 +450,7 @@ bool Robot::getPose(const std::vector<double> & joint_point,
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
   
-  bool GET_POSE_FLAG = false;
+  bool get_pose = false;
 
   Eigen::Affine3d pose_buffer;
 
@@ -466,20 +468,23 @@ bool Robot::getPose(const std::vector<double> & joint_point,
         pose = transformPoseBetweenFrames(pose_buffer, moveit_tool_link, 
                                           custom_tool_frame);
 
-        GET_POSE_FLAG = true;
+        get_pose = true;
     }
     catch(tf2::TransformException &ex)
     {
         ROS_WARN_STREAM("getPose failed for arbitrary Joint Point in Frame[" << 
             custom_tool_frame << "]: " << ex.what());
+
+        get_pose = false;
     }    
   }                        
   else  
   {
     ROS_ERROR_STREAM("Robot State failed to find FK for given joint point");
+    get_pose = false;
   }
 
-  return GET_POSE_FLAG;
+  return get_pose;
 }
 
 
