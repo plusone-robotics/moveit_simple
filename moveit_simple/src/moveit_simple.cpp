@@ -672,6 +672,54 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
 
 
 
+void OnlineRobot::planOnly(const std::string traj_name, 
+                           control_msgs::FollowJointTrajectoryGoal & goal,
+                           ros::Duration & traj_time,
+                           bool collision_check)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  const double TIMEOUT_SCALE = 1.25;  //scales time to wait for action timeout.
+  bool success = false;
+  if ( traj_info_map_.count(traj_name) )
+  {
+    goal.trajectory.joint_names = joint_group_->getVariableNames();
+    try
+    {
+      if ( toJointTrajectory(traj_name, goal.trajectory.points, collision_check) )
+      {
+
+        // Modify the speed of execution for the trajectory based off of the speed_modifier_
+        for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+        {
+          goal.trajectory.points[i].time_from_start *= speed_modifier_;
+        }
+
+        traj_time = goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
+        
+        ROS_INFO_STREAM("Successfully planned out trajectory: " << traj_name);
+      }
+      else
+      {
+        ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
+        throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
+      }
+    }
+    catch(CollisionDetected &cd)
+    {
+      ROS_ERROR_STREAM("Collision detected in the " << traj_name);
+      throw cd;
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
+    throw std::invalid_argument("No trajectory found named " + traj_name);
+  }
+}
+
+
+
 void OnlineRobot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level)
 {
   params_.fromConfig(config);

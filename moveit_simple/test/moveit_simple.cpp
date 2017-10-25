@@ -407,13 +407,13 @@ TEST_F(DeveloperRobotTest, interpolation)
 }
 
 
-/*TEST_F(UserRobotTest, speed_reconfiguration)
+TEST_F(UserRobotTest, speed_reconfiguration)
 {
   const std::string TRAJECTORY_NAME("traj1");
 
   ros::Duration(2.0).sleep(); //wait for tf tree to populate
 
-  double execution_time_tolerance = 0.50;
+  double execution_time_tolerance = 0.50; // Empirically assumed
 
   double delta_half_min_speeds = 0.0;
   double delta_max_half_speeds = 0.0;
@@ -429,18 +429,21 @@ TEST_F(DeveloperRobotTest, interpolation)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
 
+  // Test 1 -- MAX_EXECUTION_SPEED: PLAN ONLY
   robot->setSpeedModifier(1.0);
   EXPECT_TRUE(robot->getSpeedModifier() == 1.0);
 
-  double start_min_speed_execution = ros::Time::now().toSec();
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
-  double end_min_speed_execution = ros::Time::now().toSec();
+  ros::Duration traj_time;
+  control_msgs::FollowJointTrajectoryGoal goal;
 
-  execution_time_check_1 = end_min_speed_execution - start_min_speed_execution;
+  EXPECT_NO_THROW(robot->planOnly(TRAJECTORY_NAME, goal, traj_time));
+  
+  execution_time_check_1 = traj_time.toSec();
   EXPECT_TRUE(execution_time_check_1 >= 0.0);
-  ROS_INFO_STREAM("Time for single traj. execution at MIN speed: " 
+  ROS_INFO_STREAM("Time for single traj. execution at MAX speed: " 
     << execution_time_check_1 << " seconds");
 
+  // Test 2 -- HALF_EXECUTION_SPEED: PLAN & EXECUTE
   robot->setSpeedModifier(5.5);
   EXPECT_TRUE(robot->getSpeedModifier() == 5.5);
 
@@ -453,6 +456,7 @@ TEST_F(DeveloperRobotTest, interpolation)
   ROS_INFO_STREAM("Time for single traj. execution at Half-MAX speed: "
     << execution_time_check_2 << " seconds");
 
+  // Test 3 -- MIN_EXECUTION_SPEED: PLAN & EXECUTE
   robot->setSpeedModifier(10.0);
   EXPECT_TRUE(robot->getSpeedModifier() == 10.0);
 
@@ -462,7 +466,7 @@ TEST_F(DeveloperRobotTest, interpolation)
 
   execution_time_check_3 = end_max_speed_execution - start_max_speed_execution;
   EXPECT_TRUE(execution_time_check_3 >= 0.0);
-  ROS_INFO_STREAM("Time for single traj. execution at MAX speed: "
+  ROS_INFO_STREAM("Time for single traj. execution at MIN speed: "
     << execution_time_check_3 << " seconds");
 
   delta_half_min_speeds = execution_time_check_2 - execution_time_check_1;
@@ -472,14 +476,14 @@ TEST_F(DeveloperRobotTest, interpolation)
   EXPECT_TRUE(delta_max_half_speeds >= 0.0);
 
   delta_time_for_speed_limits = delta_max_half_speeds - delta_half_min_speeds;
-  EXPECT_NEAR(delta_time_for_speed_limits, 0.0, 0.25);
+  EXPECT_NEAR(delta_time_for_speed_limits, 0.0, execution_time_tolerance);
 
   if(abs(delta_time_for_speed_limits) > execution_time_tolerance) 
   {
-    //ROS_ERROR_STREAM("Time diff between [MIN_SPEED, REGULAR_SPEED] & [REGULAR_SPEED, MAX_SPEED] 
-                      //is not within tolerance limits [0.25]");
+    ROS_ERROR_STREAM("Time diff between [MIN_SPEED, REGULAR_SPEED] & [REGULAR_SPEED, MAX_SPEED] " << 
+                     "is not within tolerance limits [0.50]");
   }
-}*/
+}
 
 
 TEST_F(UserRobotTest, kinematics)

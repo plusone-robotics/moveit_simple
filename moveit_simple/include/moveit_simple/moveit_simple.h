@@ -473,6 +473,24 @@ public:
 
 
   /**
+   * @brief plan out a given trajectory
+   * @param traj_name - name of trajectory to be executed (must be filled with
+   * prior calls to "addTrajPoint".
+   * @param goal - Joint trajectory goal
+   * @param collision_check - bool to turn check for collision on\off
+   * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
+   * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
+   * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
+   * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
+   * in Collision with itself or environment)
+   */
+  void planOnly(const std::string traj_name, 
+                           control_msgs::FollowJointTrajectoryGoal & goal,
+                           ros::Duration & traj_time,
+                           bool collision_check = false);
+
+
+  /**
   * @brief getJointState - Returns a vector<double> of the
   * current joint positions of the robot from current_robot_state_.
   *
