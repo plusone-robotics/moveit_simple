@@ -1,4 +1,3 @@
-- git:
-    uri: https://github.com/shaun-edwards/prettyprint.git 
-    local-name: prettyprint
-    version: master
+- git: {local-name: prettyprint, uri: 'https://github.com/shaun-edwards/prettyprint.git', version: master}
+- git: {local-name: rosparam_handler, uri: 'https://github.com/plusone-robotics/rosparam_handler.git', version: master}
+

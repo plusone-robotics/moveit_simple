@@ -20,6 +20,9 @@
 #include "prettyprint/prettyprint.hpp"
 #include <gtest/gtest.h>
 
+#include "eigen_conversions/eigen_msg.h"
+
+
 using testing::Types;
 
 namespace moveit_simple_test
@@ -89,6 +92,7 @@ TEST(MoveitSimpleTest, construction)
   moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator");
 }
 
+
 TEST(MoveitSimpleTest, reachability)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
@@ -123,18 +127,19 @@ TEST_F(UserRobotTest, add_trajectory)
   EXPECT_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "random_link", 5.0), tf2::TransformException);
   ROS_INFO_STREAM("Testing trajectory adding of points");
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, cart));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, joint));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0));
+  
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 
   EXPECT_NO_THROW(robot->addTrajPoint("traj2", "waypoint4", 4.5));
   EXPECT_THROW(robot->execute("traj2"), moveit_simple::IKFailException);
 
   EXPECT_THROW(robot->execute("bad_traj"), std::invalid_argument);
-
 }
 
 
@@ -402,7 +407,6 @@ TEST_F(DeveloperRobotTest, interpolation)
 }
 
 
-
 TEST_F(UserRobotTest, kinematics)
 {
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
@@ -449,6 +453,93 @@ TEST_F(UserRobotTest, kinematics)
 
   EXPECT_TRUE(pose1.isApprox(pose2,1e-3));
   EXPECT_TRUE(pose1.isApprox(pose3,1e-3));
+
+}
+
+
+TEST_F(UserRobotTest, custom_tool_link)
+{
+  const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
+  Eigen::Affine3d pose1;
+  Eigen::Affine3d pose2;
+  Eigen::Affine3d pose3;
+  std::vector<double> joint_point1(6,M_PI/6);
+  std::vector<double> joint_point2;
+  std::vector<double> joint_point3;
+  std::vector<double> joint_point4;
+  std::vector<double> seed = joint_point1;
+  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+
+  std::string tool_name = "tool_custom";
+  EXPECT_TRUE(robot->getPose(joint_point1, tool_name, pose1));
+  EXPECT_TRUE(robot->getJointSolution(pose1, tool_name, 3.0, seed, joint_point2));
+  EXPECT_TRUE(robot->getPose(joint_point2, tool_name, pose2));
+  EXPECT_TRUE(robot->getJointSolution(pose2, tool_name, 3.0, seed, joint_point3));
+  EXPECT_TRUE(robot->getPose(joint_point3, tool_name, pose3));
+  EXPECT_FALSE(robot->getJointSolution(pose, tool_name, 3.0, seed, joint_point3));
+
+  // Check for error in getJointSolution
+  ROS_INFO_STREAM(" joint_point1: " << joint_point1);
+  ROS_INFO_STREAM(" joint_point2: " << joint_point2);
+  ROS_INFO_STREAM(" joint_point3: " << joint_point3);
+
+  double error_joint1 = 0.0;
+  for (std::size_t i = 0; i < joint_point1.size(); ++i)
+  {
+    error_joint1 += fabs(joint_point1[i] - joint_point2[i]);
+  }
+  EXPECT_NEAR(error_joint1, 0.0, 1e-2);
+
+  double error_joint2 = 0.0;
+  for (std::size_t i = 0; i < joint_point1.size(); ++i)
+  {
+    error_joint2 += fabs(joint_point1[i] - joint_point3[i]);
+  }
+  EXPECT_NEAR(error_joint2, 0.0, 1e-2);
+
+  // Check for error in getPose
+  ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
+  ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
+  ROS_INFO_STREAM(" pose3: " << std::endl << pose3.matrix());
+
+  EXPECT_TRUE(pose1.isApprox(pose2,1e-3));
+  EXPECT_TRUE(pose1.isApprox(pose3,1e-3));
+
+  // Testing addTrajPoint() with custom_tool_frame as eef
+  Eigen::Affine3d pose_msg_to_eigen;
+  geometry_msgs::Pose pose_buffer;
+
+  // We take the Origin of our reference frame in consideration as the "known pose"
+  // In this case our reference frame resolves to the variable "point_name"
+  pose_buffer.position.x = 0.000;
+  pose_buffer.position.y = 0.000;
+  pose_buffer.position.z = 0.000;
+
+  pose_buffer.orientation.w = 1.000;
+  pose_buffer.orientation.x = 0.000;
+  pose_buffer.orientation.y = 0.000;
+  pose_buffer.orientation.z = 0.000;
+
+  tf::poseMsgToEigen(pose_buffer, pose_msg_to_eigen);
+
+  const Eigen::Affine3d pose_eigen = pose_msg_to_eigen;
+
+  const std::string TRAJECTORY_NAME("traj1");
+
+  ROS_INFO_STREAM("Testing trajectory adding of points");
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
+
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "waypoint1", tool_name, 1.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", tool_name, 2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", "tool0", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", "tool_custom", 4.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", tool_name, 5.0, joint, 5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "tool0", 6.0));
+  
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 
 }
 

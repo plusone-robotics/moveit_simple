@@ -35,13 +35,12 @@
 #include <moveit_visual_tools/moveit_visual_tools.h>
 
 #include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 #include <actionlib/client/simple_action_client.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <sensor_msgs/JointState.h>
-
-
 
 namespace moveit_simple
 {
@@ -107,7 +106,7 @@ public:
                      double timeout = 10.0,
                      std::vector<double> joint_seed = std::vector<double>() ) const;
   /**
-   * @brief isReachable - check if point is reacheable
+   * @brief isReachable - check if point is reacheable.
    * @param name - name of point to check
    * @param joint_seed - (optional) tries to find joint solutions closest to seed
    * @param timeout - (optional) timeout for IK
@@ -118,7 +117,7 @@ public:
 
 
   /**
-   * @brief isReachable - check if pose (relative to named frame) is reacheable
+   * @brief isReachable - check if pose (relative to named frame) is reacheable.
    * @param pose - pose to check
    * @param frame - frame in which pose is expressed
    * @param timeout - (optional) timeout for IK
@@ -131,7 +130,7 @@ public:
 
 
   /**
-   * @brief addTrajPoint - add point to trajectory
+   * @brief addTrajPoint - add point to trajectory.
    * @param traj_name - name of trajectory buffer to add point to
    * @param point_name - name of point to add
    * @param time - time from start of trajectory to reach point
@@ -146,8 +145,7 @@ public:
                     double time, const InterpolationType & type = interpolation_type::JOINT,
                     const unsigned int num_steps = 0);
   /**
-   * @brief Add trajectory point to motion buffer
-   *
+   * @brief Add trajectory point to motion buffer.
    * @param traj_name - name of trajectory buffer to add point to
    * @param pose - pose of point to add
    * @param frame - frame (must be a TF accessible frame) in which pose is defined
@@ -165,6 +163,47 @@ public:
                     const unsigned int num_steps = 0,
                     const std::string & point_name = std::string());
 
+
+  /**
+   * @brief addTrajPoint - add point to trajectory.
+   * @brief This function supports custom tool frame for adding traj points.
+   * @param traj_name - name of trajectory buffer to add point to
+   * @param point_name - name of point to add
+   * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
+   * @param time - time from start of trajectory to reach point
+   * @param type - Type of interpolation from last point to this point
+   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * @param num_steps - number of points to be interpolated
+   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * @throws <std::invalid_argument> (point_name is not found)
+   * @throws <tf2::TransformException> (transform of TF named point_name fails)
+   */
+  void addTrajPoint(const std::string & traj_name, const std::string & point_name,
+                    const std::string & tool_name, 
+                    double time, const InterpolationType & type = interpolation_type::JOINT,
+                    const unsigned int num_steps = 0);
+  /**
+   * @brief Add trajectory point to motion buffer.
+   * @brief This function supports custom tool frame for adding traj points.
+   * @param traj_name - name of trajectory buffer to add point to
+   * @param pose - pose of point to add
+   * @param pose_frame - frame (must be a TF accessible frame) in which pose is defined
+   * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
+   * @param time - time from start of trajectory to reach point
+   * @param type - Type of interpolation from last point to this point
+   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * @param num_steps - number of points to be interpolated
+   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * @param point_name - (optional) name of point (used in log messages)
+   * @throws <tf2::TransformException> (Transform from frame to robot base failed)
+  */
+  void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
+                    const std::string & pose_frame, const std::string & tool_name, 
+                    double time, const InterpolationType & type = interpolation_type::JOINT,
+                    const unsigned int num_steps = 0,
+                    const std::string & point_name = std::string());
+
+
   /**
    * @brief getJointSolution returns joint solution for cartesian pose.
    * @param pose - desired pose
@@ -179,12 +218,39 @@ public:
                         std::vector<double> & joint_point) const;
 
   /**
+   * @brief getJointSolution returns joint solution for cartesian pose.
+   * @brief This function supports custom tool frame for solving IK.
+   * @param pose - desired pose
+   * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
+   * @param timeout - ik solver timeout
+   * @param attempts - number of IK solve attem
+   * @param seed - ik seed
+   * @param joint_point - joint solution for pose
+   * @return true if joint solution found
+   */
+  bool getJointSolution(const Eigen::Affine3d &pose, const std::string& tool_name,
+                        double timeout, const std::vector<double> & seed,
+                        std::vector<double> & joint_point) const;
+
+  /**
    * @brief getPose finds cartesian pose for the given joint positions.
    * @param joint_point - joint positions
    * @param pose - pose corresponding to joint_pose
    * @return true if pose is found
    */
   bool getPose(const std::vector<double> & joint_point,
+             Eigen::Affine3d & pose) const;
+
+  /**
+   * @brief getPose finds cartesian pose for the given joint positions.
+   * @brief This function supports custom tool frame for solving FK.
+   * @param joint_point - joint positions
+   * @param pose - pose corresponding to joint_pose
+   * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
+   * @return true if pose is found
+   */
+  bool getPose(const std::vector<double> & joint_point,
+             const std::string& tool_name,
              Eigen::Affine3d & pose) const;
 
   /**
@@ -240,6 +306,17 @@ protected:
 
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in,
                                          const std::string &in_frame) const;
+
+    /**
+   * @brief transformPoseBetweenFrames transforms custom frame to moveit_end_link.
+   * @param target_pose - goal pose for IK 
+   * @param frame_in - Current Frame of Reference as Input
+   * @param frame_out - Target Frame of Reference for Transform
+   * @param
+   */
+  Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose, 
+                                         const std::string& frame_in,
+                                         const std::string& frame_out) const;
 
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
@@ -324,7 +401,7 @@ protected:
                                Eigen::Affine3d &pose) const;
 
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & name,
-                                                              double time) const;
+                                                         double time) const;
 
   bool isConfigChange(const std::vector<double> jp1,
                       const std::vector<double> jp2) const;
