@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED)
 find_package(Eigen3 REQUIRED)
 
-generate_ros_parameter_files(cfg/moveit_simple_.params)
+generate_ros_parameter_files(cfg/moveit_simple_dynamic_reconfigure_.params)
 
 catkin_package(
   INCLUDE_DIRS

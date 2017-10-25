@@ -60,7 +60,9 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
                const std::string &robot_description,
                       const std::string &group_name):
   Robot(nh, robot_description, group_name),
-  action_("joint_trajectory_action", true)
+  action_("joint_trajectory_action", true),
+  params_(nh),
+  speed_modifier_(1.0)
 {
   current_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
   current_robot_state_->setToDefaultValues();
@@ -78,6 +80,10 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
 
   ROS_INFO_STREAM("Loading ROS pubs/subs");
   j_state_sub_ = nh_.subscribe("joint_states", 1, &OnlineRobot::updateCurrentState, this);
+
+  // Dynamic Reconfigure Parameters with rosparam_handler
+  params_.fromParamServer();
+  dynamic_reconfig_server_.setCallback(boost::bind(&OnlineRobot::reconfigureRequest, this, _1, _2));
 
   //TODO: How to handle action server and other failures in the constructor
   // Perhaps move any items that can fail our of the constructor into an init
@@ -625,6 +631,13 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
     {
       if ( toJointTrajectory(traj_name, goal.trajectory.points, collision_check) )
       {
+
+        // Modify the speed of execution for the trajectory based off of the speed_modifier_
+        for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+        {
+          goal.trajectory.points[i].time_from_start *= speed_modifier_;
+        }
+
         ros::Duration traj_time =
             goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
         ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
@@ -655,6 +668,42 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
     ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
     throw std::invalid_argument("No trajectory found named " + traj_name);
   }
+}
+
+
+
+void OnlineRobot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level)
+{
+  params_.fromConfig(config);
+  if (params_.speed_modifier > 0.0)
+  {
+    setSpeedModifier(params_.speed_modifier);
+  }
+}
+
+
+
+void OnlineRobot::setSpeedModifier(double speed_modifier)
+{
+  if (speed_modifier <= 10.0 && speed_modifier > 0.0)
+  {
+    speed_modifier_ = speed_modifier;
+  }
+  else if((speed_modifier > 10.0))  
+  {
+    speed_modifier = 10.0;
+  }
+  else if((speed_modifier < 1.0))  
+  {
+    speed_modifier = 1.0;
+  }
+}
+
+
+
+double OnlineRobot::getSpeedModifier(void)
+{
+  return speed_modifier_;
 }
 
 

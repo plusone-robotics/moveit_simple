@@ -42,6 +42,9 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <sensor_msgs/JointState.h>
 
+#include <dynamic_reconfigure/server.h>
+#include <moveit_simple/moveit_simple_dynamic_reconfigure_Parameters.h>
+
 namespace moveit_simple
 {
 
@@ -477,12 +480,29 @@ public:
   */
   virtual std::vector<double> getJointState(void) const;
 
+  /**
+   * @brief setSpeedModifier - Setter method for the execution speed modifier of the 
+   * execute method.
+   * @param speed_modifier
+   * @return
+   */
+  void setSpeedModifier(double speed_modifier);
+
+  /**
+   * @brief setSpeedModifier - Getter method for the execution speed modifier of the 
+   * execute method.
+   * @return speed_modifier_
+   */
+  double getSpeedModifier(void);
+
 protected:
   OnlineRobot();
 
   void updateCurrentState(const sensor_msgs::JointStateConstPtr& msg);
   mutable moveit::core::RobotStatePtr current_robot_state_;
 
+  // Dynamic Reconfigure callback
+  void reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level);
 
   // Visualizations
   moveit_visual_tools::MoveItVisualToolsPtr online_visual_tools_;
@@ -492,6 +512,14 @@ protected:
 
   // ROS objects
   ros::Subscriber j_state_sub_;
+
+  // Dynamic Reconfigure
+  double speed_modifier_;
+
+  moveit_simple_dynamic_reconfigure_Parameters params_;
+
+  dynamic_reconfigure::Server 
+  <moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
 };
 
 

@@ -407,6 +407,81 @@ TEST_F(DeveloperRobotTest, interpolation)
 }
 
 
+/*TEST_F(UserRobotTest, speed_reconfiguration)
+{
+  const std::string TRAJECTORY_NAME("traj1");
+
+  ros::Duration(2.0).sleep(); //wait for tf tree to populate
+
+  double execution_time_tolerance = 0.50;
+
+  double delta_half_min_speeds = 0.0;
+  double delta_max_half_speeds = 0.0;
+  double delta_time_for_speed_limits = 0.0;
+
+  double execution_time_check_1 = INT_MAX;
+  double execution_time_check_2 = INT_MAX;
+  double execution_time_check_3 = INT_MAX;
+
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
+
+  robot->setSpeedModifier(1.0);
+  EXPECT_TRUE(robot->getSpeedModifier() == 1.0);
+
+  double start_min_speed_execution = ros::Time::now().toSec();
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  double end_min_speed_execution = ros::Time::now().toSec();
+
+  execution_time_check_1 = end_min_speed_execution - start_min_speed_execution;
+  EXPECT_TRUE(execution_time_check_1 >= 0.0);
+  ROS_INFO_STREAM("Time for single traj. execution at MIN speed: " 
+    << execution_time_check_1 << " seconds");
+
+  robot->setSpeedModifier(5.5);
+  EXPECT_TRUE(robot->getSpeedModifier() == 5.5);
+
+  double start_half_speed_execution = ros::Time::now().toSec();
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  double end_half_speed_execution = ros::Time::now().toSec();
+
+  execution_time_check_2 = end_half_speed_execution - start_half_speed_execution;
+  EXPECT_TRUE(execution_time_check_2 >= 0.0);
+  ROS_INFO_STREAM("Time for single traj. execution at Half-MAX speed: "
+    << execution_time_check_2 << " seconds");
+
+  robot->setSpeedModifier(10.0);
+  EXPECT_TRUE(robot->getSpeedModifier() == 10.0);
+
+  double start_max_speed_execution = ros::Time::now().toSec();
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  double end_max_speed_execution = ros::Time::now().toSec();
+
+  execution_time_check_3 = end_max_speed_execution - start_max_speed_execution;
+  EXPECT_TRUE(execution_time_check_3 >= 0.0);
+  ROS_INFO_STREAM("Time for single traj. execution at MAX speed: "
+    << execution_time_check_3 << " seconds");
+
+  delta_half_min_speeds = execution_time_check_2 - execution_time_check_1;
+  EXPECT_TRUE(delta_half_min_speeds >= 0.0);
+
+  delta_max_half_speeds = execution_time_check_3 - execution_time_check_2;
+  EXPECT_TRUE(delta_max_half_speeds >= 0.0);
+
+  delta_time_for_speed_limits = delta_max_half_speeds - delta_half_min_speeds;
+  EXPECT_NEAR(delta_time_for_speed_limits, 0.0, 0.25);
+
+  if(abs(delta_time_for_speed_limits) > execution_time_tolerance) 
+  {
+    //ROS_ERROR_STREAM("Time diff between [MIN_SPEED, REGULAR_SPEED] & [REGULAR_SPEED, MAX_SPEED] 
+                      //is not within tolerance limits [0.25]");
+  }
+}*/
+
+
 TEST_F(UserRobotTest, kinematics)
 {
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
