@@ -473,13 +473,13 @@ TEST_F(UserRobotTest, custom_tool_link)
   std::vector<double> seed = joint_point1;
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
-  std::string custom_tool_frame = "tool_custom";
-  EXPECT_TRUE(robot->getPose(joint_point1, custom_tool_frame, pose1));
-  EXPECT_TRUE(robot->getJointSolution(pose1, custom_tool_frame, 3.0, seed, joint_point2));
-  EXPECT_TRUE(robot->getPose(joint_point2, custom_tool_frame, pose2));
-  EXPECT_TRUE(robot->getJointSolution(pose2, custom_tool_frame, 3.0, seed, joint_point3));
-  EXPECT_TRUE(robot->getPose(joint_point3, custom_tool_frame, pose3));
-  EXPECT_FALSE(robot->getJointSolution(pose, custom_tool_frame, 3.0, seed, joint_point3));
+  std::string tool_name = "tool_custom";
+  EXPECT_TRUE(robot->getPose(joint_point1, tool_name, pose1));
+  EXPECT_TRUE(robot->getJointSolution(pose1, tool_name, 3.0, seed, joint_point2));
+  EXPECT_TRUE(robot->getPose(joint_point2, tool_name, pose2));
+  EXPECT_TRUE(robot->getJointSolution(pose2, tool_name, 3.0, seed, joint_point3));
+  EXPECT_TRUE(robot->getPose(joint_point3, tool_name, pose3));
+  EXPECT_FALSE(robot->getJointSolution(pose, tool_name, 3.0, seed, joint_point3));
 
   // Check for error in getJointSolution
   ROS_INFO_STREAM(" joint_point1: " << joint_point1);
@@ -532,11 +532,11 @@ TEST_F(UserRobotTest, custom_tool_link)
   ROS_INFO_STREAM("Testing trajectory adding of points");
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
 
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "waypoint1", "tool_custom", 1.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", "tool_custom", 2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "waypoint1", tool_name, 1.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", tool_name, 2.0, cart, 8));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", "tool0", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", "tool_custom", 4.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", "tool_custom", 5.0, joint, 5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", tool_name, 5.0, joint, 5));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "tool0", 6.0));
   
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
