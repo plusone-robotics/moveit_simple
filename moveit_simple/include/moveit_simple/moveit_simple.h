@@ -311,7 +311,7 @@ protected:
                                          const std::string &in_frame) const;
 
     /**
-   * @brief customToolFrameTF transforms custom frame to moveit_end_link.
+   * @brief transformPoseBetweenFrames transforms frame_in to frame_out.
    * @param target_pose - goal pose for IK 
    * @param frame_in - Current Frame of Reference as Input
    * @param frame_out - Target Frame of Reference for Transform
@@ -484,7 +484,7 @@ public:
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void planOnly(const std::string traj_name, 
+  void plan(const std::string traj_name, 
                            control_msgs::FollowJointTrajectoryGoal & goal,
                            ros::Duration & traj_time,
                            bool collision_check = false);
@@ -511,7 +511,7 @@ public:
    * execute method.
    * @return speed_modifier_
    */
-  double getSpeedModifier(void);
+  double getSpeedModifier(void) const;
 
 protected:
   OnlineRobot();
@@ -533,6 +533,8 @@ protected:
 
   // Dynamic Reconfigure
   double speed_modifier_;
+  double max_speed = 0.0;
+  double min_speed = 10.0;
 
   moveit_simple_dynamic_reconfigure_Parameters params_;
 

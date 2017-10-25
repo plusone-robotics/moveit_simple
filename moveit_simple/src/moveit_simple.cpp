@@ -672,7 +672,7 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
 
 
 
-void OnlineRobot::planOnly(const std::string traj_name, 
+void OnlineRobot::plan(const std::string traj_name, 
                            control_msgs::FollowJointTrajectoryGoal & goal,
                            ros::Duration & traj_time,
                            bool collision_check)
@@ -723,33 +723,32 @@ void OnlineRobot::planOnly(const std::string traj_name,
 void OnlineRobot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level)
 {
   params_.fromConfig(config);
-  if (params_.speed_modifier > 0.0)
+  if (params_.speed_percent > 0.0)
   {
-    setSpeedModifier(params_.speed_modifier);
+    setSpeedModifier(params_.speed_percent);
   }
 }
 
 
 
-void OnlineRobot::setSpeedModifier(double speed_modifier)
+void OnlineRobot::setSpeedModifier(double speed_percent)
 {
-  if (speed_modifier <= 10.0 && speed_modifier > 0.0)
+  if((speed_percent > 1.0))  
   {
-    speed_modifier_ = speed_modifier;
+    speed_percent = 1.0;
   }
-  else if((speed_modifier > 10.0))  
+  else if((speed_percent < 0.0))  
   {
-    speed_modifier = 10.0;
+    speed_percent = 0.0;
   }
-  else if((speed_modifier < 1.0))  
-  {
-    speed_modifier = 1.0;
-  }
+
+  speed_modifier_ = (speed_percent * abs(max_speed - min_speed) );
+  
 }
 
 
 
-double OnlineRobot::getSpeedModifier(void)
+double OnlineRobot::getSpeedModifier(void) const
 {
   return speed_modifier_;
 }

@@ -436,7 +436,7 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   ros::Duration traj_time;
   control_msgs::FollowJointTrajectoryGoal goal;
 
-  EXPECT_NO_THROW(robot->planOnly(TRAJECTORY_NAME, goal, traj_time));
+  EXPECT_NO_THROW(robot->plan(TRAJECTORY_NAME, goal, traj_time));
   
   execution_time_check_1 = traj_time.toSec();
   EXPECT_TRUE(execution_time_check_1 >= 0.0);
@@ -480,7 +480,7 @@ TEST_F(UserRobotTest, speed_reconfiguration)
 
   if(abs(delta_time_for_speed_limits) > execution_time_tolerance) 
   {
-    ROS_ERROR_STREAM("Time diff between [MIN_SPEED, REGULAR_SPEED] & [REGULAR_SPEED, MAX_SPEED] " << 
+    ROS_ERROR_STREAM("Time diff between [MIN_SPEED, REGULAR_SPEED] & [REGULAR_SPEED, MAX_SPEED] " << delta_time_for_speed_limits <<
                      "is not within tolerance limits [0.50]");
   }
 }
