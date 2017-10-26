@@ -86,9 +86,14 @@ protected:
 
 
 
-TEST(MoveitSimpleTest, construction)
+TEST(MoveitSimpleTest, construction_robot)
 {
-  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");  
+}
+
+
+TEST(MoveitSimpleTest, construction_online_robot)
+{
   moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator");
 }
 
@@ -159,7 +164,7 @@ TEST_F(DeveloperRobotTest, planning)
 
   Eigen::Affine3d pose1;
   Eigen::Affine3d pose2;
-  Eigen::Affine3d  joint_interpolated_expected_pose;
+  Eigen::Affine3d joint_interpolated_expected_pose;
 
   EXPECT_TRUE(robot2->getPose(joint1, pose1));
   EXPECT_TRUE(robot2->getPose(joint2, pose2));
@@ -429,22 +434,22 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
 
-  // Test 1 -- MAX_EXECUTION_SPEED: PLAN & THEN EXECUTE THAT PLAN SEPARATELY
+  
+  // Test 1 -- Max_Execution_Speed: Plan & then Execute that Plan separately
   robot->setSpeedModifier(1.0);
   EXPECT_TRUE(robot->getSpeedModifier() == 1.0);
 
-  ros::Duration traj_time;
-  control_msgs::FollowJointTrajectoryGoal goal;
+  moveit_simple::JointTrajectoryType goal;
 
-  EXPECT_NO_THROW(robot->plan(TRAJECTORY_NAME, goal, traj_time));
-  EXPECT_NO_THROW(robot->executeKnownPlan(TRAJECTORY_NAME, goal));  
+  EXPECT_NO_THROW(robot->plan(TRAJECTORY_NAME, goal));
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME, goal));  
   
-  execution_time_check_1 = traj_time.toSec();
+  execution_time_check_1 = goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start.toSec();
   EXPECT_TRUE(execution_time_check_1 >= 0.0);
   ROS_INFO_STREAM("Time for single traj. execution at MAX speed: " 
     << execution_time_check_1 << " seconds");
 
-  // Test 2 -- HALF_EXECUTION_SPEED: PLAN & EXECUTE
+  // Test 2 -- Half_Execution_Speed: Plan & Execute
   robot->setSpeedModifier(0.50);
   EXPECT_TRUE(robot->getSpeedModifier() == 0.50);
 
@@ -457,7 +462,7 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   ROS_INFO_STREAM("Time for single traj. execution at Half speed: "
     << execution_time_check_2 << " seconds");
 
-  // Test 3 -- MIN_EXECUTION_SPEED: PLAN & EXECUTE
+  // Test 3 -- Min_Execution_Speed: Plan & Execute
   robot->setSpeedModifier(0.25);
   EXPECT_TRUE(robot->getSpeedModifier() == 0.25);
 
@@ -701,11 +706,10 @@ TEST_F(DeveloperRobotTest, collision)
   EXPECT_THROW(robot2->execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
 
   // Test to see if above collision detection works when you separate out plan(...) & execute(...)
-  ros::Duration traj_time;
-  control_msgs::FollowJointTrajectoryGoal goal;
+  moveit_simple::JointTrajectoryType goal;
 
-  EXPECT_NO_THROW(robot2->plan(TRAJECTORY_NAME, goal, traj_time));
-  EXPECT_THROW(robot2->executeKnownPlan(TRAJECTORY_NAME, goal, true), moveit_simple::CollisionDetected);
+  EXPECT_NO_THROW(robot2->plan(TRAJECTORY_NAME, goal));
+  EXPECT_THROW(robot2->execute(TRAJECTORY_NAME, goal, true), moveit_simple::CollisionDetected);
 }
 
 TEST(MoveitSimpleTest, Singularity)

@@ -30,7 +30,9 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
                                          const std::string &group_name):
   tf_buffer_(),
   tf_listener_(tf_buffer_),
-  nh_(nh)
+  nh_(nh),
+  params_(nh),
+  speed_modifier_(1.0)
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
                   << ", group name: " << group_name);
@@ -51,6 +53,11 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
                         robot_model_ptr_));
   virtual_visual_tools_->loadRobotStatePub(nh_.getNamespace()
                                     + "/display_robot_state");
+
+  // Dynamic Reconfigure Parameters with rosparam_handler
+  params_.fromParamServer();
+  dynamic_reconfig_server_.setCallback(boost::bind(&Robot::reconfigureRequest, this, _1, _2));
+
   return;
 }
 
@@ -60,10 +67,8 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
                const std::string &robot_description,
                       const std::string &group_name):
   Robot(nh, robot_description, group_name),
-  action_("joint_trajectory_action", true),
-  params_(nh),
-  speed_modifier_(1.0)
-{
+  action_("joint_trajectory_action", true)
+ {
   current_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
   current_robot_state_->setToDefaultValues();
 
@@ -80,10 +85,6 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
 
   ROS_INFO_STREAM("Loading ROS pubs/subs");
   j_state_sub_ = nh_.subscribe("joint_states", 1, &OnlineRobot::updateCurrentState, this);
-
-  // Dynamic Reconfigure Parameters with rosparam_handler
-  params_.fromParamServer();
-  dynamic_reconfig_server_.setCallback(boost::bind(&OnlineRobot::reconfigureRequest, this, _1, _2));
 
   //TODO: How to handle action server and other failures in the constructor
   // Perhaps move any items that can fail our of the constructor into an init
@@ -608,11 +609,55 @@ bool Robot::isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout
 }
 
 
+
 void Robot::clearTrajectory(const::std::string traj_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   traj_info_map_.erase(traj_name);
+}
+
+
+
+void Robot::plan(const std::string traj_name, 
+                       JointTrajectoryType & goal,
+                       bool collision_check)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  if ( traj_info_map_.count(traj_name) )
+  {
+    goal.trajectory.joint_names = joint_group_->getVariableNames();
+    try
+    {
+      if ( toJointTrajectory(traj_name, goal.trajectory.points, collision_check) )
+      {
+
+        // Modify the speed of execution for the trajectory based off of the speed_modifier_
+        for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+        {
+          goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
+        }
+
+        ROS_INFO_STREAM("Successfully planned out trajectory: " << traj_name);
+      }
+      else
+      {
+        ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
+        throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
+      }
+    }
+    catch(CollisionDetected &cd)
+    {
+      ROS_ERROR_STREAM("Collision detected in the " << traj_name);
+      throw cd;
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
+    throw std::invalid_argument("No trajectory found named " + traj_name);
+  }
 }
 
 
@@ -625,7 +670,7 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
   bool success = false;
   if ( traj_info_map_.count(traj_name) )
   {
-    control_msgs::FollowJointTrajectoryGoal goal;
+    JointTrajectoryType goal;
     goal.trajectory.joint_names = joint_group_->getVariableNames();
     try
     {
@@ -672,9 +717,9 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
 
 
 
-void OnlineRobot::executeKnownPlan(const std::string traj_name, 
-                              control_msgs::FollowJointTrajectoryGoal & goal,
-                              bool collision_check)
+void OnlineRobot::execute(const std::string traj_name, 
+                          JointTrajectoryType & goal,
+                          bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -740,88 +785,45 @@ void OnlineRobot::executeKnownPlan(const std::string traj_name,
 
 
 
-void OnlineRobot::plan(const std::string traj_name, 
-                       control_msgs::FollowJointTrajectoryGoal & goal,
-                       ros::Duration & traj_time,
-                       bool collision_check)
+void Robot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level)
 {
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
-  const double TIMEOUT_SCALE = 1.25;  //scales time to wait for action timeout.
-  bool success = false;
-  if ( traj_info_map_.count(traj_name) )
+  params_.fromConfig(config);
+  if (params_.speed_modifier > 0.0)
   {
-    goal.trajectory.joint_names = joint_group_->getVariableNames();
-    try
-    {
-      if ( toJointTrajectory(traj_name, goal.trajectory.points, collision_check) )
-      {
-
-        // Modify the speed of execution for the trajectory based off of the speed_modifier_
-        for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
-        {
-          goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
-        }
-
-        traj_time = goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
-        
-        ROS_INFO_STREAM("Successfully planned out trajectory: " << traj_name);
-      }
-      else
-      {
-        ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
-        throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
-      }
-    }
-    catch(CollisionDetected &cd)
-    {
-      ROS_ERROR_STREAM("Collision detected in the " << traj_name);
-      throw cd;
-    }
+    setSpeedModifier(params_.speed_modifier);
   }
   else
   {
-    ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
-    throw std::invalid_argument("No trajectory found named " + traj_name);
+    ROS_WARN_STREAM("Speed modifier should be a positive nunber but it is: " <<
+                    params_.speed_modifier);
   }
 }
 
 
 
-void OnlineRobot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level)
+void Robot::setSpeedModifier(const double speed_modifier)
 {
-  params_.fromConfig(config);
-  if (params_.speed_percent > 0.0)
+  if (speed_modifier <= 1.0 && speed_modifier > 0.0)
   {
-    setSpeedModifier(params_.speed_percent);
+    speed_modifier_ = speed_modifier;
+  }
+  else if ((speed_modifier > 1.0))  
+  {
+    speed_modifier_ = 1.0;
+    ROS_WARN_STREAM("Clamping Speed from " << speed_modifier_ <<
+                    " to max_speed: [1.0]");
+  }
+  else
+  {
+    speed_modifier_ = 0.1;
+    ROS_WARN_STREAM("Clamping Speed from " << speed_modifier_ <<
+                    " to min_speed: [0.1]");
   }
 }
 
 
 
-void OnlineRobot::setSpeedModifier(double speed_percent)
-{
-  if (speed_percent <= 1.0 && speed_percent > 0.0)
-  {
-    speed_modifier_ = speed_percent;
-  }
-  else if((speed_percent > 1.0))  
-  {
-    speed_modifier_ = max_speed;
-    ROS_WARN_STREAM("Clamping Speed from " << speed_modifier_ <<
-                    " to max_speed: " << max_speed);
-  }
-  else if((speed_percent <= 0.0))  
-  {
-    speed_modifier_ = min_speed;
-    ROS_WARN_STREAM("Clamping Speed from " << speed_modifier_ <<
-                    " to min_speed: " << min_speed);
-  }
-}
-
-
-
-double OnlineRobot::getSpeedModifier(void) const
+double Robot::getSpeedModifier(void) const
 {
   return speed_modifier_;
 }
