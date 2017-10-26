@@ -125,7 +125,7 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
 
 
 void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
-                         const std::string & pose_frame, const std::string & custom_tool_frame,  
+                         const std::string & pose_frame, const std::string & tool_name,  
                          double time, const InterpolationType & type, const unsigned int num_steps,
                          const std::string & point_name)
 {
@@ -135,17 +135,17 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
 
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << 
                   " relative to " << pose_frame << " at time " << time << 
-                  " and custom_tool_frame [" << custom_tool_frame << "]");
+                  " and custom_tool_frame [" << tool_name << "]");
   
   try
   {
     ROS_INFO_STREAM("Transforming Pose to custom_tool_frame frame [" << 
-                        custom_tool_frame << "] from moveit_end_link [" << 
+                        tool_name << "] from moveit_end_link [" << 
                          moveit_tool_link << "]");
 
     const Eigen::Affine3d target_pose_buffer = 
                             transformPoseBetweenFrames(pose, moveit_tool_link,
-                                                       custom_tool_frame);
+                                                       tool_name);
 
     Eigen::Affine3d pose_rel_robot = transformToBase(target_pose_buffer, pose_frame);
 
@@ -160,7 +160,7 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
   catch(tf2::TransformException &ex)
   {
       ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point in Frame[" << 
-          custom_tool_frame << "]: " << ex.what());
+          tool_name << "]: " << ex.what());
       throw ex;
   }
 }
@@ -195,7 +195,7 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
 
 
 void Robot::addTrajPoint(const std::string & traj_name, const std::string & point_name,
-                         const std::string & custom_tool_frame, 
+                         const std::string & tool_name, 
                          double time, const InterpolationType & type,
                          const unsigned int num_steps)
 {
@@ -203,7 +203,7 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
 
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name <<
                  " at time " << time <<
-                 " and custom_tool_frame [" << custom_tool_frame << "]");
+                 " and custom_tool_frame [" << tool_name << "]");
 
   // Check to see if the point under consideration is a Joint point/state
   if ( virtual_robot_state_->setToDefaultValues(joint_group_, point_name) )
@@ -251,7 +251,7 @@ void Robot::addTrajPoint(const std::string & traj_name, const std::string & poin
       tf::poseMsgToEigen(pose_buffer, pose_eigen_buffer);
       const Eigen::Affine3d pose_eigen = pose_eigen_buffer;
 
-      addTrajPoint(traj_name, pose_eigen, point_name, custom_tool_frame, 
+      addTrajPoint(traj_name, pose_eigen, point_name, tool_name, 
                    time, type, num_steps, point_name);
     }
     catch ( std::invalid_argument &ia )
@@ -345,7 +345,7 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
 
 
 
-bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& custom_tool_frame,
+bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& tool_name,
                              double timeout, const std::vector<double> & seed,
                              std::vector<double> & joint_point) const
 {
@@ -358,12 +358,12 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
   try
   {
       ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" << 
-                         custom_tool_frame << "] to moveit_end_link [" << 
+                         tool_name << "] to moveit_end_link [" << 
                          moveit_tool_link << "] before performing IK");
 
       // Transform Target/Goal Point from custom tool frame to moveit_end_link
       const Eigen::Affine3d custom_frame_goal_pose = 
-                               transformPoseBetweenFrames(pose, custom_tool_frame, 
+                               transformPoseBetweenFrames(pose, tool_name, 
                                                           moveit_tool_link);
 
       std::vector<double> local_seed = seed;
@@ -378,7 +378,7 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& cus
   catch(tf2::TransformException &ex)
   {
       ROS_WARN_STREAM("getJointSolution failed for arbitrary pose in Frame[" << 
-          custom_tool_frame << "]: " << ex.what());
+          tool_name << "]: " << ex.what());
 
       get_joints = false;
   }
@@ -451,7 +451,7 @@ bool Robot::getPose(const std::vector<double> & joint_point,
 
 
 bool Robot::getPose(const std::vector<double> & joint_point,
-                    const std::string& custom_tool_frame,
+                    const std::string& tool_name,
                     Eigen::Affine3d & pose) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -468,18 +468,18 @@ bool Robot::getPose(const std::vector<double> & joint_point,
     {
         ROS_INFO_STREAM("Transforming Pose from moveit_end_link frame [" << 
                          moveit_tool_link << "] to custom_tool_frame [" << 
-                         custom_tool_frame << "]");
+                         tool_name << "]");
 
         // Transform Target/Goal Point from moveit_end_link to custom tool frame
         pose = transformPoseBetweenFrames(pose_buffer, moveit_tool_link, 
-                                          custom_tool_frame);
+                                          tool_name);
 
         get_pose = true;
     }
     catch(tf2::TransformException &ex)
     {
         ROS_WARN_STREAM("getPose failed for arbitrary Joint Point in Frame[" << 
-            custom_tool_frame << "]: " << ex.what());
+            tool_name << "]: " << ex.what());
 
         get_pose = false;
     }    
@@ -635,7 +635,8 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
         // Modify the speed of execution for the trajectory based off of the speed_modifier_
         for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
         {
-          goal.trajectory.points[i].time_from_start *= speed_modifier_;
+          // '*' is an overloaded operator for trajectory_msgs/JointTrajectory type
+          goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
         }
 
         ros::Duration traj_time =
@@ -672,10 +673,79 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
 
 
 
+void OnlineRobot::executeKnownPlan(const std::string traj_name, 
+                              control_msgs::FollowJointTrajectoryGoal & goal,
+                              bool collision_check)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  const double TIMEOUT_SCALE = 1.25;  //scales time to wait for action timeout.
+  bool success = false;
+  bool isStatecolliding = false;
+
+  if ( traj_info_map_.count(traj_name) )
+  {
+    try
+    {
+      int collision_count = 0;
+      for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+      {
+        if( (collision_check) && isInCollision(goal.trajectory.points[i].positions ) )
+        {
+          collision_count++;
+          isStatecolliding = true;
+        }
+      }
+
+      if ( !isStatecolliding )
+      {
+
+        // Modify the speed of execution for the trajectory based off of the speed_modifier_
+        for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+        {
+          // '*' is an overloaded operator for trajectory_msgs/JointTrajectory type
+          goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
+        }
+
+        ros::Duration traj_time =
+            goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
+        ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
+        if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
+        {
+          ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
+        }
+        else
+        {
+          ROS_ERROR_STREAM("Trajectory " << traj_name << " failed to exectue");
+          throw ExecutionFailureException("Execution failed for "+ traj_name);
+        }
+      }
+      else
+      {
+        ROS_ERROR_STREAM("Collision detected at " << collision_count << 
+                         " points for [" << traj_name <<"]");
+        throw CollisionDetected("Collision detected while interpolating " + traj_name);
+      }
+    }
+    catch(CollisionDetected &cd)
+    {
+      ROS_ERROR_STREAM("Collision detected in trajectory [" << traj_name << "]");
+      throw cd;
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
+    throw std::invalid_argument("No trajectory found named " + traj_name);
+  }
+}
+
+
+
 void OnlineRobot::plan(const std::string traj_name, 
-                           control_msgs::FollowJointTrajectoryGoal & goal,
-                           ros::Duration & traj_time,
-                           bool collision_check)
+                       control_msgs::FollowJointTrajectoryGoal & goal,
+                       ros::Duration & traj_time,
+                       bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -692,7 +762,8 @@ void OnlineRobot::plan(const std::string traj_name,
         // Modify the speed of execution for the trajectory based off of the speed_modifier_
         for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
         {
-          goal.trajectory.points[i].time_from_start *= speed_modifier_;
+          // '*' is an overloaded operator for trajectory_msgs/JointTrajectory type
+          goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
         }
 
         traj_time = goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
@@ -733,17 +804,22 @@ void OnlineRobot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &c
 
 void OnlineRobot::setSpeedModifier(double speed_percent)
 {
-  if((speed_percent > 1.0))  
+  if (speed_percent <= 1.0 && speed_percent > 0.0)
   {
-    speed_percent = 1.0;
+    speed_modifier_ = speed_percent;
   }
-  else if((speed_percent < 0.0))  
+  else if((speed_percent > 1.0))  
   {
-    speed_percent = 0.0;
+    speed_modifier_ = max_speed;
+    ROS_WARN_STREAM("Clamping Speed from " << speed_modifier_ <<
+                    " to max_speed: " << max_speed);
   }
-
-  speed_modifier_ = (speed_percent * abs(max_speed - min_speed) );
-  
+  else if((speed_percent <= 0.0))  
+  {
+    speed_modifier_ = min_speed;
+    ROS_WARN_STREAM("Clamping Speed from " << speed_modifier_ <<
+                    " to min_speed: " << min_speed);
+  }
 }
 
 

@@ -172,7 +172,7 @@ public:
    * @brief This function supports custom tool frame for adding traj points.
    * @param traj_name - name of trajectory buffer to add point to
    * @param point_name - name of point to add
-   * @param custom_tool_frame - frame (must be a TF accessible frame) in which pose is defined
+   * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
    * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
@@ -182,7 +182,7 @@ public:
    * @throws <tf2::TransformException> (transform of TF named point_name fails)
    */
   void addTrajPoint(const std::string & traj_name, const std::string & point_name,
-                    const std::string & custom_tool_frame, 
+                    const std::string & tool_name, 
                     double time, const InterpolationType & type = interpolation_type::JOINT,
                     const unsigned int num_steps = 0);
   /**
@@ -191,7 +191,7 @@ public:
    * @param traj_name - name of trajectory buffer to add point to
    * @param pose - pose of point to add
    * @param pose_frame - frame (must be a TF accessible frame) in which pose is defined
-   * @param custom_tool_frame - frame (must be a TF accessible frame) in which pose is defined
+   * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
    * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
@@ -201,7 +201,7 @@ public:
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
   void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
-                    const std::string & pose_frame, const std::string & custom_tool_frame, 
+                    const std::string & pose_frame, const std::string & tool_name, 
                     double time, const InterpolationType & type = interpolation_type::JOINT,
                     const unsigned int num_steps = 0,
                     const std::string & point_name = std::string());
@@ -224,14 +224,14 @@ public:
    * @brief getJointSolution returns joint solution for cartesian pose.
    * @brief This function supports custom tool frame for solving IK.
    * @param pose - desired pose
-   * @param custom_tool_frame - frame (must be a TF accessible frame) in which pose is defined
+   * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @param timeout - ik solver timeout
    * @param attempts - number of IK solve attem
    * @param seed - ik seed
    * @param joint_point - joint solution for pose
    * @return true if joint solution found
    */
-  bool getJointSolution(const Eigen::Affine3d &pose, const std::string& custom_tool_frame,
+  bool getJointSolution(const Eigen::Affine3d &pose, const std::string& tool_name,
                         double timeout, const std::vector<double> & seed,
                         std::vector<double> & joint_point) const;
 
@@ -249,11 +249,11 @@ public:
    * @brief This function supports custom tool frame for solving FK.
    * @param joint_point - joint positions
    * @param pose - pose corresponding to joint_pose
-   * @param custom_tool_frame - frame (must be a TF accessible frame) in which pose is defined
+   * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @return true if pose is found
    */
   bool getPose(const std::vector<double> & joint_point,
-             const std::string& custom_tool_frame,
+             const std::string& tool_name,
              Eigen::Affine3d & pose) const;
 
   /**
@@ -473,6 +473,23 @@ public:
 
 
   /**
+   * @brief execute a given trajectory
+   * @param traj_name - name of trajectory to be executed (must be filled with
+   * prior calls to "addTrajPoint".
+   * @param goal - Joint trajectory goal which is a known 'Plan'
+   * @param collision_check - bool to turn check for collision on\off
+   * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
+   * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
+   * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
+   * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
+   * in Collision with itself or environment)
+   */
+  void executeKnownPlan(const std::string traj_name, 
+                   control_msgs::FollowJointTrajectoryGoal & goal,
+                   bool collision_check = false);
+
+
+  /**
    * @brief plan out a given trajectory
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
@@ -485,9 +502,9 @@ public:
    * in Collision with itself or environment)
    */
   void plan(const std::string traj_name, 
-                           control_msgs::FollowJointTrajectoryGoal & goal,
-                           ros::Duration & traj_time,
-                           bool collision_check = false);
+          control_msgs::FollowJointTrajectoryGoal & goal,
+          ros::Duration & traj_time,
+          bool collision_check = false);
 
 
   /**
@@ -533,8 +550,9 @@ protected:
 
   // Dynamic Reconfigure
   double speed_modifier_;
-  double max_speed = 0.0;
-  double min_speed = 10.0;
+  double speed_percent_;
+  double max_speed = 1.0;
+  double min_speed = 0.1;
 
   moveit_simple_dynamic_reconfigure_Parameters params_;
 
