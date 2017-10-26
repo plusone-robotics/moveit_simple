@@ -635,7 +635,6 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
         // Modify the speed of execution for the trajectory based off of the speed_modifier_
         for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
         {
-          // '*' is an overloaded operator for trajectory_msgs/JointTrajectory type
           goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
         }
 
@@ -703,7 +702,6 @@ void OnlineRobot::executeKnownPlan(const std::string traj_name,
         // Modify the speed of execution for the trajectory based off of the speed_modifier_
         for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
         {
-          // '*' is an overloaded operator for trajectory_msgs/JointTrajectory type
           goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
         }
 
@@ -762,7 +760,6 @@ void OnlineRobot::plan(const std::string traj_name,
         // Modify the speed of execution for the trajectory based off of the speed_modifier_
         for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
         {
-          // '*' is an overloaded operator for trajectory_msgs/JointTrajectory type
           goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
         }
 

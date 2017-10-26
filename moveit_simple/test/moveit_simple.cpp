@@ -413,7 +413,7 @@ TEST_F(UserRobotTest, speed_reconfiguration)
 
   ros::Duration(2.0).sleep(); //wait for tf tree to populate
 
-  double execution_time_tolerance = 0.50; // Empirically assumed
+  double execution_time_tolerance = 0.25; // Empirically assumed
 
   double delta_half_min_speeds = 0.0;
   double delta_max_half_speeds = 0.0;
@@ -445,8 +445,8 @@ TEST_F(UserRobotTest, speed_reconfiguration)
     << execution_time_check_1 << " seconds");
 
   // Test 2 -- HALF_EXECUTION_SPEED: PLAN & EXECUTE
-  robot->setSpeedModifier(0.55);
-  EXPECT_TRUE(robot->getSpeedModifier() == 0.55);
+  robot->setSpeedModifier(0.50);
+  EXPECT_TRUE(robot->getSpeedModifier() == 0.50);
 
   double start_half_speed_execution = ros::Time::now().toSec();
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
@@ -458,8 +458,8 @@ TEST_F(UserRobotTest, speed_reconfiguration)
     << execution_time_check_2 << " seconds");
 
   // Test 3 -- MIN_EXECUTION_SPEED: PLAN & EXECUTE
-  robot->setSpeedModifier(0.1);
-  EXPECT_TRUE(robot->getSpeedModifier() == 0.1);
+  robot->setSpeedModifier(0.25);
+  EXPECT_TRUE(robot->getSpeedModifier() == 0.25);
 
   double start_min_speed_execution = ros::Time::now().toSec();
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
@@ -470,23 +470,22 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   ROS_INFO_STREAM("Time for single traj. execution at MIN speed: "
     << execution_time_check_3 << " seconds");
 
-  delta_half_min_speeds = execution_time_check_2 - execution_time_check_1;
+  delta_half_min_speeds = execution_time_check_2 / execution_time_check_1;
   EXPECT_TRUE(delta_half_min_speeds >= 0.0);
 
-  delta_max_half_speeds = execution_time_check_3 - execution_time_check_2;
+  delta_max_half_speeds = execution_time_check_3 / execution_time_check_2;
   EXPECT_TRUE(delta_max_half_speeds >= 0.0);
 
   delta_time_for_speed_limits = delta_max_half_speeds - delta_half_min_speeds;
-  //THE BELOW TEST IS FAILING RIGHT NOW -- FIGURE OUT WHY!!!!!
-  //EXPECT_NEAR(delta_time_for_speed_limits, 0.0, execution_time_tolerance);
+  EXPECT_NEAR(delta_time_for_speed_limits, 0.0, execution_time_tolerance);
 
   if(abs(delta_time_for_speed_limits) > execution_time_tolerance) 
   {
-    ROS_ERROR_STREAM("Time diff between [MAX_SPEED, REGULAR_SPEED] --> [" << 
+    ROS_ERROR_STREAM("Time diff between [MAX_SPEED/REGULAR_SPEED] --> [" << 
                      execution_time_check_1 << ", " << execution_time_check_2 << 
-                     "] & [REGULAR_SPEED, MIN_SPEED] --> [" << execution_time_check_2 <<
+                     "] & [REGULAR_SPEED/MIN_SPEED] --> [" << execution_time_check_2 <<
                      ", " << execution_time_check_3 << "] is " << delta_time_for_speed_limits << 
-                     "; but tolerance limit is [0.50]");
+                     "; but tolerance limit is [" << execution_time_tolerance << "]");
   }
 }
 
