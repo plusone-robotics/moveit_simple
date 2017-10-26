@@ -310,7 +310,7 @@ protected:
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in,
                                          const std::string &in_frame) const;
 
-    /**
+  /**
    * @brief transformPoseBetweenFrames transforms frame_in to frame_out.
    * @param target_pose - goal pose for IK 
    * @param frame_in - Current Frame of Reference as Input
@@ -404,11 +404,6 @@ protected:
                                Eigen::Affine3d &pose) const;
 
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & name,
-                                                         double time) const;
-
-  std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & traj_name,
-                                                         const std::string & name,
-                                                         const std::string & custom_tool_frame, 
                                                          double time) const;
 
   bool isConfigChange(const std::vector<double> jp1,
