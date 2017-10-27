@@ -619,14 +619,14 @@ void Robot::clearTrajectory(const::std::string traj_name)
 
 
 
-void Robot::plan(const std::string traj_name, 
-                       JointTrajectoryType & goal,
-                       bool collision_check)
+moveit_simple::JointTrajectoryType Robot::plan(const std::string traj_name, 
+                                               bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   if ( traj_info_map_.count(traj_name) )
   {
+    JointTrajectoryType goal;
     goal.trajectory.joint_names = joint_group_->getVariableNames();
     try
     {
@@ -639,23 +639,24 @@ void Robot::plan(const std::string traj_name,
           goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
         }
 
-        ROS_INFO_STREAM("Successfully planned out trajectory: " << traj_name);
+        ROS_INFO_STREAM("Successfully planned out trajectory: [" << traj_name << "]");
+        return goal;
       }
       else
       {
-        ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
+        ROS_ERROR_STREAM("Failed to convert [" << traj_name << "] to joint trajectory");
         throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
       }
     }
     catch(CollisionDetected &cd)
     {
-      ROS_ERROR_STREAM("Collision detected in the " << traj_name);
+      ROS_ERROR_STREAM("Collision detected in [" << traj_name << "]");
       throw cd;
     }
   }
   else
   {
-    ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
+    ROS_ERROR_STREAM("Trajectoy [" << traj_name << "] not found");
     throw std::invalid_argument("No trajectory found named " + traj_name);
   }
 }
@@ -688,37 +689,36 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
         ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
         if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
         {
-          ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
+          ROS_INFO_STREAM("Successfully executed trajectory: [" << traj_name << "]");
         }
         else
         {
-          ROS_ERROR_STREAM("Trajectory " << traj_name << " failed to exectue");
+          ROS_ERROR_STREAM("Trajectory [" << traj_name << "] failed to exectue");
           throw ExecutionFailureException("Execution failed for "+ traj_name);
         }
       }
       else
       {
-        ROS_ERROR_STREAM("Failed to convert " << traj_name << " to joint trajectory");
+        ROS_ERROR_STREAM("Failed to convert [" << traj_name << "] to joint trajectory");
         throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
       }
     }
     catch(CollisionDetected &cd)
     {
-      ROS_ERROR_STREAM("Collision detected in the " << traj_name);
+      ROS_ERROR_STREAM("Collision detected in the [" << traj_name << "]");
       throw cd;
     }
   }
   else
   {
-    ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
+    ROS_ERROR_STREAM("Trajectoy [" << traj_name << "] not found");
     throw std::invalid_argument("No trajectory found named " + traj_name);
   }
 }
 
 
 
-void OnlineRobot::execute(const std::string traj_name, 
-                          JointTrajectoryType & goal,
+void OnlineRobot::execute(JointTrajectoryType & goal,
                           bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -727,59 +727,51 @@ void OnlineRobot::execute(const std::string traj_name,
   bool success = false;
   bool isStatecolliding = false;
 
-  if ( traj_info_map_.count(traj_name) )
+  try
   {
-    try
+    int collision_count = 0;
+    for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
     {
-      int collision_count = 0;
+      if( (collision_check) && isInCollision(goal.trajectory.points[i].positions ) )
+      {
+        collision_count++;
+        isStatecolliding = true;
+      }
+    }
+
+    if ( !isStatecolliding )
+    {
+
+      // Modify the speed of execution for the trajectory based off of the speed_modifier_
       for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
       {
-        if( (collision_check) && isInCollision(goal.trajectory.points[i].positions ) )
-        {
-          collision_count++;
-          isStatecolliding = true;
-        }
+        goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
       }
 
-      if ( !isStatecolliding )
+      ros::Duration traj_time =
+          goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
+      ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
+      if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
       {
-
-        // Modify the speed of execution for the trajectory based off of the speed_modifier_
-        for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
-        {
-          goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
-        }
-
-        ros::Duration traj_time =
-            goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
-        ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
-        if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
-        {
-          ROS_INFO_STREAM("Successfully executed trajectory: " << traj_name);
-        }
-        else
-        {
-          ROS_ERROR_STREAM("Trajectory " << traj_name << " failed to exectue");
-          throw ExecutionFailureException("Execution failed for "+ traj_name);
-        }
+        ROS_INFO_STREAM("Successfully executed Joint Trajectory ");
       }
       else
       {
-        ROS_ERROR_STREAM("Collision detected at " << collision_count << 
-                         " points for [" << traj_name <<"]");
-        throw CollisionDetected("Collision detected while interpolating " + traj_name);
+        ROS_ERROR_STREAM("Joint Trajectory failed to execute.. check input Plan");
+        throw ExecutionFailureException("Execution failed for Joint Trajectory");
       }
     }
-    catch(CollisionDetected &cd)
+    else
     {
-      ROS_ERROR_STREAM("Collision detected in trajectory [" << traj_name << "]");
-      throw cd;
+      ROS_ERROR_STREAM("Collision detected at " << collision_count << 
+                       " points for Joint Trajectory");
+      throw CollisionDetected("Collision detected while interpolating ");
     }
   }
-  else
+  catch(CollisionDetected &cd)
   {
-    ROS_ERROR_STREAM("Trajectoy " << traj_name << " not found");
-    throw std::invalid_argument("No trajectory found named " + traj_name);
+    ROS_ERROR_STREAM("Collision detected in trajectory ");
+    throw cd;
   }
 }
 

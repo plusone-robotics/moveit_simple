@@ -433,7 +433,6 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
-
   
   // Test 1 -- Max_Execution_Speed: Plan & then Execute that Plan separately
   robot->setSpeedModifier(1.0);
@@ -441,8 +440,8 @@ TEST_F(UserRobotTest, speed_reconfiguration)
 
   moveit_simple::JointTrajectoryType goal;
 
-  EXPECT_NO_THROW(robot->plan(TRAJECTORY_NAME, goal));
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME, goal));  
+  EXPECT_NO_THROW(goal = robot->plan(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(robot->execute(goal));  
   
   execution_time_check_1 = goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start.toSec();
   EXPECT_TRUE(execution_time_check_1 >= 0.0);
@@ -708,8 +707,8 @@ TEST_F(DeveloperRobotTest, collision)
   // Test to see if above collision detection works when you separate out plan(...) & execute(...)
   moveit_simple::JointTrajectoryType goal;
 
-  EXPECT_NO_THROW(robot2->plan(TRAJECTORY_NAME, goal));
-  EXPECT_THROW(robot2->execute(TRAJECTORY_NAME, goal, true), moveit_simple::CollisionDetected);
+  EXPECT_NO_THROW(goal = robot2->plan(TRAJECTORY_NAME));
+  EXPECT_THROW(robot2->execute(goal, true), moveit_simple::CollisionDetected);
 }
 
 TEST(MoveitSimpleTest, Singularity)

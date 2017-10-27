@@ -268,16 +268,14 @@ public:
    * @brief plan out a given trajectory
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
-   * @param goal - Joint trajectory goal
    * @param collision_check - bool to turn check for collision on\off
    * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
    * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void plan(const std::string traj_name, 
-          JointTrajectoryType & goal,
-          bool collision_check = false);
+  moveit_simple::JointTrajectoryType plan(const std::string traj_name, 
+                                          bool collision_check = false);
 
   /**
    * @brief toJointTrajPtMsg - Converts native joint point (vector + time) to ROS joint
@@ -509,19 +507,14 @@ public:
 
 
   /**
-   * @brief execute a given trajectory given a planned trajectory
-   * @param traj_name - name of trajectory to be executed (must be filled with
-   * prior calls to "addTrajPoint".
-   * @param goal - Joint trajectory goal which is a known 'Plan'
+   * @brief execute a given planned joint trajectory
+   * @param goal - Joint Trajectory goal which is a known 'Plan'
    * @param collision_check - bool to turn check for collision on\off
    * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
-   * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void execute(const std::string traj_name, 
-            JointTrajectoryType & goal,
-            bool collision_check = false);
+  void execute(JointTrajectoryType & goal, bool collision_check = false);
 
 
   /**
