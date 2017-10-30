@@ -274,18 +274,8 @@ public:
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  moveit_simple::JointTrajectoryType plan(const std::string traj_name, 
-                                          bool collision_check = false);
-
-  /**
-   * @brief toJointTrajPtMsg - Converts native joint point (vector + time) to ROS joint
-   * trajectory point message type.
-   * @param joint_point
-   * @param time
-   * @return
-   */
-  static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
-      const std::vector<double> & joint_point, double time);
+  std::vector<moveit_simple::JointTrajectoryPoint> plan(const std::string traj_name, 
+                                                        bool collision_check = false);
 
   /**
    * @brief interpolate - returns the pose interpolated from \e from pose towards \e to
@@ -338,7 +328,7 @@ protected:
   Robot();
 
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in,
-                                         const std::string &in_frame) const;
+                                  const std::string &in_frame) const;
 
   /**
    * @brief transformPoseBetweenFrames transforms frame_in to frame_out.
@@ -350,6 +340,12 @@ protected:
   Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose, 
                                          const std::string& frame_in,
                                          const std::string& frame_out) const;
+
+  std::vector<moveit_simple::JointTrajectoryPoint> 
+    trajectoryTypeConversionFromROSToMoveItSimple(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const; 
+
+  control_msgs::FollowJointTrajectoryGoal 
+    trajectoryTypeConversionFromMoveItSimpleToROS(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)  const;     
 
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
@@ -416,6 +412,10 @@ protected:
   bool isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout,
                    std::vector<double> joint_seed = std::vector<double>() ) const;
 
+  bool jointTrajectoryCollisionCheck(control_msgs::FollowJointTrajectoryGoal & goal,
+                                     int & collision_points,
+                                     bool collision_check = false);
+
   /**
   * @brief getJointState - Returns a vector<double> of the
   * robot position from updated from last IK call.
@@ -438,6 +438,16 @@ protected:
 
   bool isConfigChange(const std::vector<double> jp1,
                       const std::vector<double> jp2) const;
+
+  /**
+   * @brief toJointTrajPtMsg - Converts native joint point (vector + time) to ROS joint
+   * trajectory point message type.
+   * @param joint_point
+   * @param time
+   * @return
+   */
+  static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
+      const std::vector<double> & joint_point, double time);
 
   trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
       const JointTrajectoryPoint & joint_point) const;
@@ -514,7 +524,7 @@ public:
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void execute(JointTrajectoryType & goal, bool collision_check = false);
+  void execute(std::vector<moveit_simple::JointTrajectoryPoint> & goal, bool collision_check = false);
 
 
   /**

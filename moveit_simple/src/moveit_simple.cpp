@@ -619,25 +619,28 @@ void Robot::clearTrajectory(const::std::string traj_name)
 
 
 
-moveit_simple::JointTrajectoryType Robot::plan(const std::string traj_name, 
-                                               bool collision_check)
+std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string traj_name, 
+                                              				 bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   if ( traj_info_map_.count(traj_name) )
   {
-    JointTrajectoryType goal;
-    goal.trajectory.joint_names = joint_group_->getVariableNames();
+  	std::vector<trajectory_msgs::JointTrajectoryPoint> ROS_trajectory_points;
+
     try
     {
-      if ( toJointTrajectory(traj_name, goal.trajectory.points, collision_check) )
+      if ( toJointTrajectory(traj_name, ROS_trajectory_points, collision_check) )
       {
-
-        // Modify the speed of execution for the trajectory based off of the speed_modifier_
-        for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+		
+		// Modify the speed of execution for the trajectory based off of the speed_modifier_
+        for (std::size_t i = 0; i < ROS_trajectory_points.size(); i++)
         {
-          goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
+          ROS_trajectory_points[i].time_from_start *= (1.0/speed_modifier_);
         }
+
+        std::vector<moveit_simple::JointTrajectoryPoint> goal =
+        	trajectoryTypeConversionFromROSToMoveItSimple(ROS_trajectory_points);
 
         ROS_INFO_STREAM("Successfully planned out trajectory: [" << traj_name << "]");
         return goal;
@@ -656,7 +659,7 @@ moveit_simple::JointTrajectoryType Robot::plan(const std::string traj_name,
   }
   else
   {
-    ROS_ERROR_STREAM("Trajectoy [" << traj_name << "] not found");
+    ROS_ERROR_STREAM("Trajectory [" << traj_name << "] not found");
     throw std::invalid_argument("No trajectory found named " + traj_name);
   }
 }
@@ -667,112 +670,133 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  const double TIMEOUT_SCALE = 1.25;  //scales time to wait for action timeout.
-  bool success = false;
-  if ( traj_info_map_.count(traj_name) )
+  try 
   {
-    JointTrajectoryType goal;
-    goal.trajectory.joint_names = joint_group_->getVariableNames();
-    try
-    {
-      if ( toJointTrajectory(traj_name, goal.trajectory.points, collision_check) )
-      {
+  	std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
-        // Modify the speed of execution for the trajectory based off of the speed_modifier_
-        for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
-        {
-          goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
-        }
-
-        ros::Duration traj_time =
-            goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
-        ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
-        if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
-        {
-          ROS_INFO_STREAM("Successfully executed trajectory: [" << traj_name << "]");
-        }
-        else
-        {
-          ROS_ERROR_STREAM("Trajectory [" << traj_name << "] failed to exectue");
-          throw ExecutionFailureException("Execution failed for "+ traj_name);
-        }
-      }
-      else
-      {
-        ROS_ERROR_STREAM("Failed to convert [" << traj_name << "] to joint trajectory");
-        throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
-      }
-    }
-    catch(CollisionDetected &cd)
-    {
-      ROS_ERROR_STREAM("Collision detected in the [" << traj_name << "]");
-      throw cd;
-    }
+  	goal = plan(traj_name, collision_check);
+  	execute(goal);
   }
-  else
+  catch	(IKFailException &ik)
   {
-    ROS_ERROR_STREAM("Trajectoy [" << traj_name << "] not found");
-    throw std::invalid_argument("No trajectory found named " + traj_name);
+  	ROS_ERROR_STREAM("IK Failed for trajectory: [" << traj_name << "]");
+  	throw ik;
   }
+  catch	(CollisionDetected &cd)
+  {
+  	ROS_ERROR_STREAM("Collision detected in trajectory");
+	throw cd;
+  }
+  catch (std::invalid_argument &ia)
+  {
+    ROS_ERROR_STREAM("Invalid trajectory name: [" << traj_name << "]");
+    throw ia;
+  }
+  catch (ExecutionFailureException &ef)
+  {
+    ROS_ERROR_STREAM("Trajectory [" << traj_name << "] failed to execute");
+    throw ef;
+  } 
 }
 
 
 
-void OnlineRobot::execute(JointTrajectoryType & goal,
+void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points,
                           bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   const double TIMEOUT_SCALE = 1.25;  //scales time to wait for action timeout.
-  bool success = false;
-  bool isStatecolliding = false;
+  
+  int collision_points = 0;
 
-  try
+  control_msgs::FollowJointTrajectoryGoal goal = 
+  				trajectoryTypeConversionFromMoveItSimpleToROS(joint_trajectory_points);
+
+  if (!jointTrajectoryCollisionCheck(goal, collision_points, collision_check) )
   {
-    int collision_count = 0;
-    for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+
+    ros::Duration traj_time =
+        goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
+    ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
+    if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
     {
-      if( (collision_check) && isInCollision(goal.trajectory.points[i].positions ) )
-      {
-        collision_count++;
-        isStatecolliding = true;
-      }
-    }
-
-    if ( !isStatecolliding )
-    {
-
-      // Modify the speed of execution for the trajectory based off of the speed_modifier_
-      for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
-      {
-        goal.trajectory.points[i].time_from_start *= (1.0/speed_modifier_);
-      }
-
-      ros::Duration traj_time =
-          goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start;
-      ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
-      if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
-      {
-        ROS_INFO_STREAM("Successfully executed Joint Trajectory ");
-      }
-      else
-      {
-        ROS_ERROR_STREAM("Joint Trajectory failed to execute.. check input Plan");
-        throw ExecutionFailureException("Execution failed for Joint Trajectory");
-      }
+      ROS_INFO_STREAM("Successfully executed Joint Trajectory ");
     }
     else
     {
-      ROS_ERROR_STREAM("Collision detected at " << collision_count << 
-                       " points for Joint Trajectory");
-      throw CollisionDetected("Collision detected while interpolating ");
+      ROS_ERROR_STREAM("Joint Trajectory failed to execute.. check input Plan");
+      throw ExecutionFailureException("Execution failed for Joint Trajectory");
     }
   }
-  catch(CollisionDetected &cd)
+
+  else
   {
-    ROS_ERROR_STREAM("Collision detected in trajectory ");
-    throw cd;
+  	ROS_ERROR_STREAM("Collision detected at " << collision_points << 
+                       " points for Joint Trajectory");
+
+  	throw CollisionDetected("Collision detected while interpolating ");
   }
+}
+
+
+
+std::vector<moveit_simple::JointTrajectoryPoint> Robot::trajectoryTypeConversionFromROSToMoveItSimple(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const
+{
+	std::vector<moveit_simple::JointTrajectoryPoint> goal;
+      	
+    for (std::size_t i = 0; i < ROS_joint_trajectory_points.size(); i++)
+    {
+	    JointTrajectoryPoint point(ROS_joint_trajectory_points[i].positions, ROS_joint_trajectory_points[i].time_from_start.toSec(), "");
+	    goal.push_back(point);
+	}
+
+	return goal;
+}
+
+
+
+control_msgs::FollowJointTrajectoryGoal Robot::trajectoryTypeConversionFromMoveItSimpleToROS(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)	const
+{
+	control_msgs::FollowJointTrajectoryGoal goal;
+  	goal.trajectory.joint_names = joint_group_->getVariableNames();
+
+    for(auto& trajectory_point : joint_trajectory_points)	
+    {
+    	trajectory_msgs::JointTrajectoryPoint goal_buffer;
+  	 	goal_buffer.positions = trajectory_point.jointPoint();
+
+   		ros::Duration ros_time(trajectory_point.time());
+   		goal_buffer.time_from_start = ros_time;
+
+   		goal.trajectory.points.push_back(goal_buffer); 
+  	}
+
+  	return goal;
+}
+
+
+
+bool Robot::jointTrajectoryCollisionCheck(control_msgs::FollowJointTrajectoryGoal & goal,
+										  int & collision_count,
+										  bool collision_check)	
+{
+	bool isStatecolliding = false;
+	collision_count = 0;
+
+	if(collision_check)
+	{
+		for (std::size_t i = 0; i < goal.trajectory.points.size(); i++)
+		{
+		    if(isInCollision(goal.trajectory.points[i].positions ) )
+		    {
+		      collision_count++;
+		      isStatecolliding = true;
+		    }
+    	}
+	}
+
+    return isStatecolliding;
 }
 
 
@@ -801,13 +825,13 @@ void Robot::setSpeedModifier(const double speed_modifier)
   }
   else if ((speed_modifier > 1.0))  
   {
-    speed_modifier_ = 1.0;
+    speed_modifier_ = 1.0;	// MAX allowed parameter value
     ROS_WARN_STREAM("Clamping Speed from " << speed_modifier_ <<
                     " to max_speed: [1.0]");
   }
   else
   {
-    speed_modifier_ = 0.1;
+    speed_modifier_ = 0.01;	// MIN allowed parameter value
     ROS_WARN_STREAM("Clamping Speed from " << speed_modifier_ <<
                     " to min_speed: [0.1]");
   }

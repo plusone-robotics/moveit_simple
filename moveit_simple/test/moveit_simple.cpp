@@ -438,12 +438,12 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   robot->setSpeedModifier(1.0);
   EXPECT_TRUE(robot->getSpeedModifier() == 1.0);
 
-  moveit_simple::JointTrajectoryType goal;
+  std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
   EXPECT_NO_THROW(goal = robot->plan(TRAJECTORY_NAME));
   EXPECT_NO_THROW(robot->execute(goal));  
   
-  execution_time_check_1 = goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start.toSec();
+  execution_time_check_1 = goal[goal.size()-1].time();
   EXPECT_TRUE(execution_time_check_1 >= 0.0);
   ROS_INFO_STREAM("Time for single traj. execution at MAX speed: " 
     << execution_time_check_1 << " seconds");
@@ -705,7 +705,7 @@ TEST_F(DeveloperRobotTest, collision)
   EXPECT_THROW(robot2->execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
 
   // Test to see if above collision detection works when you separate out plan(...) & execute(...)
-  moveit_simple::JointTrajectoryType goal;
+  std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
   EXPECT_NO_THROW(goal = robot2->plan(TRAJECTORY_NAME));
   EXPECT_THROW(robot2->execute(goal, true), moveit_simple::CollisionDetected);
