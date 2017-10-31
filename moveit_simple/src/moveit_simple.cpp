@@ -640,7 +640,7 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string t
         }
 
         std::vector<moveit_simple::JointTrajectoryPoint> goal =
-        	trajectoryTypeConversionFromROSToMoveItSimple(ROS_trajectory_points);
+        	toJointTrajectoryPoint(ROS_trajectory_points);
 
         ROS_INFO_STREAM("Successfully planned out trajectory: [" << traj_name << "]");
         return goal;
@@ -708,12 +708,12 @@ void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> & joi
 
   const double TIMEOUT_SCALE = 1.25;  //scales time to wait for action timeout.
   
-  int collision_points = 0;
-
   control_msgs::FollowJointTrajectoryGoal goal = 
-  				trajectoryTypeConversionFromMoveItSimpleToROS(joint_trajectory_points);
+  				toFollowJointTrajectoryGoal(joint_trajectory_points);
 
-  if (!jointTrajectoryCollisionCheck(goal, collision_points, collision_check) )
+  int collision_points = trajCollisionCheck(goal, collision_check);
+
+  if (collision_points == 0)
   {
 
     ros::Duration traj_time =
@@ -741,13 +741,14 @@ void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> & joi
 
 
 
-std::vector<moveit_simple::JointTrajectoryPoint> Robot::trajectoryTypeConversionFromROSToMoveItSimple(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const
+std::vector<moveit_simple::JointTrajectoryPoint> Robot::toJointTrajectoryPoint(std::vector<trajectory_msgs::JointTrajectoryPoint> & ros_joint_trajectory_points)  const
 {
 	std::vector<moveit_simple::JointTrajectoryPoint> goal;
+  goal.reserve(ros_joint_trajectory_points.size());
       	
-    for (std::size_t i = 0; i < ROS_joint_trajectory_points.size(); i++)
+    for (std::size_t i = 0; i < ros_joint_trajectory_points.size(); i++)
     {
-	    JointTrajectoryPoint point(ROS_joint_trajectory_points[i].positions, ROS_joint_trajectory_points[i].time_from_start.toSec(), "");
+	    JointTrajectoryPoint point(ros_joint_trajectory_points[i].positions, ros_joint_trajectory_points[i].time_from_start.toSec(), "");
 	    goal.push_back(point);
 	}
 
@@ -756,7 +757,7 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::trajectoryTypeConversion
 
 
 
-control_msgs::FollowJointTrajectoryGoal Robot::trajectoryTypeConversionFromMoveItSimpleToROS(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)	const
+control_msgs::FollowJointTrajectoryGoal Robot::toFollowJointTrajectoryGoal(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)	const
 {
 	control_msgs::FollowJointTrajectoryGoal goal;
   	goal.trajectory.joint_names = joint_group_->getVariableNames();
@@ -777,12 +778,10 @@ control_msgs::FollowJointTrajectoryGoal Robot::trajectoryTypeConversionFromMoveI
 
 
 
-bool Robot::jointTrajectoryCollisionCheck(control_msgs::FollowJointTrajectoryGoal & goal,
-										  int & collision_count,
+int Robot::trajCollisionCheck(control_msgs::FollowJointTrajectoryGoal & goal,
 										  bool collision_check)	
 {
-	bool isStatecolliding = false;
-	collision_count = 0;
+	int collision_count = 0;
 
 	if(collision_check)
 	{
@@ -791,12 +790,11 @@ bool Robot::jointTrajectoryCollisionCheck(control_msgs::FollowJointTrajectoryGoa
 		    if(isInCollision(goal.trajectory.points[i].positions ) )
 		    {
 		      collision_count++;
-		      isStatecolliding = true;
 		    }
     	}
 	}
 
-    return isStatecolliding;
+  return collision_count;
 }
 
 

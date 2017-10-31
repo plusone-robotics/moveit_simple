@@ -74,8 +74,6 @@ struct TrajectoryPointInfo {
 };
 typedef std::vector<TrajectoryPointInfo> TrajectoryInfo;
 
-typedef control_msgs::FollowJointTrajectoryGoal JointTrajectoryType;
-
 /**
  * @brief Robot is a wrapper around standard MoveIt objects.  It makes multiple
  assumptions about the type and complexity of the robot.  Assumptions are:
@@ -342,10 +340,10 @@ protected:
                                          const std::string& frame_out) const;
 
   std::vector<moveit_simple::JointTrajectoryPoint> 
-    trajectoryTypeConversionFromROSToMoveItSimple(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const; 
+    toJointTrajectoryPoint(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const; 
 
   control_msgs::FollowJointTrajectoryGoal 
-    trajectoryTypeConversionFromMoveItSimpleToROS(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)  const;     
+    toFollowJointTrajectoryGoal(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)  const;     
 
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
@@ -412,8 +410,7 @@ protected:
   bool isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout,
                    std::vector<double> joint_seed = std::vector<double>() ) const;
 
-  bool jointTrajectoryCollisionCheck(control_msgs::FollowJointTrajectoryGoal & goal,
-                                     int & collision_points,
+  int trajCollisionCheck(control_msgs::FollowJointTrajectoryGoal & goal,
                                      bool collision_check = false);
 
   /**
