@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(moveit_simple)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  dynamic_reconfigure
+  rosparam_handler
   geometry_msgs
   eigen_conversions
   tf2
@@ -19,6 +21,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Boost REQUIRED)
 find_package(Eigen3 REQUIRED)
+
+generate_ros_parameter_files(cfg/moveit_simple_dynamic_reconfigure_.params)
 
 catkin_package(
   INCLUDE_DIRS
@@ -51,6 +55,8 @@ include_directories(
 
 add_library(moveit_simple src/moveit_simple.cpp)
 add_dependencies(moveit_simple ${catkin_EXPORTED_TARGETS})
+add_dependencies(moveit_simple ${PROJECT_NAME}_gencfg)
+add_dependencies(moveit_simple ${PROJECT_NAME}_genparam)
 target_link_libraries(moveit_simple ${catkin_LIBRARIES})
 target_compile_options(moveit_simple PUBLIC -std=c++11)
 
