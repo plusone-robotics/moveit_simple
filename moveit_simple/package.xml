@@ -18,7 +18,6 @@
   <build_depend>moveit_core</build_depend>
   <build_depend>moveit_ros_planning</build_depend>
   <build_depend>moveit_visual_tools</build_depend>
-  <build_depend>prettyprint</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>rosparam_handler</build_depend>
   <build_depend>sensor_msgs</build_depend>
