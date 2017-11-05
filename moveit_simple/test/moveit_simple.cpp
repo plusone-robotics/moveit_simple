@@ -86,9 +86,14 @@ protected:
 
 
 
-TEST(MoveitSimpleTest, construction)
+TEST(MoveitSimpleTest, construction_robot)
 {
-  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");  
+}
+
+
+TEST(MoveitSimpleTest, construction_online_robot)
+{
   moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator");
 }
 
@@ -159,7 +164,7 @@ TEST_F(DeveloperRobotTest, planning)
 
   Eigen::Affine3d pose1;
   Eigen::Affine3d pose2;
-  Eigen::Affine3d  joint_interpolated_expected_pose;
+  Eigen::Affine3d joint_interpolated_expected_pose;
 
   EXPECT_TRUE(robot2->getPose(joint1, pose1));
   EXPECT_TRUE(robot2->getPose(joint2, pose2));
@@ -414,6 +419,88 @@ TEST_F(DeveloperRobotTest, interpolation)
 }
 
 
+TEST_F(UserRobotTest, speed_reconfiguration)
+{
+  const std::string TRAJECTORY_NAME("traj1");
+
+  ros::Duration(2.0).sleep(); //wait for tf tree to populate
+
+  double execution_time_tolerance = 0.25; // Empirically assumed
+
+  double delta_half_min_speeds = 0.0;
+  double delta_max_half_speeds = 0.0;
+  double delta_time_for_speed_limits = 0.0;
+
+  double execution_time_check_1 = INT_MAX;
+  double execution_time_check_2 = INT_MAX;
+  double execution_time_check_3 = INT_MAX;
+
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
+  
+  // Test 1 -- Max_Execution_Speed: Plan & then Execute that Plan separately
+  robot->setSpeedModifier(1.0);
+  EXPECT_TRUE(robot->getSpeedModifier() == 1.0);
+
+  std::vector<moveit_simple::JointTrajectoryPoint> goal;
+
+  EXPECT_NO_THROW(goal = robot->plan(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(robot->execute(goal));  
+  
+  execution_time_check_1 = goal[goal.size()-1].time();
+  EXPECT_TRUE(execution_time_check_1 >= 0.0);
+  ROS_INFO_STREAM("Time for single traj. execution at MAX speed: " 
+    << execution_time_check_1 << " seconds");
+
+  // Test 2 -- Half_Execution_Speed: Plan & Execute
+  robot->setSpeedModifier(0.50);
+  EXPECT_TRUE(robot->getSpeedModifier() == 0.50);
+
+  double start_half_speed_execution = ros::Time::now().toSec();
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  double end_half_speed_execution = ros::Time::now().toSec();
+
+  execution_time_check_2 = end_half_speed_execution - start_half_speed_execution;
+  EXPECT_TRUE(execution_time_check_2 >= 0.0);
+  ROS_INFO_STREAM("Time for single traj. execution at Half speed: "
+    << execution_time_check_2 << " seconds");
+
+  // Test 3 -- Min_Execution_Speed: Plan & Execute
+  robot->setSpeedModifier(0.25);
+  EXPECT_TRUE(robot->getSpeedModifier() == 0.25);
+
+  double start_min_speed_execution = ros::Time::now().toSec();
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  double end_min_speed_execution = ros::Time::now().toSec();
+
+  execution_time_check_3 = end_min_speed_execution - start_min_speed_execution;
+  EXPECT_TRUE(execution_time_check_3 >= 0.0);
+  ROS_INFO_STREAM("Time for single traj. execution at MIN speed: "
+    << execution_time_check_3 << " seconds");
+
+  delta_half_min_speeds = execution_time_check_2 / execution_time_check_1;
+  EXPECT_TRUE(delta_half_min_speeds >= 0.0);
+
+  delta_max_half_speeds = execution_time_check_3 / execution_time_check_2;
+  EXPECT_TRUE(delta_max_half_speeds >= 0.0);
+
+  delta_time_for_speed_limits = delta_max_half_speeds - delta_half_min_speeds;
+  EXPECT_NEAR(delta_time_for_speed_limits, 0.0, execution_time_tolerance);
+
+  if(abs(delta_time_for_speed_limits) > execution_time_tolerance) 
+  {
+    ROS_ERROR_STREAM("Time diff between [MAX_SPEED/REGULAR_SPEED] --> [" << 
+                     execution_time_check_1 << ", " << execution_time_check_2 << 
+                     "] & [REGULAR_SPEED/MIN_SPEED] --> [" << execution_time_check_2 <<
+                     ", " << execution_time_check_3 << "] is " << delta_time_for_speed_limits << 
+                     "; but tolerance limit is [" << execution_time_tolerance << "]");
+  }
+}
+
+
 TEST_F(UserRobotTest, kinematics)
 {
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
@@ -460,7 +547,6 @@ TEST_F(UserRobotTest, kinematics)
 
   EXPECT_TRUE(pose1.isApprox(pose2,1e-3));
   EXPECT_TRUE(pose1.isApprox(pose3,1e-3));
-
 }
 
 
@@ -547,7 +633,6 @@ TEST_F(UserRobotTest, custom_tool_link)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "link_t", 6.0));
   
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
-
 }
 
 
@@ -629,6 +714,12 @@ TEST_F(DeveloperRobotTest, collision)
   EXPECT_TRUE(robot2->isInCollision(joint2));
   EXPECT_FALSE(robot2->isInCollision(joint3));
   EXPECT_THROW(robot2->execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
+
+  // Test to see if above collision detection works when you separate out plan(...) & execute(...)
+  std::vector<moveit_simple::JointTrajectoryPoint> goal;
+
+  EXPECT_NO_THROW(goal = robot2->plan(TRAJECTORY_NAME));
+  EXPECT_THROW(robot2->execute(goal, true), moveit_simple::CollisionDetected);
 }
 
 TEST(MoveitSimpleTest, Singularity)

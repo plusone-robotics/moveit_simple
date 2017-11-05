@@ -42,6 +42,9 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <sensor_msgs/JointState.h>
 
+#include <dynamic_reconfigure/server.h>
+#include <moveit_simple/moveit_simple_dynamic_reconfigure_Parameters.h>
+
 namespace moveit_simple
 {
 
@@ -260,14 +263,17 @@ public:
   void clearTrajectory(const::std::string traj_name);
 
   /**
-   * @brief toJointTrajPtMsg - Converts native joint point (vector + time) to ROS joint
-   * trajectory point message type.
-   * @param joint_point
-   * @param time
-   * @return
+   * @brief plan out a given trajectory
+   * @param traj_name - name of trajectory to be executed (must be filled with
+   * prior calls to "addTrajPoint".
+   * @param collision_check - bool to turn check for collision on\off
+   * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
+   * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
+   * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
+   * in Collision with itself or environment)
    */
-  static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
-      const std::vector<double> & joint_point, double time);
+  std::vector<moveit_simple::JointTrajectoryPoint> plan(const std::string traj_name, 
+                                                        bool collision_check = false);
 
   /**
    * @brief interpolate - returns the pose interpolated from \e from pose towards \e to
@@ -301,14 +307,29 @@ public:
 
   bool isNearSingular(const std::vector<double> & joint_point = std::vector<double>() ) const;
 
+  /**
+   * @brief setSpeedModifier - Setter method for the execution speed modifier of the 
+   * execute method.
+   * @param speed_modifier
+   * @return
+   */
+  void setSpeedModifier(const double speed_modifier);
+
+  /**
+   * @brief setSpeedModifier - Getter method for the execution speed modifier of the 
+   * execute method.
+   * @return speed_modifier_
+   */
+  double getSpeedModifier(void) const;
+
 protected:
   Robot();
 
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in,
-                                         const std::string &in_frame) const;
+                                  const std::string &in_frame) const;
 
-    /**
-   * @brief transformPoseBetweenFrames transforms custom frame to moveit_end_link.
+  /**
+   * @brief transformPoseBetweenFrames transforms frame_in to frame_out.
    * @param target_pose - goal pose for IK 
    * @param frame_in - Current Frame of Reference as Input
    * @param frame_out - Target Frame of Reference for Transform
@@ -317,6 +338,12 @@ protected:
   Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose, 
                                          const std::string& frame_in,
                                          const std::string& frame_out) const;
+
+  std::vector<moveit_simple::JointTrajectoryPoint> 
+    toJointTrajectoryPoint(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const; 
+
+  control_msgs::FollowJointTrajectoryGoal 
+    toFollowJointTrajectoryGoal(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)  const;     
 
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
@@ -383,6 +410,9 @@ protected:
   bool isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout,
                    std::vector<double> joint_seed = std::vector<double>() ) const;
 
+  int trajCollisionCheck(control_msgs::FollowJointTrajectoryGoal & goal,
+                                     bool collision_check = false);
+
   /**
   * @brief getJointState - Returns a vector<double> of the
   * robot position from updated from last IK call.
@@ -406,8 +436,21 @@ protected:
   bool isConfigChange(const std::vector<double> jp1,
                       const std::vector<double> jp2) const;
 
+  /**
+   * @brief toJointTrajPtMsg - Converts native joint point (vector + time) to ROS joint
+   * trajectory point message type.
+   * @param joint_point
+   * @param time
+   * @return
+   */
+  static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
+      const std::vector<double> & joint_point, double time);
+
   trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
       const JointTrajectoryPoint & joint_point) const;
+
+  // Dynamic Reconfigure callback
+  void reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level);
 
   // Robot internal objects
   std::map<std::string, TrajectoryInfo> traj_info_map_;
@@ -418,7 +461,6 @@ protected:
   const moveit::core::JointModelGroup *joint_group_;
   robot_model::RobotModelConstPtr robot_model_ptr_;
   robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
-
 
   // Visualizations
   moveit_visual_tools::MoveItVisualToolsPtr virtual_visual_tools_;
@@ -433,6 +475,13 @@ protected:
   ros::NodeHandle nh_;
   mutable std::recursive_mutex m_;
 
+  // Dynamic Reconfigure
+  double speed_modifier_;
+  
+  moveit_simple_dynamic_reconfigure_Parameters params_;
+
+  dynamic_reconfigure::Server 
+  <moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
 };
 
 
@@ -465,6 +514,17 @@ public:
 
 
   /**
+   * @brief execute a given planned joint trajectory
+   * @param goal - Joint Trajectory goal which is a known 'Plan'
+   * @param collision_check - bool to turn check for collision on\off
+   * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
+   * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
+   * in Collision with itself or environment)
+   */
+  void execute(std::vector<moveit_simple::JointTrajectoryPoint> & goal, bool collision_check = false);
+
+
+  /**
   * @brief getJointState - Returns a vector<double> of the
   * current joint positions of the robot from current_robot_state_.
   *
@@ -477,7 +537,6 @@ protected:
 
   void updateCurrentState(const sensor_msgs::JointStateConstPtr& msg);
   mutable moveit::core::RobotStatePtr current_robot_state_;
-
 
   // Visualizations
   moveit_visual_tools::MoveItVisualToolsPtr online_visual_tools_;
