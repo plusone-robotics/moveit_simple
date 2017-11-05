@@ -1,22 +1,22 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(moveit_simple)
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  dynamic_reconfigure
-  rosparam_handler
-  geometry_msgs
-  eigen_conversions
-  tf2
-  tf2_ros
+  actionlib
   cmake_modules
-  trajectory_msgs
   control_msgs
-  sensor_msgs
+  dynamic_reconfigure
+  eigen_conversions
+  geometry_msgs
   moveit_core
   moveit_ros_planning
   moveit_visual_tools
-  actionlib
   prettyprint
+  roscpp
+  rosparam_handler
+  sensor_msgs
+  tf2
+  tf2_ros
+  trajectory_msgs
 )
 
 find_package(Boost REQUIRED)
@@ -30,17 +30,17 @@ catkin_package(
   LIBRARIES
     moveit_simple
   CATKIN_DEPENDS
-    roscpp
-    geometry_msgs
-    tf2_geometry_msgs
-    eigen_conversions
-    tf2
-    tf2_ros
-    cmake_modules
-    trajectory_msgs
-    control_msgs
-    sensor_msgs
     actionlib
+    cmake_modules
+    control_msgs
+    eigen_conversions
+    geometry_msgs
+    roscpp
+    sensor_msgs
+    tf2
+    tf2_geometry_msgs
+    tf2_ros
+    trajectory_msgs
   DEPENDS
     Boost
     Eigen

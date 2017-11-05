@@ -8,46 +8,45 @@
   <author >Shaun Edwards</author>
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>roscpp</build_depend>
-  <build_depend>moveit_core</build_depend>
-  <build_depend>rosparam_handler</build_depend>
-  <build_depend>geometry_msgs</build_depend>
-  <build_depend>eigen_conversions</build_depend>
-  <build_depend>tf2</build_depend>
-  <build_depend>tf2_ros</build_depend>
+  <build_depend>actionlib</build_depend>
   <build_depend>cmake_modules</build_depend>
+  <build_depend>control_msgs</build_depend>
+  <build_depend>eigen</build_depend>
+  <build_depend>eigen_conversions</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>moveit_core</build_depend>
   <build_depend>moveit_ros_planning</build_depend>
   <build_depend>moveit_visual_tools</build_depend>
-  <build_depend>eigen</build_depend>
-  <build_depend>trajectory_msgs</build_depend>
-  <build_depend>tf2_geometry_msgs</build_depend>
-  <build_depend>control_msgs</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>actionlib</build_depend>
   <build_depend>prettyprint</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>rosparam_handler</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>tf2</build_depend>
+  <build_depend>tf2_geometry_msgs</build_depend>
+  <build_depend>tf2_ros</build_depend>
+  <build_depend>trajectory_msgs</build_depend>
 
-  <run_depend>roscpp</run_depend>
-  <run_depend>moveit_core</run_depend>
-  <run_depend>rosparam_handler</run_depend>
-  <run_depend>geometry_msgs</run_depend>
-  <run_depend>eigen_conversions</run_depend>
-  <run_depend>tf2</run_depend>
-  <run_depend>tf2_ros</run_depend>
-  <run_depend>tf2_geometry_msgs</run_depend>
-  <run_depend>cmake_modules</run_depend>
-  <run_depend>moveit_ros_planning</run_depend>
-  <run_depend>eigen</run_depend>
-  <run_depend>trajectory_msgs</run_depend>
-  <run_depend>control_msgs</run_depend>
-  <run_depend>sensor_msgs</run_depend>
   <run_depend>actionlib</run_depend>
+  <run_depend>cmake_modules</run_depend>
+  <run_depend>control_msgs</run_depend>
+  <run_depend>eigen</run_depend>
+  <run_depend>eigen_conversions</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>moveit_core</run_depend>
+  <run_depend>moveit_ros_planning</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>rosparam_handler</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>tf2</run_depend>
+  <run_depend>tf2_geometry_msgs</run_depend>
+  <run_depend>tf2_ros</run_depend>
+  <run_depend>trajectory_msgs</run_depend>
 
-  <test_depend>rosunit</test_depend>
   <test_depend>industrial_robot_client</test_depend>
   <test_depend>industrial_robot_simulator</test_depend>
-  <test_depend>robot_state_publisher</test_depend>
   <test_depend>moveit_kinematics</test_depend>
-  
+  <test_depend>robot_state_publisher</test_depend>
+  <test_depend>rosunit</test_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
