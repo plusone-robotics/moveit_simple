@@ -47,6 +47,7 @@
   <test_depend>industrial_robot_simulator</test_depend>
   <test_depend>moveit_kinematics</test_depend>
   <test_depend>robot_state_publisher</test_depend>
+  <test_depend>rostest</test_depend>
   <test_depend>rosunit</test_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
