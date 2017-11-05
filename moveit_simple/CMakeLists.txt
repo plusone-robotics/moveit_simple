@@ -33,7 +33,6 @@ catkin_package(
     ${PROJECT_NAME}
   CATKIN_DEPENDS
     actionlib
-    cmake_modules
     control_msgs
     eigen_conversions
     geometry_msgs
