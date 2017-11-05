@@ -44,14 +44,14 @@ catkin_package(
     trajectory_msgs
   DEPENDS
     Boost
-    Eigen
+    EIGEN3
 )
 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
-  ${Eigen_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/moveit_simple.cpp)
