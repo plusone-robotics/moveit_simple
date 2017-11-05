@@ -61,7 +61,7 @@ target_link_libraries(moveit_simple ${catkin_LIBRARIES})
 target_compile_options(moveit_simple PUBLIC -std=c++11)
 
 if(CATKIN_ENABLE_TESTING)
-  find_package(rostest)
+  find_package(rostest REQUIRED)
   set(UTEST_SRC_FILES test/utest.cpp
       test/moveit_simple.cpp)
 
