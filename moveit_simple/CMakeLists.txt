@@ -29,7 +29,7 @@ catkin_package(
   INCLUDE_DIRS
     include
   LIBRARIES
-    moveit_simple
+    ${PROJECT_NAME}
   CATKIN_DEPENDS
     actionlib
     cmake_modules
@@ -54,12 +54,12 @@ include_directories(
   ${Eigen_INCLUDE_DIRS}
 )
 
-add_library(moveit_simple src/moveit_simple.cpp)
-add_dependencies(moveit_simple ${catkin_EXPORTED_TARGETS})
-add_dependencies(moveit_simple ${PROJECT_NAME}_gencfg)
-add_dependencies(moveit_simple ${PROJECT_NAME}_genparam)
-target_link_libraries(moveit_simple ${catkin_LIBRARIES})
-target_compile_options(moveit_simple PUBLIC -std=c++11)
+add_library(${PROJECT_NAME} src/moveit_simple.cpp)
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_genparam)
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
