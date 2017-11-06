@@ -6,7 +6,10 @@
   <arg name="robot_description" default="robot_description"/>
 
   <!-- URDF file (including path) -->
-  <arg name="urdf_file" default="$(find moveit_simple)/test/resources/kuka_kr210/kr210l150.urdf"/>
+  <arg name="urdf_file" default="$(find moveit_simple)/test/resources/motoman_mh5/urdf/mh5.urdf"/>
+
+  <!-- URDF file for Custom Tool  -->
+  <arg name="urdf_file_custom_tool" default="$(find moveit_simple)/test/resources/motoman_mh5/urdf/motoman_mh5_custom_tool.urdf"/>
 
   <!-- URDF file for Custom Tool  -->
   <arg name="urdf_file_custom_tool" default="$(find moveit_simple)/test/resources/kuka_kr210/kuka_custom_tool.urdf"/>
@@ -18,16 +21,19 @@
   <param name="$(arg robot_description)" textfile="$(arg urdf_file)"/>
 
   <!-- The semantic description that corresponds to the URDF -->
-  <param name="$(arg robot_description)_semantic" textfile="$(find moveit_simple)/test/resources/kuka_kr210/kuka_kr210.srdf" />
+  <param name="$(arg robot_description)_semantic" textfile="$(find moveit_simple)/test/resources/motoman_mh5/urdf/motoman_mh5.srdf" />
   
   <!-- Load updated joint limits (override information from URDF) -->
   <group ns="$(arg robot_description)_planning">
-    <rosparam command="load" file="$(find moveit_simple)/test/resources/kuka_kr210/joint_limits.yaml"/>
+    <rosparam command="load" file="$(find moveit_simple)/test/resources/motoman_mh5/config/joint_limits.yaml"/>
   </group>
+
+  <!-- Load Joint Names from the yaml files to override default joint names (Joint_1,..) -->
+  <rosparam command="load" file="$(find moveit_simple)/test/resources/motoman_mh5/config/joint_names.yaml"/>
 
   <!-- Load default settings for kinematics; these settings are overridden by settings in a node's namespace -->
   <group ns="$(arg robot_description)_kinematics">
-    <rosparam command="load" file="$(find moveit_simple)/test/resources/kuka_kr210/kinematics.yaml"/>
+    <rosparam command="load" file="$(find moveit_simple)/test/resources/motoman_mh5/config/kinematics.yaml"/>
   </group>
 
   <!-- Nodes for simulating robot motion and state -->
@@ -43,6 +49,6 @@
   </group>
 
   <!-- Static tranform publisher for testing tf lookup -->
-  <node name="tf_pub1" type="static_transform_publisher" pkg="tf" args="1.9 0 2.2 0 -0.5 0 base_link tf_pub1 100"/>
+  <node name="tf_pub1" type="static_transform_publisher" pkg="tf" args="0.400 -0.206 0.825 0.000 0.555 0.000 base_link tf_pub1 100"/>
 
 </launch>

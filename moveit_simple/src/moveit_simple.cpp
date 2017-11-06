@@ -572,7 +572,7 @@ bool Robot::isReachable(const Eigen::Affine3d & pose, const std::string & frame,
   }
   catch (tf2::TransformException &ex)
   {
-    ROS_WARN_STREAM("Reacheability failed for arbitrary pose point: " << ex.what());
+    ROS_ERROR_STREAM("Reacheability failed for arbitrary pose point: " << ex.what());
     reacheable = false;
   }
   return reacheable;
