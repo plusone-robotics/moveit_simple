@@ -138,6 +138,11 @@ TEST_F(UserRobotTest, add_trajectory)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "wp2", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "wp3", 4.0, joint));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "link_t", 5.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, joint));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0));
   
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 
@@ -620,6 +625,25 @@ TEST_F(UserRobotTest, custom_tool_link)
 
   const Eigen::Affine3d pose_eigen = pose_msg_to_eigen;
 
+  // Testing addTrajPoint() with custom_tool_frame as eef
+  Eigen::Affine3d pose_msg_to_eigen;
+  geometry_msgs::Pose pose_buffer;
+
+  // We take the Origin of our reference frame in consideration as the "known pose"
+  // In this case our reference frame resolves to the variable "point_name"
+  pose_buffer.position.x = 0.000;
+  pose_buffer.position.y = 0.000;
+  pose_buffer.position.z = 0.000;
+
+  pose_buffer.orientation.w = 1.000;
+  pose_buffer.orientation.x = 0.000;
+  pose_buffer.orientation.y = 0.000;
+  pose_buffer.orientation.z = 0.000;
+
+  tf::poseMsgToEigen(pose_buffer, pose_msg_to_eigen);
+
+  const Eigen::Affine3d pose_eigen = pose_msg_to_eigen;
+  
   const std::string TRAJECTORY_NAME("traj1");
 
   ROS_INFO_STREAM("Testing trajectory adding of points");
@@ -631,6 +655,13 @@ TEST_F(UserRobotTest, custom_tool_link)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "wp3", "tool_custom", 4.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "wp1", tool_name, 5.0, joint, 5));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "link_t", 6.0));
+ 
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "waypoint1", tool_name, 1.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", tool_name, 2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", "tool0", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", "tool_custom", 4.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", tool_name, 5.0, joint, 5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "tool0", 6.0));
   
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 }

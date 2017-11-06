@@ -18,6 +18,8 @@
     <arg name="robot_description" value="$(arg robot_description)"/>
     <arg name="urdf_file" value="$(find moveit_simple)/test/resources/motoman_mh5/urdf/mh5.urdf"/>
     <arg name="urdf_file_custom_tool" value="$(find moveit_simple)/test/resources/motoman_mh5/urdf/motoman_mh5_custom_tool.urdf"/>
+    <arg name="urdf_file" value="$(find moveit_simple)/test/resources/kuka_kr210/kr210l150.urdf"/>
+    <arg name="urdf_file_custom_tool" value="$(find moveit_simple)/test/resources/kuka_kr210/kuka_custom_tool.urdf"/>
     <arg name="run_test_node" value="$(arg run_test_node)"/>
   </include>
 

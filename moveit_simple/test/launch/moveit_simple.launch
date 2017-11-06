@@ -11,6 +11,9 @@
   <!-- URDF file for Custom Tool  -->
   <arg name="urdf_file_custom_tool" default="$(find moveit_simple)/test/resources/motoman_mh5/urdf/motoman_mh5_custom_tool.urdf"/>
 
+  <!-- URDF file for Custom Tool  -->
+  <arg name="urdf_file_custom_tool" default="$(find moveit_simple)/test/resources/kuka_kr210/kuka_custom_tool.urdf"/>
+
   <!-- Launch test node -->
   <arg name="run_test_node" default="true"/>
 
