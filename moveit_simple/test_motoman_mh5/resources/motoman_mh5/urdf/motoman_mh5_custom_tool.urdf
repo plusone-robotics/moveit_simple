@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<robot name="kuka_custom_tool" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <link name="link_t"/>
+
+  <link name="tool_custom"/>
+  
+  <joint name="link_t-tool_custom" type="fixed">
+    <parent link="link_t"/>
+    <child link="tool_custom"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.1"/>
+  </joint>
+
+</robot>

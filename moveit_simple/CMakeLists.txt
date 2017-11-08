@@ -6,6 +6,7 @@ find_package(catkin REQUIRED COMPONENTS
   cmake_modules
   control_msgs
   dynamic_reconfigure
+  rosparam_handler
   eigen_conversions
   geometry_msgs
   moveit_core
@@ -13,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_visual_tools
   prettyprint
   roscpp
-  rosparam_handler
   sensor_msgs
   tf2
   tf2_geometry_msgs
@@ -65,11 +65,20 @@ target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
-  set(UTEST_SRC_FILES test/utest.cpp
-      test/moveit_simple.cpp)
+  set(UTEST_SRC_FILES test_kuka_kr210/utest.cpp
+      test_kuka_kr210/moveit_simple.cpp)
 
-  add_rostest_gtest(${PROJECT_NAME}_utest test/launch/utest.launch ${UTEST_SRC_FILES})
-  target_link_libraries(${PROJECT_NAME}_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+  add_rostest_gtest(${PROJECT_NAME}_utest_kuka test_kuka_kr210/launch/utest_kuka.launch ${UTEST_SRC_FILES})
+  target_link_libraries(${PROJECT_NAME}_utest_kuka ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  set(UTEST_SRC_FILES test_motoman_mh5/utest.cpp
+      test_motoman_mh5/moveit_simple.cpp)
+
+  add_rostest_gtest(${PROJECT_NAME}_utest_motoman test_motoman_mh5/launch/utest_motoman.launch ${UTEST_SRC_FILES})
+  target_link_libraries(${PROJECT_NAME}_utest_motoman ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif()
 
 install(TARGETS ${PROJECT_NAME}
