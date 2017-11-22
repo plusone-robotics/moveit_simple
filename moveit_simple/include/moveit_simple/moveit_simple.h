@@ -87,6 +87,10 @@ class Robot
 public:
    Robot(const ros::NodeHandle & nh, const std::string &robot_description,
                                      const std::string &group_name);
+
+   Robot(const ros::NodeHandle & nh, const std::string &robot_description,
+         const std::string &group_name, const std::string &kinematics_base_link, const std::string &kinematics_tip_link);
+
    /**
    * @brief isInCollision  returns true if joint_point results in robot config that is
    * in collision with the environment as defined by the URDF.
@@ -182,7 +186,7 @@ public:
    * @throws <tf2::TransformException> (transform of TF named point_name fails)
    */
   void addTrajPoint(const std::string & traj_name, const std::string & point_name,
-                    const std::string & tool_name, 
+                    const std::string & tool_name,
                     double time, const InterpolationType & type = interpolation_type::JOINT,
                     const unsigned int num_steps = 0);
   /**
@@ -201,7 +205,7 @@ public:
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
   void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
-                    const std::string & pose_frame, const std::string & tool_name, 
+                    const std::string & pose_frame, const std::string & tool_name,
                     double time, const InterpolationType & type = interpolation_type::JOINT,
                     const unsigned int num_steps = 0,
                     const std::string & point_name = std::string());
@@ -272,7 +276,7 @@ public:
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  std::vector<moveit_simple::JointTrajectoryPoint> plan(const std::string traj_name, 
+  std::vector<moveit_simple::JointTrajectoryPoint> plan(const std::string traj_name,
                                                         bool collision_check = false);
 
   /**
@@ -308,7 +312,7 @@ public:
   bool isNearSingular(const std::vector<double> & joint_point = std::vector<double>() ) const;
 
   /**
-   * @brief setSpeedModifier - Setter method for the execution speed modifier of the 
+   * @brief setSpeedModifier - Setter method for the execution speed modifier of the
    * execute method.
    * @param speed_modifier
    * @return
@@ -316,7 +320,7 @@ public:
   void setSpeedModifier(const double speed_modifier);
 
   /**
-   * @brief setSpeedModifier - Getter method for the execution speed modifier of the 
+   * @brief setSpeedModifier - Getter method for the execution speed modifier of the
    * execute method.
    * @return speed_modifier_
    */
@@ -330,20 +334,20 @@ protected:
 
   /**
    * @brief transformPoseBetweenFrames transforms frame_in to frame_out.
-   * @param target_pose - goal pose for IK 
+   * @param target_pose - goal pose for IK
    * @param frame_in - Current Frame of Reference as Input
    * @param frame_out - Target Frame of Reference for Transform
    * @param
    */
-  Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose, 
+  Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose,
                                          const std::string& frame_in,
                                          const std::string& frame_out) const;
 
-  std::vector<moveit_simple::JointTrajectoryPoint> 
-    toJointTrajectoryPoint(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const; 
+  std::vector<moveit_simple::JointTrajectoryPoint>
+    toJointTrajectoryPoint(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const;
 
-  control_msgs::FollowJointTrajectoryGoal 
-    toFollowJointTrajectoryGoal(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)  const;     
+  control_msgs::FollowJointTrajectoryGoal
+    toFollowJointTrajectoryGoal(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)  const;
 
   bool toJointTrajectory(const std::string traj_name,
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
@@ -386,7 +390,7 @@ protected:
    */
   void interpolate( const std::unique_ptr<CartTrajectoryPoint>& from,
                     const std::unique_ptr<CartTrajectoryPoint>& to,
-                    double t, 
+                    double t,
                     std::unique_ptr<CartTrajectoryPoint> & point) const;
 
   /**
@@ -399,7 +403,7 @@ protected:
    */
   void interpolate( const std::unique_ptr<JointTrajectoryPoint>& from,
                     const std::unique_ptr<JointTrajectoryPoint>& to,
-                    double t, 
+                    double t,
                     std::unique_ptr<JointTrajectoryPoint> & point) const;
 
   void addTrajPoint(const std::string & traj_name,
@@ -477,11 +481,16 @@ protected:
 
   // Dynamic Reconfigure
   double speed_modifier_;
-  
+
   moveit_simple_dynamic_reconfigure_Parameters params_;
 
-  dynamic_reconfigure::Server 
+  dynamic_reconfigure::Server
   <moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
+
+  std::string kinematics_base_link_override;
+  std::string kinematics_tip_link_override;
+
+  bool override_SRDF_chain = false;
 };
 
 
@@ -595,7 +604,6 @@ protected:
   std::string name_;
   PointType type_;
 
-
 };
 
 
@@ -675,7 +683,7 @@ private:
    */
 
 class ExecutionFailureException: public std::runtime_error
-{ 
+{
 public:
   ExecutionFailureException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
 };
@@ -690,7 +698,7 @@ public:
    */
 
 class IKFailException: public std::runtime_error
-{ 
+{
 public:
   IKFailException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
 };
