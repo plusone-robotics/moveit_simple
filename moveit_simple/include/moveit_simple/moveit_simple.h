@@ -87,6 +87,10 @@ class Robot
 public:
    Robot(const ros::NodeHandle & nh, const std::string &robot_description,
                                      const std::string &group_name);
+
+   Robot(const ros::NodeHandle & nh, const std::string &robot_description,
+         const std::string &group_name, const std::string &kinematics_base_link, const std::string &kinematics_tip_link);
+
    /**
    * @brief isInCollision  returns true if joint_point results in robot config that is
    * in collision with the environment as defined by the URDF.
@@ -482,6 +486,11 @@ protected:
 
   dynamic_reconfigure::Server
   <moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
+
+  std::string kinematics_base_link_override;
+  std::string kinematics_tip_link_override;
+
+  bool override_SRDF_chain = false;
 };
 
 
@@ -594,7 +603,6 @@ protected:
   double t_;
   std::string name_;
   PointType type_;
-
 
 };
 
