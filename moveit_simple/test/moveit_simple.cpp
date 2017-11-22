@@ -17,7 +17,7 @@
  */
 
 #include <moveit_simple/moveit_simple.h>
-#include "cxx-prettyprint/prettyprint.hpp"
+#include "prettyprint/prettyprint.hpp"
 #include <gtest/gtest.h>
 
 #include "eigen_conversions/eigen_msg.h"
