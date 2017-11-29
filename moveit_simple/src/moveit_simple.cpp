@@ -35,29 +35,8 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   speed_modifier_(1.0),
   dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple"))
 {
-  ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
-                  << ", group name: " << group_name);
-  robot_model_loader_.reset(new robot_model_loader::RobotModelLoader
-                            (robot_description));
-  robot_model_ptr_ = robot_model_loader_->getModel();
-  virtual_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
-  virtual_robot_state_->setToDefaultValues();
-  planning_scene_.reset(new planning_scene::PlanningScene(robot_model_ptr_));
-  joint_group_ = robot_model_ptr_->getJointModelGroup(group_name);
-  ROS_INFO_STREAM("Calculating all positions assuming, root: " << robot_model_ptr_->getRootLinkName()
-                  << ", and tool: " << robot_model_ptr_->getLinkModelNames());
-  ROS_INFO_STREAM("MoveIt object loaded");
-
-  virtual_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
-                        robot_model_ptr_->getRootLinkName(),
-                        nh_.getNamespace() + "/rviz_visual_tools",
-                        robot_model_ptr_));
-  virtual_visual_tools_->loadRobotStatePub(nh_.getNamespace()
-                                    + "/display_robot_state");
-
-  // Dynamic Reconfigure Parameters with rosparam_handler
-  params_.fromParamServer();
-  dynamic_reconfig_server_.setCallback(boost::bind(&Robot::reconfigureRequest, this, _1, _2));
+  init(nh, robot_description, group_name);
+  moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   return;
 }
@@ -75,6 +54,19 @@ Robot::Robot(const ros::NodeHandle & nh,
   params_(ros::NodeHandle("~/moveit_simple")),
   speed_modifier_(1.0),
   dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple"))
+{
+  init(nh, robot_description, group_name);
+
+  moveit_base_link = kinematics_base_link;
+  moveit_tool_link = kinematics_tip_link;
+
+  return;
+}
+
+
+
+void Robot::init(const ros::NodeHandle & nh, const std::string &robot_description,
+                 const std::string &group_name)
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
                   << ", group name: " << group_name);
@@ -99,11 +91,6 @@ Robot::Robot(const ros::NodeHandle & nh,
   // Dynamic Reconfigure Parameters with rosparam_handler
   params_.fromParamServer();
   dynamic_reconfig_server_.setCallback(boost::bind(&Robot::reconfigureRequest, this, _1, _2));
-
-  kinematics_base_link_override = kinematics_base_link;
-  kinematics_tip_link_override = kinematics_tip_link;
-
-  override_SRDF_chain = true;
 
   return;
 }
@@ -178,16 +165,6 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
                          const std::string & point_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
-
-  std::string moveit_tool_link;
-  if(override_SRDF_chain == true)
-  {
-    moveit_tool_link = kinematics_tip_link_override;
-  }
-  else
-  {
-    moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
-  }
 
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name <<
                   " relative to " << pose_frame << " at time " << time <<
@@ -409,8 +386,6 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& too
 
   bool get_joints = false;
 
-  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
-
   try
   {
       ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" <<
@@ -515,8 +490,6 @@ bool Robot::getPose(const std::vector<double> & joint_point,
   bool get_pose = false;
 
   Eigen::Affine3d pose_buffer;
-
-  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   if(getFK(joint_point, pose_buffer) )
   {
@@ -1264,13 +1237,13 @@ bool Robot::getFK(const std::vector<double> & joint_point,
   const int vc =  (int) virtual_robot_state_->getVariableCount();
   if ( joint_point.size() == vc)
   {
-    if(override_SRDF_chain == true)
+    if(moveit_tool_link == link_names.back())
     {
-      pose = virtual_robot_state_->getFrameTransform(kinematics_tip_link_override);
+      pose = virtual_robot_state_->getFrameTransform(link_names.back());
     }
     else
     {
-      pose = virtual_robot_state_->getFrameTransform(link_names.back());
+      pose = virtual_robot_state_->getFrameTransform(moveit_tool_link);
     }
 
     return true;

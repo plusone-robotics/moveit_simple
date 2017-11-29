@@ -456,6 +456,10 @@ protected:
   // Dynamic Reconfigure callback
   void reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level);
 
+  // Initializer function for Constructors
+  void init(const ros::NodeHandle & nh, const std::string &robot_description,
+            const std::string &group_name);
+
   // Robot internal objects
   std::map<std::string, TrajectoryInfo> traj_info_map_;
 
@@ -487,10 +491,8 @@ protected:
   dynamic_reconfigure::Server
   <moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
 
-  std::string kinematics_base_link_override;
-  std::string kinematics_tip_link_override;
-
-  bool override_SRDF_chain = false;
+  std::string moveit_base_link;
+  std::string moveit_tool_link;
 };
 
 
