@@ -34,6 +34,7 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   params_(ros::NodeHandle("~/moveit_simple")),
   speed_modifier_(1.0),
   dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple"))
+
 {
   init(nh, robot_description, group_name);
   moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
@@ -67,6 +68,7 @@ Robot::Robot(const ros::NodeHandle & nh,
 
 void Robot::init(const ros::NodeHandle & nh, const std::string &robot_description,
                  const std::string &group_name)
+
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
                   << ", group name: " << group_name);
@@ -165,6 +167,8 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
                          const std::string & point_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name <<
                   " relative to " << pose_frame << " at time " << time <<
