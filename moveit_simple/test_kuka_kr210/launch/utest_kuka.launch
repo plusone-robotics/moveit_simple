@@ -14,15 +14,15 @@
 
 
 
-  <include file="$(find moveit_simple)/test/launch/moveit_simple.launch">
+  <include file="$(find moveit_simple)/test_kuka_kr210/launch/moveit_simple.launch">
     <arg name="robot_description" value="$(arg robot_description)"/>
-    <arg name="urdf_file" value="$(find moveit_simple)/test/resources/kuka_kr210/kr210l150.urdf"/>
-    <arg name="urdf_file_custom_tool" value="$(find moveit_simple)/test/resources/kuka_kr210/kuka_custom_tool.urdf"/>
+    <arg name="urdf_file" value="$(find moveit_simple)/test_kuka_kr210/resources/kuka_kr210/kr210l150.urdf"/>
+    <arg name="urdf_file_custom_tool" value="$(find moveit_simple)/test_kuka_kr210/resources/kuka_kr210/kuka_custom_tool.urdf"/>
     <arg name="run_test_node" value="$(arg run_test_node)"/>
   </include>
 
   <!-- Test Node -->
-  <test test-name="utest" pkg="moveit_simple" type="moveit_simple_utest"
+  <test test-name="utest_kuka" pkg="moveit_simple" type="moveit_simple_utest_kuka"
   launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit = "200.0">
 
   </test>
