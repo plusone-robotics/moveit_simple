@@ -34,9 +34,11 @@ catkin_package(
   CATKIN_DEPENDS
     actionlib
     control_msgs
+    dynamic_reconfigure
     eigen_conversions
     geometry_msgs
     roscpp
+    rosparam_handler
     sensor_msgs
     tf2
     tf2_geometry_msgs
