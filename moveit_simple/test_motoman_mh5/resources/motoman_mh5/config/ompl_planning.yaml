@@ -145,5 +145,3 @@ manipulator:
     - LazyPRMstarkConfigDefault
     - SPARSkConfigDefault
     - SPARStwokConfigDefault
-  projection_evaluator: joints(joint_s,joint_l)
-  longest_valid_segment_fraction: 0.005
