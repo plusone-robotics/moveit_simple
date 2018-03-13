@@ -1,0 +1,30 @@
+<launch>
+  <!-- Unit test launch file -->
+
+  <!-- The name of the parameter under which the URDF is loaded -->
+  <arg name="robot_description" default="robot_description"/>
+
+  <!-- Launch test node -->
+  <arg name="run_test_node" default="true"/>
+
+  <!-- Debug Info -->
+  <arg name="debug" default="false" />
+  <arg unless="$(arg debug)" name="launch_prefix" value="" />
+  <arg     if="$(arg debug)" name="launch_prefix" value="gdb --ex run --args" />
+
+
+
+  <include file="$(find moveit_simple)/test_motoman_mh5/launch/moveit_simple.launch">
+    <arg name="robot_description" value="$(arg robot_description)"/>
+    <arg name="urdf_file" value="$(find moveit_simple)/test_motoman_mh5/resources/motoman_mh5/urdf/mh5.urdf"/>
+    <arg name="urdf_file_custom_tool" value="$(find moveit_simple)/test_motoman_mh5/resources/motoman_mh5/urdf/motoman_mh5_custom_tool.urdf"/>
+    <arg name="run_test_node" value="$(arg run_test_node)"/>
+  </include>
+
+  <!-- Test Node -->
+  <test test-name="utest_motoman" pkg="moveit_simple" type="moveit_simple_utest_motoman"
+  launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit = "200.0">
+
+  </test>
+  
+</launch>

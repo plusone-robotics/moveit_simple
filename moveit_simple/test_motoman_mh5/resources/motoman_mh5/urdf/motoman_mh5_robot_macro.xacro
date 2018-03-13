@@ -1,0 +1,48 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
+  <xacro:property name="DEG_TO_RAD" value="0.01745329251994329577"/>
+
+  <xacro:include filename="$(find moveit_simple)/test_motoman_mh5/resources/motoman_mh5/urdf/mh5_macro.xacro"/>
+
+  <xacro:macro name="motoman_mh5_robot" params="prefix">
+    <xacro:motoman_mh5 prefix="${prefix}robot_"/>
+
+    <!-- Links -->
+    <link name="world"/>
+    <link name="${prefix}robot_tool0"/>
+
+    <link name="${prefix}tool_custom">
+      <visual>
+        <origin xyz="0 0 0.075"/>
+        <geometry>
+          <cylinder length="0.15" radius="0.015"/>
+        </geometry>
+        <material name="green">
+          <color rgba="0 1 0 1"/>
+        </material>
+      </visual>
+    </link>
+    <!-- End Links -->
+
+    <!-- Joints -->
+    <joint name="${prefix}world_to_base" type="fixed">
+      <parent link="world"/>
+      <child link="${prefix}robot_base_link"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}joint_t_tool0_joint" type="fixed">
+      <parent link="${prefix}robot_link_t"/>
+      <child link="${prefix}robot_tool0"/>
+      <origin rpy="0 1.57 0" xyz="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}ee_joint" type="fixed">
+      <parent link="${prefix}robot_tool0"/>
+      <child link="${prefix}tool_custom"/>
+      <origin rpy="0 ${M_PI} 0" xyz="0 0 0.15"/>
+    </joint>
+    <!-- End Joints -->
+  </xacro:macro>
+</robot>

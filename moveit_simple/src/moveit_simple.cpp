@@ -35,6 +35,39 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   speed_modifier_(1.0),
   dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple"))
 {
+  init(nh, robot_description, group_name);
+  moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
+
+  return;
+}
+
+
+
+Robot::Robot(const ros::NodeHandle & nh,
+                      const std::string &robot_description,
+                      const std::string &group_name,
+                      const std::string &kinematics_base_link,
+                      const std::string &kinematics_tip_link):
+  tf_buffer_(),
+  tf_listener_(tf_buffer_),
+  nh_(nh),
+  params_(ros::NodeHandle("~/moveit_simple")),
+  speed_modifier_(1.0),
+  dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple"))
+{
+  init(nh, robot_description, group_name);
+
+  moveit_base_link = kinematics_base_link;
+  moveit_tool_link = kinematics_tip_link;
+
+  return;
+}
+
+
+
+void Robot::init(const ros::NodeHandle & nh, const std::string &robot_description,
+                 const std::string &group_name)
+{
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
                   << ", group name: " << group_name);
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader
@@ -65,7 +98,7 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
 
 
 OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
-               const std::string &robot_description,
+                      const std::string &robot_description,
                       const std::string &group_name):
   Robot(nh, robot_description, group_name),
   action_("joint_trajectory_action", true)
@@ -132,8 +165,6 @@ void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d po
                          const std::string & point_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
-
-  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name <<
                   " relative to " << pose_frame << " at time " << time <<
@@ -355,8 +386,6 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string& too
 
   bool get_joints = false;
 
-  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
-
   try
   {
       ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" <<
@@ -461,8 +490,6 @@ bool Robot::getPose(const std::vector<double> & joint_point,
   bool get_pose = false;
 
   Eigen::Affine3d pose_buffer;
-
-  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   if(getFK(joint_point, pose_buffer) )
   {
@@ -765,7 +792,6 @@ control_msgs::FollowJointTrajectoryGoal Robot::toFollowJointTrajectoryGoal(const
 {
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory.joint_names = joint_group_->getVariableNames();
-
     std::vector<double> empty( goal.trajectory.joint_names.size(), 0.0);
 
     for(auto& trajectory_point : joint_trajectory_points)
@@ -1210,7 +1236,15 @@ bool Robot::getFK(const std::vector<double> & joint_point,
   const int vc =  (int) virtual_robot_state_->getVariableCount();
   if ( joint_point.size() == vc)
   {
-    pose = virtual_robot_state_->getFrameTransform(link_names.back());
+    if(moveit_tool_link == link_names.back())
+    {
+      pose = virtual_robot_state_->getFrameTransform(link_names.back());
+    }
+    else
+    {
+      pose = virtual_robot_state_->getFrameTransform(moveit_tool_link);
+    }
+
     return true;
   }else{
     return false;
