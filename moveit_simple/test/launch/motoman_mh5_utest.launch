@@ -1,6 +1,6 @@
+<?xml version="1.0"?>
 <launch>
   <!-- Unit test launch file -->
-
   <!-- The name of the parameter under which the URDF is loaded -->
   <arg name="robot_description" default="robot_description"/>
 
@@ -10,11 +10,9 @@
   <!-- Debug Info -->
   <arg name="debug" default="false" />
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
-  <arg     if="$(arg debug)" name="launch_prefix" value="gdb --ex run --args" />
+  <args    if="$(arg debug)" name="launch_prefix" value="gdb --ex run --args" />
 
-
-
-  <include file="$(find moveit_simple)/test/launch/moveit_simple.launch">
+  <include file="$(find moveit_simple)/test/launch/kuka_kr210.launch">
     <arg name="robot_description" value="$(arg robot_description)"/>
     <arg name="urdf_file" value="$(find moveit_simple)/test/resources/kuka_kr210/kr210l150.urdf"/>
     <arg name="urdf_file_custom_tool" value="$(find moveit_simple)/test/resources/kuka_kr210/kuka_custom_tool.urdf"/>
@@ -22,9 +20,6 @@
   </include>
 
   <!-- Test Node -->
-  <test test-name="utest" pkg="moveit_simple" type="moveit_simple_utest"
-  launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit = "200.0">
-
-  </test>
-  
+  <test test-name="utest" pkg="moveit_simple" type="motoman_mh5_utest"
+  launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit="300.0"/>
 </launch>
