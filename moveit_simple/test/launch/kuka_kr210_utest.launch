@@ -20,6 +20,6 @@
   </include>
 
   <!-- Test Node -->
-  <test test-name="utest" pkg="moveit_simple" type="kuka_kr210_utest"
+  <test test-name="kuka_kr210_utest" pkg="moveit_simple" type="kuka_kr210_utest"
   launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit="300.0"/>
 </launch>
