@@ -23,7 +23,7 @@
 int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);
-  ros::init(argc, argv, "utest");
+  ros::init(argc, argv, "kuka_kr210_utest");
   boost::thread ros_thread(boost::bind(&ros::spin));
 
   int res = RUN_ALL_TESTS();
