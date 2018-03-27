@@ -34,21 +34,22 @@
   <run_depend>eigen</run_depend>
   <run_depend>eigen_conversions</run_depend>
   <run_depend>geometry_msgs</run_depend>
+  <run_depend>industrial_robot_client</run_depend>
+  <run_depend>industrial_robot_simulator</run_depend>
   <run_depend>moveit_core</run_depend>
   <run_depend>moveit_ros_planning</run_depend>
   <run_depend>prettyprint</run_depend>
+  <run_depend>robot_state_publisher</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>rosparam_handler</run_depend>
   <run_depend>sensor_msgs</run_depend>
+  <run_depend>tf</run_depend>
   <run_depend>tf2</run_depend>
   <run_depend>tf2_geometry_msgs</run_depend>
   <run_depend>tf2_ros</run_depend>
   <run_depend>trajectory_msgs</run_depend>
 
-  <test_depend>industrial_robot_client</test_depend>
-  <test_depend>industrial_robot_simulator</test_depend>
   <test_depend>moveit_kinematics</test_depend>
-  <test_depend>robot_state_publisher</test_depend>
   <test_depend>rostest</test_depend>
   <test_depend>rosunit</test_depend>
 </package>
