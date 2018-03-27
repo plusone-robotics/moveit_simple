@@ -10,7 +10,7 @@
   <!-- Debug Info -->
   <arg name="debug" default="false" />
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
-  <args    if="$(arg debug)" name="launch_prefix" value="gdb --ex run --args" />
+  <arg    if="$(arg debug)" name="launch_prefix" value="gdb --ex run --args" />
 
   <include file="$(find moveit_simple)/test/launch/motoman_mh5.launch">
     <arg name="robot_description" value="$(arg robot_description)"/>
