@@ -1,2 +1,4 @@
+- git: {local-name: industrial_experimental, uri: 'https://github.com/ros-industrial/industrial_experimental.git', version: indigo-devel}
+- git: {local-name: motoman-experimental, uri: 'https://github.com/ros-industrial/motoman_experimental', version: kinetic-devel}
 - git: {local-name: prettyprint, uri: 'https://github.com/shaun-edwards/prettyprint.git', version: master}
 - git: {local-name: rosparam_handler, uri: 'https://github.com/plusone-robotics/rosparam_handler.git', version: plusone/master}
