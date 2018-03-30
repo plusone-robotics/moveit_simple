@@ -23,9 +23,6 @@
 
 namespace moveit_simple
 {
-
-
-
 Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
                                          const std::string &group_name):
   tf_buffer_(),
@@ -33,7 +30,8 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   nh_(nh),
   params_(ros::NodeHandle("~/moveit_simple")),
   speed_modifier_(1.0),
-  dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple"))
+  dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple")),
+  ik_transforms_found_(false)
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
                   << ", group name: " << group_name);
@@ -62,7 +60,15 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   return;
 }
 
+Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
+  const std::string &group_name, const std::string &ik_base_frame,
+  const std::string &ik_tip_frame) : Robot(nh, robot_description, group_name)
+{ 
+  ik_base_frame_ = ik_base_frame;
+  ik_tip_frame_ = ik_tip_frame;
 
+  ik_transforms_found_ = this->computeIKTransforms();
+}
 
 OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
                const std::string &robot_description,
@@ -99,7 +105,15 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
   return;
 }
 
+OnlineRobot::OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_description,
+  const std::string &group_name, const std::string &ik_base_frame,
+  const std::string &ik_tip_frame) : OnlineRobot(nh, robot_description, group_name)
+{ 
+  ik_base_frame_ = ik_base_frame;
+  ik_tip_frame_ = ik_tip_frame;
 
+  ik_transforms_found_ = this->computeIKTransforms();
+}
 
 void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
                          const std::string & frame, double time,
@@ -895,7 +909,30 @@ bool Robot::toJointTrajectory(const std::string traj_name,
   return true;
 }
 
+bool Robot::computeIKTransforms()
+{
+  if (!virtual_robot_state_->knowsFrameTransform(ik_base_frame_))
+  {
+    ROS_ERROR_STREAM("Unable to find the transformation to frame: "
+      << ik_base_frame_ << " in group: " << joint_group_->getName()
+      << " IK solutions will not be found");
+    return false;
+  }
 
+  if (!virtual_robot_state_->knowsFrameTransform(ik_tip_frame_))
+  {
+    ROS_ERROR_STREAM("Unable to find the transformation to frame: "
+      << ik_tip_frame_ << " in group: " << joint_group_->getName()
+      << " IK solutions will not be found!");
+    return false;
+  }
+
+  std::vector<std::string> link_names = joint_group_->getLinkModelNames();
+  tool0_to_tcp_ = virtual_robot_state_->getFrameTransform(link_names.back()).inverse()
+    * virtual_robot_state_->getFrameTransform(ik_tip_frame_);
+
+  return true;
+}
 
 bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
            std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
@@ -1206,14 +1243,26 @@ bool Robot::getFK(const std::vector<double> & joint_point,
                   Eigen::Affine3d &pose) const
 {
   virtual_robot_state_->setJointGroupPositions(joint_group_, joint_point);
-  const std::vector<std::string> link_names = joint_group_->getLinkModelNames();
-  const int vc =  (int) virtual_robot_state_->getVariableCount();
-  if ( joint_point.size() == vc)
+
+  if (ik_transforms_found_)
   {
-    pose = virtual_robot_state_->getFrameTransform(link_names.back());
+    Eigen::Affine3d base_to_tool0 = virtual_robot_state_->getFrameTransform(ik_tip_frame_);
+    pose = base_to_tool0 * tool0_to_tcp_.inverse();
     return true;
-  }else{
-    return false;
+  }
+  else
+  {
+    const std::vector<std::string> link_names = joint_group_->getLinkModelNames();
+    const int vc =  (int) virtual_robot_state_->getVariableCount();
+    if (joint_point.size() == vc)
+    {
+      pose = virtual_robot_state_->getFrameTransform(link_names.back());
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 }
 
@@ -1232,16 +1281,34 @@ bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
 bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> & joint_point,
                   double timeout, unsigned int attempts) const
 {
-  if ( virtual_robot_state_->setFromIK(joint_group_, pose, attempts, timeout) )
+  if (ik_transforms_found_)
   {
-    virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
-    virtual_robot_state_->update();
-    virtual_visual_tools_->deleteAllMarkers();
-    virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
-    virtual_visual_tools_->publishContactPoints(*virtual_robot_state_, &(*planning_scene_));  
-    ros::spinOnce();
-    return true;
+    Eigen::Affine3d tool0_pose = pose * tool0_to_tcp_;
+    if (virtual_robot_state_->setFromIK(joint_group_, tool0_pose, attempts, timeout))
+    {
+      virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
+      virtual_robot_state_->update();
+      virtual_visual_tools_->deleteAllMarkers();
+      virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
+      virtual_visual_tools_->publishContactPoints(*virtual_robot_state_, &(*planning_scene_));  
+      ros::spinOnce();
+      return true;      
+    }
   }
+  else
+  {
+    if (virtual_robot_state_->setFromIK(joint_group_, pose, attempts, timeout))
+    {
+      virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
+      virtual_robot_state_->update();
+      virtual_visual_tools_->deleteAllMarkers();
+      virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
+      virtual_visual_tools_->publishContactPoints(*virtual_robot_state_, &(*planning_scene_));  
+      ros::spinOnce();
+      return true;
+    }
+  }
+
   return false;
 }
 

@@ -87,6 +87,17 @@ class Robot
 public:
    Robot(const ros::NodeHandle & nh, const std::string &robot_description,
                                      const std::string &group_name);
+  
+  /**
+  * @brief Constructor for the case where the IK implementation does not match the
+  * SRDF. For example: IKFast solutions are generally solved for the base_link to
+  * tool0 of a robot, and the robot_description is defined for some world_frame to
+  * some tcp frame.
+  */   
+  Robot(const ros::NodeHandle &nh, const std::string &robot_description,
+   const std::string &group_name, const std::string &ik_base_frame,
+   const std::string &ik_tip_frame);
+
    /**
    * @brief isInCollision  returns true if joint_point results in robot config that is
    * in collision with the environment as defined by the URDF.
@@ -349,6 +360,8 @@ protected:
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
                          bool collision_check = false);
 
+  bool computeIKTransforms();
+
 
   /**
    * @brief  jointInterpolation - joint Interpolation from last added point to
@@ -477,11 +490,15 @@ protected:
 
   // Dynamic Reconfigure
   double speed_modifier_;
-
   moveit_simple_dynamic_reconfigure_Parameters params_;
-
   dynamic_reconfigure::Server
   <moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
+
+  // Kinematics
+  std::string ik_base_frame_;
+  std::string ik_tip_frame_;
+  bool ik_transforms_found_;
+  Eigen::Affine3d tool0_to_tcp_;
 };
 
 
@@ -498,6 +515,16 @@ class OnlineRobot : public Robot
 public:
   OnlineRobot(const ros::NodeHandle & nh, const std::string &robot_description,
         const std::string &group_name);
+
+  /**
+  * @brief Constructor for the case where the IK implementation does not match the
+  * SRDF. For example: IKFast solutions are generally solved for the base_link to
+  * tool0 of a robot, and the robot_description is defined for some world_frame to
+  * some tcp frame.
+  */   
+  OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_description,
+    const std::string &group_name, const std::string &ik_base_frame,
+    const std::string &ik_tip_frame);
 
   /**
    * @brief execute a given trajectory
