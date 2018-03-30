@@ -66,9 +66,9 @@ target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
 
-  set(KUKA_KR210_SRC_FILES test/kuka_kr210_utest.cpp test/kuka_kr210.cpp)
-  add_rostest_gtest(kuka_kr210_utest test/launch/kuka_kr210_utest.launch ${KUKA_KR210_SRC_FILES})
-  target_link_libraries(kuka_kr210_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+  # set(KUKA_KR210_SRC_FILES test/kuka_kr210_utest.cpp test/kuka_kr210.cpp)
+  # add_rostest_gtest(kuka_kr210_utest test/launch/kuka_kr210_utest.launch ${KUKA_KR210_SRC_FILES})
+  # target_link_libraries(kuka_kr210_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
   set(MOTOMAN_MH5_SRC_FILES test/motoman_mh5_utest.cpp test/motoman_mh5.cpp)
   add_rostest_gtest(motoman_mh5_utest test/launch/motoman_mh5_utest.launch ${MOTOMAN_MH5_SRC_FILES})
