@@ -16,18 +16,15 @@
  * limitations under the License.
  */
 
-#include <moveit_simple/moveit_simple.h>
-#include "prettyprint/prettyprint.hpp"
+#include <eigen_conversions/eigen_msg.h>
 #include <gtest/gtest.h>
-
-#include "eigen_conversions/eigen_msg.h"
-
+#include <moveit_simple/moveit_simple.h>
+#include <prettyprint/prettyprint.hpp>
 
 using testing::Types;
 
 namespace moveit_simple_test
 {
-
 /**
  * @brief UserRobotTest is a fixture for testing public methods.
  * Objects that can be directly used inside the test
@@ -36,15 +33,15 @@ namespace moveit_simple_test
 class UserRobotTest : public ::testing::Test
 {
 protected:
-  std::unique_ptr<moveit_simple::OnlineRobot> robot;
+  std::unique_ptr<moveit_simple::OnlineRobot> user_robot;
   virtual void SetUp()
   {      
-  robot = std::unique_ptr<moveit_simple::OnlineRobot> (new moveit_simple::OnlineRobot
-                  (ros::NodeHandle(), "robot_description", "manipulator"));
-  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+    user_robot = std::unique_ptr<moveit_simple::OnlineRobot> (new moveit_simple::OnlineRobot
+                    (ros::NodeHandle(), "robot_description", "manipulator"));
+    ros::Duration(2.0).sleep();  //wait for tf tree to populate
   }
-  virtual void TearDown()
-  {}
+
+  virtual void TearDown() { }
 };
 
 
@@ -62,6 +59,8 @@ public:
   using moveit_simple::OnlineRobot::jointInterpolation;
   using moveit_simple::OnlineRobot::cartesianInterpolation;
   using moveit_simple::OnlineRobot::isInCollision;
+  using moveit_simple::OnlineRobot::getFK;
+  using moveit_simple::OnlineRobot::getIK;  
 };
   
 /**
@@ -69,23 +68,129 @@ public:
  * Objects that can be directly used inside the test
  - robot pointer for DeveloperRobot
 */
-
 class DeveloperRobotTest : public ::testing::Test
 {
 protected:
-  std::unique_ptr<DeveloperRobot> robot2;
+  std::unique_ptr<DeveloperRobot> developer_robot;
   virtual void SetUp()
   {      
-  robot2 = std::unique_ptr<DeveloperRobot> (new DeveloperRobot
-                  (ros::NodeHandle(), "robot_description", "manipulator"));
-  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+    developer_robot = std::unique_ptr<DeveloperRobot> (new DeveloperRobot
+      (ros::NodeHandle(), "robot_description", "manipulator", "base_link", "link_t"));
+
+    ros::Duration(2.0).sleep();  // Wait for tf tree to populate
   }
-  virtual void TearDown()
-  {}
+
+  virtual void TearDown() { }
 };
 
 
+// Start of tests
+struct KinematicsTestData
+{
+  std::vector<double> joints; // [joint_s, joint_l, joint_u, joint_r, joint_b, joint_t]
 
+  // Forward Kinematics from base -> tool0
+  std::vector<double> translation_tool0; // [x, y, z]
+  std::vector<double> rotation_tool0; // Quaternion [x, y, z, w]
+
+  // Forward kinematics from base -> tool_custom
+  std::vector<double> translation_tool_custom; // [x, y, z]
+  std::vector<double> rotation_tool_custom; // Quaternion [x, y, z, w]  
+};
+
+TEST_F(DeveloperRobotTest, kinematics)
+{
+  KinematicsTestData pose_home;
+  pose_home.joints = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  pose_home.translation_tool0 = {0.479, 0.000, 0.680};
+  pose_home.rotation_tool0 = {0.000, 0.707, 0.000, 0.707};
+  pose_home.translation_tool_custom = {0.629, 0.000, 0.680};
+  pose_home.rotation_tool_custom = {0.000, 0.707, 0.000, 0.707};
+
+  KinematicsTestData pose_1;
+  pose_1.joints = {0.2291, 0.31208875, 0.4684298, -3.07667758, 1.26189528, 3.560005};
+  pose_1.translation_tool0 = {0.505, 0.112, 0.635};
+  pose_1.rotation_tool0 = {-0.312, 0.921, -0.054, 0.227};
+  pose_1.translation_tool_custom = {0.572, 0.119, 0.501};
+  pose_1.rotation_tool_custom = {-0.312, 0.921, -0.054, 0.227};
+
+  KinematicsTestData pose_2;
+  pose_2.joints = {0.14301422, 0.60628475, 0.4671596, 0.599551, -1.26189528, 1.44636962};
+  pose_2.translation_tool0 = {0.589, 0.038, 0.511};
+  pose_2.rotation_tool0 = {0.725, -0.620, 0.278, 0.110};
+  pose_2.translation_tool_custom = {0.629, -0.038, 0.388};
+  pose_2.rotation_tool_custom = {0.725, -0.620, 0.278, 0.110};
+
+  KinematicsTestData pose_3;
+  pose_3.joints = {-0.32163364, 0.9676505, 1.079396, -0.7593869, -0.44681216, 1.5142271};
+  pose_3.translation_tool0 = {0.694, -0.204, 0.561};
+  pose_3.rotation_tool0 = {-0.277, 0.727, -0.230, 0.585};
+  pose_3.translation_tool_custom = {0.840, -0.206, 0.530};
+  pose_3.rotation_tool_custom = {-0.277, 0.727, -0.230, 0.585};
+
+  KinematicsTestData pose_4;
+  pose_4.joints = {-0.32163364, 0.334979, -0.0938454, -0.0397932, -1.0515794, 1.5142271};
+  pose_4.translation_tool0 = {0.467, -0.153, 0.446};
+  pose_4.rotation_tool0 = {-0.553, 0.831, -0.025, 0.042};
+  pose_4.translation_tool_custom = {0.482, -0.152, 0.297};
+  pose_4.rotation_tool_custom = {-0.553, 0.831, -0.025, 0.042};
+
+  KinematicsTestData pose_5;
+  pose_5.joints = {-1.00109954, 0.9001055, 0.4671596, 1.07905894, -1.28807568, -2.42276336};
+  pose_5.translation_tool0 = {0.278, -0.570, 0.385};
+  pose_5.rotation_tool0 = {0.872, 0.058, -0.407, 0.265};
+  pose_5.translation_tool_custom = {0.176, -0.646, 0.306};
+  pose_5.rotation_tool_custom = {0.872, 0.058, -0.407, 0.265};
+
+  auto testKinematics = [&](const KinematicsTestData &pose)
+  {
+    const double ABS_ERROR = 0.01; // The numbers in the data are rounded
+    const std::vector<double> JOINT_SEED(pose.joints.size(), 0.0);
+
+    // Testing forward kinematics to tool_custom
+    Eigen::Affine3d tool_custom_calculated_pose;
+    ASSERT_TRUE(developer_robot->getFK(pose.joints, tool_custom_calculated_pose));
+
+    Eigen::Vector3d tool_custom_translation = tool_custom_calculated_pose.translation();
+    EXPECT_NEAR(tool_custom_translation.x(), pose.translation_tool_custom[0], ABS_ERROR);
+    EXPECT_NEAR(tool_custom_translation.y(), pose.translation_tool_custom[1], ABS_ERROR);
+    EXPECT_NEAR(tool_custom_translation.z(), pose.translation_tool_custom[2], ABS_ERROR);
+    
+    Eigen::Quaterniond tool_custom_rotation = Eigen::Quaterniond(tool_custom_calculated_pose.linear());
+    EXPECT_NEAR(tool_custom_rotation.x(), pose.rotation_tool_custom[0], ABS_ERROR);
+    EXPECT_NEAR(tool_custom_rotation.y(), pose.rotation_tool_custom[1], ABS_ERROR);
+    EXPECT_NEAR(tool_custom_rotation.z(), pose.rotation_tool_custom[2], ABS_ERROR);
+    EXPECT_NEAR(tool_custom_rotation.w(), pose.rotation_tool_custom[3], ABS_ERROR);
+
+    // Testing inverse kinematics
+    std::vector<double> joint_solution;
+    ASSERT_TRUE(developer_robot->getIK(tool_custom_calculated_pose, JOINT_SEED, joint_solution, 10, 15));
+
+    // Checking IK solution with forward kinematics
+    Eigen::Affine3d check_joint_solution;
+    ASSERT_TRUE(developer_robot->getFK(joint_solution, check_joint_solution));
+
+    Eigen::Vector3d check_joint_translation = check_joint_solution.translation();
+    EXPECT_NEAR(check_joint_translation.x(), pose.translation_tool_custom[0], ABS_ERROR);
+    EXPECT_NEAR(check_joint_translation.y(), pose.translation_tool_custom[1], ABS_ERROR);
+    EXPECT_NEAR(check_joint_translation.z(), pose.translation_tool_custom[2], ABS_ERROR);
+    
+    Eigen::Quaterniond check_joint_rotation = Eigen::Quaterniond(check_joint_solution.linear());
+    EXPECT_NEAR(check_joint_rotation.x(), pose.rotation_tool_custom[0], ABS_ERROR);
+    EXPECT_NEAR(check_joint_rotation.y(), pose.rotation_tool_custom[1], ABS_ERROR);
+    EXPECT_NEAR(check_joint_rotation.z(), pose.rotation_tool_custom[2], ABS_ERROR);
+    EXPECT_NEAR(check_joint_rotation.w(), pose.rotation_tool_custom[3], ABS_ERROR);    
+  };
+
+  testKinematics(pose_home);
+  testKinematics(pose_1);
+  testKinematics(pose_2);
+  testKinematics(pose_3);
+  testKinematics(pose_4);
+  testKinematics(pose_5);
+}
+
+#if 0
 TEST(MoveitSimpleTest, construction_robot)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");  
@@ -755,4 +860,5 @@ TEST(MoveitSimpleTest, Singularity)
   // Boundary Singularity (occurs because of elbow and wrist singularity)
   EXPECT_TRUE(robot.isNearSingular(joint5));
 }
+#endif
 }
