@@ -29,8 +29,8 @@
 
     <!-- Joints -->
     <joint name="${prefix}world_to_base" type="fixed">
-      <parent link="world"/>
-      <child link="${prefix}base_link"/>
+      <parent link="${prefix}base_link"/>
+      <child link="world"/>
       <origin rpy="0 0 0" xyz="0 0 0"/>
     </joint>
 
@@ -47,7 +47,7 @@
     </joint>
 
     <joint name="${prefix}tool_custom_joint" type="fixed">
-      <parent link="${prefix}tool0"/>
+      <parent link="${prefix}ee_link"/>
       <child link="${prefix}tool_custom"/>
       <origin rpy="0 0 0" xyz="0 0 0.15"/>
     </joint>    
@@ -56,28 +56,28 @@
     <!-- Waypoints for testing -->
     <link name="wp1"/>
     <joint name="base-waypoint1" type="fixed">
-      <parent link="${prefix}base_link"/>
+      <parent link="world"/>
       <child link="wp1"/>
       <origin xyz="0.56 -0.023 0.821" rpy="0.000 -0.488 0.000"/>
     </joint>
 
     <link name="wp2"/>
     <joint name="base-waypoint2" type="fixed">
-      <parent link="${prefix}base_link"/>
+      <parent link="world"/>
       <child link="wp2"/>
       <origin xyz="-0.092 -0.094 0.852" rpy="3.142 0.0 3.142"/>
     </joint>
 
     <link name="wp3"/>
     <joint name="base-waypoint3" type="fixed">
-      <parent link="${prefix}base_link"/>
+      <parent link="world"/>
       <child link="wp3"/>
       <origin xyz="0.33 -0.306 0.825" rpy="0.000 0.000 0.228"/>
     </joint>
 
     <link name="wp4"/>
     <joint name="base-waypoint4" type="fixed">
-      <parent link="${prefix}base_link"/>
+      <parent link="world"/>
       <child link="wp4"/>
       <origin xyz="0.23 0.402 1.799" rpy="0.000 0.000 0.000"/>
     </joint>
