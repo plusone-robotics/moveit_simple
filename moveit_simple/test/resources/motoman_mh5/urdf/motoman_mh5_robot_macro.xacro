@@ -58,14 +58,14 @@
     <joint name="base-waypoint1" type="fixed">
       <parent link="world"/>
       <child link="wp1"/>
-      <origin xyz="0.56 -0.023 0.821" rpy="0.000 -0.488 0.000"/>
+      <origin xyz="0.3 -0.023 0.821" rpy="0.000 -0.488 0.000"/>
     </joint>
 
     <link name="wp2"/>
     <joint name="base-waypoint2" type="fixed">
       <parent link="world"/>
       <child link="wp2"/>
-      <origin xyz="-0.092 -0.094 0.852" rpy="3.142 0.0 3.142"/>
+      <origin xyz="-0.35 -0.094 0.852" rpy="3.142 -1.5 3.142"/>
     </joint>
 
     <link name="wp3"/>
