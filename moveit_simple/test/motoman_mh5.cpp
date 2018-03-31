@@ -37,13 +37,13 @@ protected:
   virtual void SetUp()
   {      
     user_robot = std::unique_ptr<moveit_simple::OnlineRobot> (new moveit_simple::OnlineRobot
-                    (ros::NodeHandle(), "robot_description", "manipulator"));
+                    (ros::NodeHandle(), "robot_description", "manipulator", "base_link", "link_t"));
+    
     ros::Duration(2.0).sleep();  //wait for tf tree to populate
   }
 
   virtual void TearDown() { }
 };
-
 
 /**
  * @brief DeveloperRobot is a class inheriting from moveit_simple::OnlineRobot to test protected methods
@@ -83,8 +83,6 @@ protected:
   virtual void TearDown() { }
 };
 
-
-// Start of tests
 struct KinematicsTestData
 {
   std::vector<double> joints; // [joint_s, joint_l, joint_u, joint_r, joint_b, joint_t]
@@ -190,40 +188,45 @@ TEST_F(DeveloperRobotTest, kinematics)
   testKinematics(pose_5);
 }
 
-#if 0
-TEST(MoveitSimpleTest, construction_robot)
+TEST(MoveitSimpleTest, construction_robot_default)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");  
 }
 
+TEST(MoveitSimpleTest, construction_robot_ikfast)
+{
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator", 
+    "base_link", "link_t");  
+}
 
 TEST(MoveitSimpleTest, construction_online_robot)
 {
   moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator");
 }
 
-
-TEST(MoveitSimpleTest, reachability)
+TEST(MoveitSimpleTest, construction_online_robot_ikfast)
 {
-  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
-  ros::Duration(2.0).sleep();  //wait for tf tree to populate
-
-  ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
-  EXPECT_FALSE(robot.isReachable("unknown_name"));
-  EXPECT_FALSE(robot.isReachable(pose, "random_link"));
-  EXPECT_TRUE(robot.isReachable(pose, "tool0"));
-
-
-  ROS_INFO_STREAM("Testing reach of points");
-  ASSERT_TRUE(robot.isReachable("home"));        //stored in the SRDF
-  ASSERT_TRUE(robot.isReachable("waypoint1"));   //stored in the URDF
-  ASSERT_TRUE(robot.isReachable("waypoint2"));   //stored in the URDF
-  ASSERT_TRUE(robot.isReachable("waypoint3"));   //stored in the URDF
-  ASSERT_TRUE(robot.isReachable("tf_pub1"));     //stored published externally
-  ASSERT_FALSE(robot.isReachable("waypoint4"));  //stored in the URDF
+  moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator", 
+    "base_link", "link_t");
 }
 
+TEST_F(UserRobotTest, reachability)
+{
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
+
+  ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
+  EXPECT_FALSE(user_robot->isReachable("unknown_name"));
+  EXPECT_FALSE(user_robot->isReachable(pose, "random_link"));
+  EXPECT_TRUE(user_robot->isReachable(pose, "link_t"));
+
+  ROS_INFO_STREAM("Testing reach of points");
+  EXPECT_TRUE(user_robot->isReachable("home")); // Defined in SRDF
+  EXPECT_TRUE(user_robot->isReachable("wp1")); // Defined in URDF
+  EXPECT_TRUE(user_robot->isReachable("wp2")); // Defined in URDF
+  EXPECT_TRUE(user_robot->isReachable("wp3")); // Defined in URDF
+  EXPECT_TRUE(user_robot->isReachable("tf_pub1")); // Published externally (defined in a launch file)
+  EXPECT_FALSE(user_robot->isReachable("wp4"));  // Defined in URDF
+}
 
 TEST_F(UserRobotTest, add_trajectory)
 {
@@ -233,25 +236,23 @@ TEST_F(UserRobotTest, add_trajectory)
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
   ROS_INFO_STREAM("Testing loading of unknown point, should fail");
-  EXPECT_THROW(robot->addTrajPoint("bad_traj", "unknown_name", 1.0),std::invalid_argument);
-  EXPECT_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "random_link", 5.0), tf2::TransformException);
+  EXPECT_THROW(user_robot->addTrajPoint("bad_traj", "unknown_name", 1.0), std::invalid_argument);
+  EXPECT_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, pose, "random_link", 5.0), tf2::TransformException);
+  
   ROS_INFO_STREAM("Testing trajectory adding of points");
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
-  
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, joint));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0));
-  
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", 1.0, joint, 5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2", 3.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", 4.0, joint));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, pose, "link_t", 5.0));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
 
-  EXPECT_NO_THROW(robot->addTrajPoint("traj2", "waypoint4", 4.5));
-  EXPECT_THROW(robot->execute("traj2"), moveit_simple::IKFailException);
+  EXPECT_NO_THROW(user_robot->addTrajPoint("traj2", "wp4", 4.5));
+  EXPECT_THROW(user_robot->execute("traj2"), moveit_simple::IKFailException);
 
-  EXPECT_THROW(robot->execute("bad_traj"), std::invalid_argument);
+  EXPECT_THROW(user_robot->execute("bad_traj"), std::invalid_argument);
 }
-
 
 TEST_F(DeveloperRobotTest, planning)
 {
@@ -261,30 +262,29 @@ TEST_F(DeveloperRobotTest, planning)
 
   std::vector<trajectory_msgs::JointTrajectoryPoint> points;
 
-  std::vector<double>joint1(6,0);
-  std::vector<double>joint2(6,M_PI/6);
-  std::vector<double>joint_interpolated_expected_joint(6,M_PI/12);
-  std::vector<double>seed;
-  std::vector<double>cart_interpolated_expected_joint;
+  std::vector<double> joint1(6, 0);
+  std::vector<double> joint2(6, M_PI/6);
+  std::vector<double> joint_interpolated_expected_joint(6, M_PI/12);
+  std::vector<double> seed;
+  std::vector<double> cart_interpolated_expected_joint;
 
   Eigen::Affine3d pose1;
   Eigen::Affine3d pose2;
   Eigen::Affine3d joint_interpolated_expected_pose;
 
-  EXPECT_TRUE(robot2->getPose(joint1, pose1));
-  EXPECT_TRUE(robot2->getPose(joint2, pose2));
-  EXPECT_TRUE(robot2->getPose(joint_interpolated_expected_joint, joint_interpolated_expected_pose));
+  EXPECT_TRUE(developer_robot->getPose(joint1, pose1));
+  EXPECT_TRUE(developer_robot->getPose(joint2, pose2));
+  EXPECT_TRUE(developer_robot->getPose(joint_interpolated_expected_joint, joint_interpolated_expected_pose));
 
   Eigen::Quaterniond point1_quaternion(pose1.rotation());
   Eigen::Quaterniond point2_quaternion(pose2.rotation());
   Eigen::Affine3d cart_interpolated_expected_pose(point1_quaternion.slerp(0.5, point2_quaternion));
   cart_interpolated_expected_pose.translation() =  0.5*(pose2.translation() + pose1.translation());
 
-  EXPECT_TRUE(robot2->getJointSolution(cart_interpolated_expected_pose, 3.0, seed, cart_interpolated_expected_joint));
+  EXPECT_TRUE(developer_robot->getJointSolution(cart_interpolated_expected_pose, 3.0, seed, cart_interpolated_expected_joint));
 
-  // joint_point1,joint_point4, cart_point1 and cart_point3 
-  // represent the same pose
-  // joint_point2, cart_point2 and joint_point3 represent the same pose
+  // joint_point1, joint_point4, cart_point1, and cart_point3 represent the same pose
+  // joint_point2, cart_point2, and joint_point3 represent the same pose
   std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
      std::unique_ptr<moveit_simple::TrajectoryPoint>
      (new moveit_simple::JointTrajectoryPoint(joint1, 1.0, "joint_point1"));
@@ -314,37 +314,32 @@ TEST_F(DeveloperRobotTest, planning)
      (new moveit_simple::JointTrajectoryPoint(joint1, 7.0, "joint_point4"));
 
   // Add first point to start from a known point
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME, joint_point1));
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, joint_point1));
   // joint interpolation between two joint points
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME,  joint_point2,  joint, 1));
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, joint_point2, joint, 1));
   // joint interpolation between a cartesian point and a joint point
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME, cart_point1, joint, 1));
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, cart_point1, joint, 1));
   // cartesian interpolation between two cartesian points
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME, cart_point2,  cart, 1));
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, cart_point2, cart, 1));
   // joint interpolation between two cartesian points
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME, cart_point3,  joint, 1));
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, cart_point3, joint, 1));
   // cartesian interpolation between a cartesian point and a joint point
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME,  joint_point3, cart, 1));
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, joint_point3, cart, 1));
   // cartesian interpolation between two joint points
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME,  joint_point4, cart, 1));
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, joint_point4, cart, 1));
 
-  // Convert the input trajectory to vector of
-  //  trajectory_msgs::JointTrajectoryPoint
-  EXPECT_TRUE(robot2->toJointTrajectory(TRAJECTORY_NAME,points));
+  // Convert the input trajectory to vector of trajectory_msgs::JointTrajectoryPoint
+  EXPECT_TRUE(developer_robot->toJointTrajectory(TRAJECTORY_NAME,points));
   EXPECT_EQ(points.size(),14);
 
-
-  // EXPECT_NO_THROW(robot2.execute(TRAJECTORY_NAME));
-
-  ROS_INFO_STREAM("Converting the joint positions to poses to compare " <<
-                                                "against expected poses");
+  ROS_INFO_STREAM("Converting the joint positions to poses to compare against expected poses");
+  
   std::vector<Eigen::Affine3d> pose_out;
   pose_out.resize(points.size());
   for (std::size_t i = 0; i < points.size(); ++i)
   {
-    EXPECT_TRUE(robot2->getPose(points[i].positions, pose_out[i]));
+    EXPECT_TRUE(developer_robot->getPose(points[i].positions, pose_out[i]));
   }
-
 
   ROS_INFO_STREAM("Testing if the planned path is correct");
 
@@ -407,7 +402,6 @@ TEST_F(DeveloperRobotTest, planning)
   ROS_INFO_STREAM(" pose_out[13]: " << std::endl << pose_out[13].matrix());
 }
 
-
 TEST_F(DeveloperRobotTest, interpolation)
 {
   const std::string TRAJECTORY_NAME("traj1");
@@ -415,9 +409,9 @@ TEST_F(DeveloperRobotTest, interpolation)
   std::vector<trajectory_msgs::JointTrajectoryPoint> points;
 
   // Joint Interpolation Test
-  std::vector<double>joint1(6,M_PI/6);
-  std::vector<double>joint2(6,-1*M_PI/6);
-  std::vector<double>joint_expected(6,0);
+  std::vector<double>joint1(6, M_PI/6);
+  std::vector<double>joint2(6, -1*M_PI/6);
+  std::vector<double>joint_expected(6, 0);
 
   const std::unique_ptr<moveit_simple::JointTrajectoryPoint> joint_point1 =
      std::unique_ptr<moveit_simple::JointTrajectoryPoint>
@@ -429,40 +423,41 @@ TEST_F(DeveloperRobotTest, interpolation)
 
   std::unique_ptr<moveit_simple::JointTrajectoryPoint> joint_point_out;
 
-  robot2->interpolate(joint_point1,joint_point2,0.5,joint_point_out);
+  developer_robot->interpolate(joint_point1,joint_point2,0.5,joint_point_out);
   std::vector<double>joint_out = joint_point_out->jointPoint();
 
-  ROS_INFO_STREAM(" joint_out: " << joint_out);
-  ROS_INFO_STREAM(" joint_expected: " << joint_expected);
+  ROS_INFO_STREAM("joint_out: " << joint_out);
+  ROS_INFO_STREAM("joint_expected: " << joint_expected);
   double error_joint = fabs(joint_point_out->time() - 1.5);
   for (std::size_t i = 0; i < joint_expected.size(); ++i)
   {
     error_joint += fabs(joint_out[i] - joint_expected[i]);
   }
+
   EXPECT_NEAR(error_joint, 0.0, 1e-2);
   ROS_INFO_STREAM("joint_out" << joint_out);
   ROS_INFO_STREAM("joint_expected" << joint_out);
 
   // Cartesian Interpolation Test
   Eigen::Affine3d pose1 = Eigen::Affine3d::Identity();
-  pose1.translation() = Eigen::Vector3d(1.9,0.0,2.2);
-  Eigen::Quaterniond rot1;
-  rot1.setFromTwoVectors(Eigen::Vector3d(0,-0.5,0), Eigen::Vector3d(1.9,0.0,2.2));
+  pose1.translation() = Eigen::Vector3d(0.8, 0.1, 0.3);
+  Eigen::Quaterniond rot1(0.66, 0.0, 0.7513, 0.0);
   pose1.linear() = rot1.toRotationMatrix();
 
   Eigen::Affine3d pose2 = Eigen::Affine3d::Identity();
-  pose2.translation() = Eigen::Vector3d(1.9,0.0,2.7);
+  pose2.translation() = Eigen::Vector3d(0.8, 0.1, 0.5);
+  Eigen::Quaterniond rot2(0.4085, 0, 0.9127, 0);
+  pose2.linear() = rot2.toRotationMatrix();
 
   Eigen::Affine3d pose3 = Eigen::Affine3d::Identity();
-  pose3.translation() = Eigen::Vector3d(-0.592,-0.000,3.452);
-  Eigen::Quaterniond rot3;
-  rot3.setFromTwoVectors(Eigen::Vector3d(3.142,-0.964,3.142), Eigen::Vector3d(-0.592,-0.000,3.452));
+  pose3.translation() = Eigen::Vector3d(-0.3, -0.5, 0.2);
+  Eigen::Quaterniond rot3(0.8253, 0.0, 0.5646, 0.0);
   pose3.linear() = rot3.toRotationMatrix();
 
   Eigen::Quaterniond point1_quaternion(pose1.rotation());
   Eigen::Quaterniond point2_quaternion(pose2.rotation());
   Eigen::Affine3d pose_expected(point1_quaternion.slerp(0.5, point2_quaternion));
-  pose_expected.translation() = Eigen::Vector3d(1.9,0.0,2.45);
+  pose_expected.translation() = Eigen::Vector3d(0.8, 0.1, 0.4);
 
   const std::unique_ptr<moveit_simple::CartTrajectoryPoint> cart_point1 =
      std::unique_ptr<moveit_simple::CartTrajectoryPoint>
@@ -474,7 +469,7 @@ TEST_F(DeveloperRobotTest, interpolation)
 
   std::unique_ptr<moveit_simple::CartTrajectoryPoint> cart_point_out;
 
-  robot2->interpolate(cart_point1,cart_point2,0.5,cart_point_out);
+  developer_robot->interpolate(cart_point1,cart_point2,0.5,cart_point_out);
 
   EXPECT_TRUE(pose_expected.isApprox(cart_point_out->pose(),1e-3));
 
@@ -495,27 +490,29 @@ TEST_F(DeveloperRobotTest, interpolation)
      std::unique_ptr<moveit_simple::TrajectoryPoint>
      (new moveit_simple::CartTrajectoryPoint(pose3, 5.0, "traj_point_cart2"));
 
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
   // Populating points for further use and a fixed known point to start from
-  EXPECT_TRUE(robot2->toJointTrajectory(TRAJECTORY_NAME,points));
+  EXPECT_TRUE(developer_robot->toJointTrajectory(TRAJECTORY_NAME,points));
   EXPECT_EQ(points.size(),2);
   // joint interpolation towards joint point
-  EXPECT_TRUE(robot2->jointInterpolation(traj_point_joint1, points, (unsigned int) 10));
+  EXPECT_TRUE(developer_robot->jointInterpolation(traj_point_joint1, points, (unsigned int) 10));
   EXPECT_EQ(points.size(),13);
   // Cartesian Interpolation towards cartesian point
-  EXPECT_TRUE(robot2->cartesianInterpolation(traj_point_cart1, points, (unsigned int) 0));
+  EXPECT_TRUE(developer_robot->cartesianInterpolation(traj_point_cart1, points, (unsigned int) 0));
   EXPECT_EQ(points.size(),14);
+
   // Cartesian Interpolation between pose1 and pose3 is not possible but joint interpolation is
-  EXPECT_FALSE(robot2->cartesianInterpolation(traj_point_cart2, points, (unsigned int) 5));
+  EXPECT_FALSE(developer_robot->cartesianInterpolation(traj_point_cart2, points, (unsigned int) 5));
   EXPECT_EQ(points.size(),14);
   // Joint Interpolation towards cartesian point
-  EXPECT_TRUE(robot2->jointInterpolation(traj_point_cart2, points, (unsigned int) 5));
-  EXPECT_EQ(points.size(),20);
-  // Cartesian Interpolation towards joint point
-  EXPECT_TRUE(robot2->jointInterpolation(traj_point_joint2, points, (unsigned int) 15));
-  EXPECT_EQ(points.size(),36);
-}
+  // This is false because we don't allow for large config changes in joint interpolations even if it is possible
+  EXPECT_FALSE(developer_robot->jointInterpolation(traj_point_cart2, points, (unsigned int) 5));
+  EXPECT_EQ(points.size(),14);
 
+  // Cartesian Interpolation towards joint point
+  EXPECT_TRUE(developer_robot->cartesianInterpolation(traj_point_joint2, points, (unsigned int) 15));
+  EXPECT_EQ(points.size(),30);
+}
 
 TEST_F(UserRobotTest, speed_reconfiguration)
 {
@@ -533,20 +530,20 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   double execution_time_check_2 = INT_MAX;
   double execution_time_check_3 = INT_MAX;
 
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", 1.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2", 3.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", 4.0));
   
   // Test 1 -- Max_Execution_Speed: Plan & then Execute that Plan separately
-  robot->setSpeedModifier(1.0);
-  EXPECT_TRUE(robot->getSpeedModifier() == 1.0);
+  user_robot->setSpeedModifier(1.0);
+  EXPECT_TRUE(user_robot->getSpeedModifier() == 1.0);
 
   std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
-  EXPECT_NO_THROW(goal = robot->plan(TRAJECTORY_NAME));
-  EXPECT_NO_THROW(robot->execute(goal));  
+  EXPECT_NO_THROW(goal = user_robot->plan(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(user_robot->execute(goal));  
   
   execution_time_check_1 = goal[goal.size()-1].time();
   EXPECT_TRUE(execution_time_check_1 >= 0.0);
@@ -554,11 +551,11 @@ TEST_F(UserRobotTest, speed_reconfiguration)
     << execution_time_check_1 << " seconds");
 
   // Test 2 -- Half_Execution_Speed: Plan & Execute
-  robot->setSpeedModifier(0.50);
-  EXPECT_TRUE(robot->getSpeedModifier() == 0.50);
+  user_robot->setSpeedModifier(0.50);
+  EXPECT_TRUE(user_robot->getSpeedModifier() == 0.50);
 
   double start_half_speed_execution = ros::Time::now().toSec();
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
   double end_half_speed_execution = ros::Time::now().toSec();
 
   execution_time_check_2 = end_half_speed_execution - start_half_speed_execution;
@@ -567,11 +564,11 @@ TEST_F(UserRobotTest, speed_reconfiguration)
     << execution_time_check_2 << " seconds");
 
   // Test 3 -- Min_Execution_Speed: Plan & Execute
-  robot->setSpeedModifier(0.25);
-  EXPECT_TRUE(robot->getSpeedModifier() == 0.25);
+  user_robot->setSpeedModifier(0.25);
+  EXPECT_TRUE(user_robot->getSpeedModifier() == 0.25);
 
   double start_min_speed_execution = ros::Time::now().toSec();
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
   double end_min_speed_execution = ros::Time::now().toSec();
 
   execution_time_check_3 = end_min_speed_execution - start_min_speed_execution;
@@ -598,7 +595,6 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   }
 }
 
-
 TEST_F(UserRobotTest, kinematics)
 {
   const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
@@ -612,17 +608,17 @@ TEST_F(UserRobotTest, kinematics)
   std::vector<double> seed = joint_point1;
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
-  EXPECT_TRUE(robot->getPose(joint_point1, pose1));
-  EXPECT_TRUE(robot->getJointSolution(pose1, 3.0, seed, joint_point2));
-  EXPECT_TRUE(robot->getPose(joint_point2, pose2));
-  EXPECT_TRUE(robot->getJointSolution(pose2, 3.0, seed, joint_point3));
-  EXPECT_TRUE(robot->getPose(joint_point3, pose3));
-  EXPECT_FALSE(robot->getJointSolution(pose, 3.0, seed, joint_point3));
+  EXPECT_TRUE(user_robot->getPose(joint_point1, pose1));
+  EXPECT_TRUE(user_robot->getJointSolution(pose1, 3.0, seed, joint_point2));
+  EXPECT_TRUE(user_robot->getPose(joint_point2, pose2));
+  EXPECT_TRUE(user_robot->getJointSolution(pose2, 3.0, seed, joint_point3));
+  EXPECT_TRUE(user_robot->getPose(joint_point3, pose3));
+  EXPECT_FALSE(user_robot->getJointSolution(pose, 3.0, seed, joint_point3));
 
   // Check for error in getJointSolution
-  ROS_INFO_STREAM(" joint_point1: " << joint_point1);
-  ROS_INFO_STREAM(" joint_point2: " << joint_point2);
-  ROS_INFO_STREAM(" joint_point3: " << joint_point3);
+  ROS_INFO_STREAM("joint_point1: " << joint_point1);
+  ROS_INFO_STREAM("joint_point2: " << joint_point2);
+  ROS_INFO_STREAM("joint_point3: " << joint_point3);
 
   double error_joint1 = 0.0;
   for (std::size_t i = 0; i < joint_point1.size(); ++i)
@@ -665,17 +661,17 @@ TEST_F(UserRobotTest, custom_tool_link)
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
   std::string tool_name = "tool_custom";
-  EXPECT_TRUE(robot->getPose(joint_point1, tool_name, pose1));
-  EXPECT_TRUE(robot->getJointSolution(pose1, tool_name, 3.0, seed, joint_point2));
-  EXPECT_TRUE(robot->getPose(joint_point2, tool_name, pose2));
-  EXPECT_TRUE(robot->getJointSolution(pose2, tool_name, 3.0, seed, joint_point3));
-  EXPECT_TRUE(robot->getPose(joint_point3, tool_name, pose3));
-  EXPECT_FALSE(robot->getJointSolution(pose, tool_name, 3.0, seed, joint_point3));
+  EXPECT_TRUE(user_robot->getPose(joint_point1, tool_name, pose1));
+  EXPECT_TRUE(user_robot->getJointSolution(pose1, tool_name, 3.0, seed, joint_point2));
+  EXPECT_TRUE(user_robot->getPose(joint_point2, tool_name, pose2));
+  EXPECT_TRUE(user_robot->getJointSolution(pose2, tool_name, 3.0, seed, joint_point3));
+  EXPECT_TRUE(user_robot->getPose(joint_point3, tool_name, pose3));
+  EXPECT_FALSE(user_robot->getJointSolution(pose, tool_name, 3.0, seed, joint_point3));
 
   // Check for error in getJointSolution
-  ROS_INFO_STREAM(" joint_point1: " << joint_point1);
-  ROS_INFO_STREAM(" joint_point2: " << joint_point2);
-  ROS_INFO_STREAM(" joint_point3: " << joint_point3);
+  ROS_INFO_STREAM("joint_point1: " << joint_point1);
+  ROS_INFO_STREAM("joint_point2: " << joint_point2);
+  ROS_INFO_STREAM("joint_point3: " << joint_point3);
 
   double error_joint1 = 0.0;
   for (std::size_t i = 0; i < joint_point1.size(); ++i)
@@ -721,16 +717,15 @@ TEST_F(UserRobotTest, custom_tool_link)
   const std::string TRAJECTORY_NAME("traj1");
 
   ROS_INFO_STREAM("Testing trajectory adding of points");
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
-
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "waypoint1", tool_name, 1.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", tool_name, 2.0, cart, 8));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", "tool0", 3.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", "tool_custom", 4.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", tool_name, 5.0, joint, 5));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "tool0", 6.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "wp1", tool_name, 1.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", tool_name, 2.0, cart, 8));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2", "tool0", 3.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", "tool_custom", 4.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", tool_name, 5.0, joint, 5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "tool0", 6.0));
   
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
 }
 
 
@@ -739,30 +734,32 @@ TEST_F(UserRobotTest, copy_current_pose)
   const std::string TRAJECTORY_NAME("traj1");
 
   // Adding trajectory points.
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", 1.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2", 3.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", 4.0));
 
-  std::vector<double> before_execution_1, before_execution_2,
-                      before_execution_3, final_position;
+  std::vector<double> before_execution_1, before_execution_2, before_execution_3, final_position;
 
   // Before the first execution robot should be at position "home"
-  before_execution_1 = robot->getJointState();
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  before_execution_1 = user_robot->getJointState();
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
+  ros::Duration(0.5).sleep();
 
   // Second Execution
-  // Robot should be at "waypoint3" at all checkpoints from here on out.
-  before_execution_2 = robot->getJointState();
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  // Robot should be at "wp3" at all checkpoints from here on out.
+  before_execution_2 = user_robot->getJointState();
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
+  ros::Duration(0.5).sleep();
 
   // Third Execution
-  before_execution_3 = robot->getJointState();
-  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  before_execution_3 = user_robot->getJointState();
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
+  ros::Duration(0.5).sleep();
 
   // Final Position
-  final_position = robot->getJointState();
+  final_position = user_robot->getJointState();
 
   ROS_INFO_STREAM("before_execution_1" << before_execution_1);
   ROS_INFO_STREAM("before_execution_2" << before_execution_2);
@@ -787,8 +784,10 @@ TEST_F(DeveloperRobotTest, collision)
   std::vector<double>joint1(6,0);
   std::vector<double>joint2(6,0);
   std::vector<double>joint3(6,0);
-  joint2[2] = M_PI;
-  joint3[2] = M_PI/2;
+
+  joint2[1] = M_PI;
+  joint3[3] = -M_PI/2;
+
   std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
      std::unique_ptr<moveit_simple::TrajectoryPoint>
      (new moveit_simple::JointTrajectoryPoint(joint1, 1.0, "joint_point1"));
@@ -796,32 +795,37 @@ TEST_F(DeveloperRobotTest, collision)
   std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point2 =
      std::unique_ptr<moveit_simple::TrajectoryPoint>
      (new moveit_simple::JointTrajectoryPoint(joint2, 2.0, "joint_point2"));
+
   ROS_INFO_STREAM("joint1: " << joint1);
   ROS_INFO_STREAM("joint2: " << joint2);
   ROS_INFO_STREAM("joint3: " << joint3);
-  // Add first point to start from a known point
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME, joint_point1));
-  // joint interpolation between two joint points
-  EXPECT_NO_THROW(robot2->addTrajPoint(TRAJECTORY_NAME,  joint_point2,  joint, 1));
 
-  EXPECT_NO_THROW(robot2->execute(TRAJECTORY_NAME));
-  EXPECT_FALSE(robot2->isInCollision(joint1));
-  EXPECT_TRUE(robot2->isInCollision(joint3));
-  EXPECT_THROW(robot2->execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
+  // Add first point to start from a known point
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME, joint_point1));
+  // joint interpolation between two joint points
+  EXPECT_NO_THROW(developer_robot->addTrajPoint(TRAJECTORY_NAME,  joint_point2,  joint, 1));
+
+  EXPECT_NO_THROW(developer_robot->execute(TRAJECTORY_NAME));
+  EXPECT_FALSE(developer_robot->isInCollision(joint1));
+
+  EXPECT_TRUE(developer_robot->isInCollision(joint2));
+  EXPECT_FALSE(developer_robot->isInCollision(joint3));
+  EXPECT_THROW(developer_robot->execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
 
   // Test to see if above collision detection works when you separate out plan(...) & execute(...)
   std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
-  EXPECT_NO_THROW(goal = robot2->plan(TRAJECTORY_NAME));
-  EXPECT_THROW(robot2->execute(goal, true), moveit_simple::CollisionDetected);
+  EXPECT_NO_THROW(goal = developer_robot->plan(TRAJECTORY_NAME));
+  EXPECT_THROW(developer_robot->execute(goal, true), moveit_simple::CollisionDetected);
 }
 
-TEST(MoveitSimpleTest, Singularity)
-{
-  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
-  const std::string TRAJECTORY_NAME("traj1");
-  ros::Duration(2.0).sleep();  //wait for tf tree to populate
+//
+// Disabling this test temporarily since isNearSingular always returns true for the MH5.
+//
 
+/*
+TEST_F(UserRobotTest, singularity)
+{
   std::vector<double>joint1(6,0);
   std::vector<double>joint2(6,0);
   std::vector<double>joint3(6,0);
@@ -843,22 +847,21 @@ TEST(MoveitSimpleTest, Singularity)
   joint5[2] = -M_PI/2+M_PI/60;
   joint5[4] = M_PI/60;
 
-
   ROS_INFO_STREAM("joint1: " << joint1);
   ROS_INFO_STREAM("joint2: " << joint2);
   ROS_INFO_STREAM("joint3: " << joint3);
   ROS_INFO_STREAM("joint4: " << joint4);
   ROS_INFO_STREAM("joint5: " << joint5);
 
-  EXPECT_FALSE(robot.isNearSingular(joint1));
+  EXPECT_FALSE(user_robot->isNearSingular(joint1));
   // Axes 4 and 6 aligned (wrist singularity)
-  EXPECT_TRUE(robot.isNearSingular(joint2));
+  EXPECT_TRUE(user_robot->isNearSingular(joint2));
   // Elbow is straight (Elbow Singularity)
-  EXPECT_TRUE(robot.isNearSingular(joint3));
+  EXPECT_TRUE(user_robot->isNearSingular(joint3));
   // Axes 1 and 6 are parallel (Alignment Singularity)
-  EXPECT_TRUE(robot.isNearSingular(joint4));
+  EXPECT_TRUE(user_robot->isNearSingular(joint4));
   // Boundary Singularity (occurs because of elbow and wrist singularity)
-  EXPECT_TRUE(robot.isNearSingular(joint5));
+  EXPECT_TRUE(user_robot->isNearSingular(joint5));
 }
-#endif
+*/
 }
