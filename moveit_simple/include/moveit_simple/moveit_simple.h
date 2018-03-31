@@ -360,6 +360,11 @@ protected:
                          std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
                          bool collision_check = false);
 
+  /**
+   * @brief computeIKTransforms - Checks if the frames passed in for a custom
+   * ikfast solver exist and computes the transform from the last link defined
+   * for the solver kinematics to the tcp link defined in the robot description
+   */
   bool computeIKTransforms();
 
 
