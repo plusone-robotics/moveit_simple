@@ -147,7 +147,7 @@ public:
    * @brief addTrajPoint - add point to trajectory.
    * @param traj_name - name of trajectory buffer to add point to
    * @param point_name - name of point to add
-   * @param time - time from start of trajectory to reach point
+   * @param time - time from sta+rt of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
    * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
@@ -361,11 +361,10 @@ protected:
                          bool collision_check = false);
 
   /**
-   * @brief computeIKTransforms - Checks if the frames passed in for a custom
-   * ikfast solver exist and computes the transform from the last link defined
-   * for the solver kinematics to the tcp link defined in the robot description
+   * @brief computeIKTransforms - Computes the transforms between the base/tip
+   * frames defined in the URDF and the base/tip frames defined for the IK solver.
    */
-  bool computeIKTransforms();
+  void computeIKSolverTransforms();
 
 
   /**
@@ -502,8 +501,8 @@ protected:
   // Kinematics
   std::string ik_base_frame_;
   std::string ik_tip_frame_;
-  bool ik_transforms_found_;
-  Eigen::Affine3d tool0_to_tcp_;
+  Eigen::Affine3d ik_tip_to_urdf_tip_;
+  Eigen::Affine3d urdf_base_to_ik_base_;
 };
 
 
@@ -727,6 +726,11 @@ public:
   IKFailException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
 };
 
+class IKSolverTransformException: public std::runtime_error
+{
+public:
+  IKSolverTransformException(const std::string error_description) : std::runtime_error(error_description) { }
+};
 
   /**
    * @brief CollisionDetected: An exception class to notify collision

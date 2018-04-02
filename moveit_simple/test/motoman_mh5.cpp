@@ -822,7 +822,6 @@ TEST_F(DeveloperRobotTest, collision)
 //
 // Disabling this test temporarily since isNearSingular always returns true for the MH5.
 //
-
 /*
 TEST_F(UserRobotTest, singularity)
 {
