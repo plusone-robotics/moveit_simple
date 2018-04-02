@@ -245,7 +245,6 @@ TEST_F(UserRobotTest, add_trajectory)
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2", 3.0));
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", 4.0, joint));
-  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, pose, "link_t", 5.0));
   EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
 
   EXPECT_NO_THROW(user_robot->addTrajPoint("traj2", "wp4", 4.5));
@@ -256,6 +255,7 @@ TEST_F(UserRobotTest, add_trajectory)
 
 TEST_F(DeveloperRobotTest, planning)
 {
+  const double ALLOWED_ERROR = 1e-2;
   const std::string TRAJECTORY_NAME("traj1");
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
@@ -343,61 +343,61 @@ TEST_F(DeveloperRobotTest, planning)
 
   ROS_INFO_STREAM("Testing if the planned path is correct");
 
-  EXPECT_TRUE(pose1.isApprox(pose_out[1],1e-3));
+  EXPECT_TRUE(pose1.isApprox(pose_out[1], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
   ROS_INFO_STREAM(" pose_out[1]: " << std::endl << pose_out[1].matrix());
 
-  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[2],1e-3));
+  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[2], ALLOWED_ERROR));
   ROS_INFO_STREAM(" joint_interpolated_expected_pose: " << std::endl
                        << joint_interpolated_expected_pose.matrix());
   ROS_INFO_STREAM(" pose_out[2]: " << std::endl << pose_out[2].matrix());
 
-  EXPECT_TRUE(pose2.isApprox(pose_out[3],1e-3));
+  EXPECT_TRUE(pose2.isApprox(pose_out[3], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
   ROS_INFO_STREAM(" pose_out[3]: " << std::endl << pose_out[3].matrix());
 
-  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[4],1e-3));
+  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[4], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose_out[4]: " << std::endl << pose_out[4].matrix());
   ROS_INFO_STREAM(" joint_interpolated_expected_pose: " << std::endl
                        << joint_interpolated_expected_pose.matrix());
 
-  EXPECT_TRUE(pose1.isApprox(pose_out[5],1e-3));
+  EXPECT_TRUE(pose1.isApprox(pose_out[5], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
   ROS_INFO_STREAM(" pose_out[5]: " << std::endl << pose_out[5].matrix());
 
-  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[6],1e-3));
+  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[6], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose_out[6]: " << std::endl << pose_out[6].matrix());
   ROS_INFO_STREAM(" cart_interpolated_expected_pose: " << std::endl
                        << cart_interpolated_expected_pose.matrix());
 
-  EXPECT_TRUE(pose2.isApprox(pose_out[7],1e-3));
+  EXPECT_TRUE(pose2.isApprox(pose_out[7], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
   ROS_INFO_STREAM(" pose_out[7]: " << std::endl << pose_out[7].matrix());
 
-  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[8],1e-3));
+  EXPECT_TRUE(joint_interpolated_expected_pose.isApprox(pose_out[8], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose_out[8]: " << std::endl << pose_out[8].matrix());
   ROS_INFO_STREAM(" joint_interpolated_expected_pose: " << std::endl
                        << joint_interpolated_expected_pose.matrix());
 
-  EXPECT_TRUE(pose1.isApprox(pose_out[9],1e-3));
+  EXPECT_TRUE(pose1.isApprox(pose_out[9], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose1: " << std::endl << pose1.matrix());
   ROS_INFO_STREAM(" pose_out[9]: " << std::endl << pose_out[9].matrix());
 
-  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[10],1e-3));
+  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[10], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose_out[10]: " << std::endl << pose_out[10].matrix());
   ROS_INFO_STREAM(" cart_interpolated_expected_pose: " << std::endl
                        << cart_interpolated_expected_pose.matrix());
 
-  EXPECT_TRUE(pose2.isApprox(pose_out[11],1e-3));
+  EXPECT_TRUE(pose2.isApprox(pose_out[11], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose2: " << std::endl << pose2.matrix());
   ROS_INFO_STREAM(" pose_out[11]: " << std::endl << pose_out[11].matrix());
 
-  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[12],1e-3));
+  EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[12], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose_out[12]: " << std::endl << pose_out[12].matrix());
   ROS_INFO_STREAM(" cart_interpolated_expected_pose: " << std::endl
                        << cart_interpolated_expected_pose.matrix());
 
-  EXPECT_TRUE(pose1.isApprox(pose_out[13],1e-3));
+  EXPECT_TRUE(pose1.isApprox(pose_out[13], ALLOWED_ERROR));
   ROS_INFO_STREAM(" pose2: " << std::endl << pose1.matrix());
   ROS_INFO_STREAM(" pose_out[13]: " << std::endl << pose_out[13].matrix());
 }
