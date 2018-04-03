@@ -949,7 +949,7 @@ void Robot::computeIKSolverTransforms()
       << " to: " << ik_base_frame_);
     geometry_msgs::TransformStamped transform_msg;
     transform_msg = tf_buffer_.lookupTransform(ik_base_frame_,
-      joint_group_->getSolverInstance()->getBaseFrame(), ros::Time::now(), ros::Duration(5.0));
+      joint_group_->getSolverInstance()->getBaseFrame(), ros::Time::now(), ros::Duration(15.0));
     tf::transformMsgToEigen(transform_msg.transform, srdf_base_to_ik_base_);
   }
   catch (tf2::TransformException &ex)
@@ -965,7 +965,7 @@ void Robot::computeIKSolverTransforms()
       << " to: " << joint_group_->getSolverInstance()->getTipFrame());
     geometry_msgs::TransformStamped transform_msg;
     transform_msg = tf_buffer_.lookupTransform(joint_group_->getSolverInstance()->getTipFrame(), 
-      ik_tip_frame_, ros::Time::now(), ros::Duration(5.0));
+      ik_tip_frame_, ros::Time::now(), ros::Duration(15.0));
     tf::transformMsgToEigen(transform_msg.transform, ik_tip_to_srdf_tip_);
   }
   catch (tf2::TransformException &ex)
