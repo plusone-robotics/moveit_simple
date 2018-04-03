@@ -65,9 +65,9 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   catch (tf2::TransformException &ex)
   {
     ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
-      << " in the URDF and the base/tip frames defined for the IK solver");
+      << " in the SRDF and the base/tip frames defined for the IK solver");
     throw IKSolverTransformException("Failed to compute transforms between the base/tip" 
-      " frame defined in the URDF and the base/tip frames defined for the IK solver");
+      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
 
   return;
@@ -86,9 +86,9 @@ Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
   catch (tf2::TransformException &ex)
   {
     ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
-      << " in the URDF and the base/tip frames defined for the IK solver");
+      << " in the SRDF and the base/tip frames defined for the IK solver");
     throw IKSolverTransformException("Failed to compute transforms between the base/tip" 
-      " frame defined in the URDF and the base/tip frames defined for the IK solver");
+      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
 }
 
@@ -132,9 +132,9 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
   catch (tf2::TransformException &ex)
   {
     ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
-      << " in the URDF and the base/tip frames defined for the IK solver");
+      << " in the SRDF and the base/tip frames defined for the IK solver");
     throw IKSolverTransformException("Failed to compute transforms between the base/tip" 
-      " frame defined in the URDF and the base/tip frames defined for the IK solver");
+      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
 
   return;
@@ -153,9 +153,9 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_des
   catch (tf2::TransformException &ex)
   {
     ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
-      << " in the URDF and the base/tip frames defined for the IK solver");
+      << " in the SRDF and the base/tip frames defined for the IK solver");
     throw IKSolverTransformException("Failed to compute transforms between the base/tip" 
-      " frame defined in the URDF and the base/tip frames defined for the IK solver");
+      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
 }
 
@@ -955,7 +955,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
 
 void Robot::computeIKSolverTransforms()
 {
-  ROS_INFO_STREAM("Computing transforms between the base/tip frames defined in the URDF"
+  ROS_INFO_STREAM("Computing transforms between the base/tip frames defined in the SRDF"
     " and the base/tip frames defined for the IK solver");
   try
   {
@@ -964,7 +964,7 @@ void Robot::computeIKSolverTransforms()
     geometry_msgs::TransformStamped transform_msg;
     transform_msg = tf_buffer_.lookupTransform(ik_base_frame_,
       joint_group_->getSolverInstance()->getBaseFrame(), ros::Time::now(), ros::Duration(5.0));
-    tf::transformMsgToEigen(transform_msg.transform, urdf_base_to_ik_base_);
+    tf::transformMsgToEigen(transform_msg.transform, srdf_base_to_ik_base_);
   }
   catch (tf2::TransformException &ex)
   {
@@ -980,7 +980,7 @@ void Robot::computeIKSolverTransforms()
     geometry_msgs::TransformStamped transform_msg;
     transform_msg = tf_buffer_.lookupTransform(joint_group_->getSolverInstance()->getTipFrame(), 
       ik_tip_frame_, ros::Time::now(), ros::Duration(5.0));
-    tf::transformMsgToEigen(transform_msg.transform, ik_tip_to_urdf_tip_);
+    tf::transformMsgToEigen(transform_msg.transform, ik_tip_to_srdf_tip_);
   }
   catch (tf2::TransformException &ex)
   {
@@ -989,7 +989,7 @@ void Robot::computeIKSolverTransforms()
     throw ex;
   }
 
-  ROS_INFO_STREAM("Transforms between the base/tip frames defined in the URDF"
+  ROS_INFO_STREAM("Transforms between the base/tip frames defined in the SRDF"
     " and the base/tip frames defined for the IK solver have been computed");
 }
 
@@ -1303,7 +1303,7 @@ bool Robot::getFK(const std::vector<double> & joint_point,
 {
   virtual_robot_state_->setJointGroupPositions(joint_group_, joint_point);
   Eigen::Affine3d ik_base_to_ik_tip = virtual_robot_state_->getFrameTransform(ik_tip_frame_);
-  pose = urdf_base_to_ik_base_ * ik_base_to_ik_tip * ik_tip_to_urdf_tip_.inverse();
+  pose = srdf_base_to_ik_base_ * ik_base_to_ik_tip * ik_tip_to_srdf_tip_.inverse();
   return true;
 }
 
@@ -1322,7 +1322,7 @@ bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
 bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> & joint_point,
                   double timeout, unsigned int attempts) const
 {
-  Eigen::Affine3d ik_tip_pose = pose * ik_tip_to_urdf_tip_;
+  Eigen::Affine3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
   if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, attempts, timeout))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
