@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(moveit_simple)
 
+add_compile_options(-std=c++11)
+
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   cmake_modules
@@ -61,7 +63,6 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_genparam)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
-target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
