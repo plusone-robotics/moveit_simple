@@ -188,20 +188,20 @@ TEST_F(DeveloperRobotTest, kinematics)
   testKinematics(pose_5);
 }
 
-TEST(MoveitSimpleTest, construction_robot_default)
+TEST(MoveitSimpleTest, construction_robot)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");  
-}
-
-TEST(MoveitSimpleTest, construction_robot_ikfast)
-{
-  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator", 
-    "base_link", "link_t");  
 }
 
 TEST(MoveitSimpleTest, construction_online_robot)
 {
   moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator");
+}
+
+TEST(MoveitSimpleTest, construction_robot_ikfast)
+{
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator", 
+    "base_link", "link_t"); 
 }
 
 TEST(MoveitSimpleTest, construction_online_robot_ikfast)
