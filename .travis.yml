@@ -10,8 +10,8 @@ notifications:
       - shaun.edwards@gmail.com
 env:
   matrix:
-    - ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
-    - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
+    - ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall ROS_PARALLEL_TEST_JOBS=-j1
+    - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall ROS_PARALLEL_TEST_JOBS=-j1
 matrix:
   allow_failures:
     - env: ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
