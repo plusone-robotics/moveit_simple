@@ -11,7 +11,7 @@ notifications:
 env:
   matrix:
     - ROS_DISTRO="indigo" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
-    - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
+    - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.kinetic.rosinstall
 matrix:
   allow_failures:
     - env: ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
