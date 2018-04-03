@@ -92,7 +92,7 @@ public:
   * @brief Constructor for the case where the IK implementation does not match the
   * SRDF. For example: IKFast solutions are generally solved for the base_link to
   * tool0 of a robot, and the robot_description is defined for some world_frame to
-  * some tcp frame.
+  * some tcp frame. The transforms to to the IK frames are assumed to be static.
   */   
   Robot(const ros::NodeHandle &nh, const std::string &robot_description,
    const std::string &group_name, const std::string &ik_base_frame,
