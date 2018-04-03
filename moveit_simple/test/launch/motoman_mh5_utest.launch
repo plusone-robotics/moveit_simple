@@ -20,5 +20,5 @@
 
   <!-- Test Node -->
   <test test-name="motoman_mh5_utest" pkg="moveit_simple" type="motoman_mh5_utest"
-  launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit="300.0"/>
+  launch-prefix="$(arg launch_prefix)" if="$(arg run_test_node)" time-limit="500.0"/>
 </launch>
