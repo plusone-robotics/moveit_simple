@@ -123,20 +123,6 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
     ROS_ERROR_STREAM("Failed to connect to joint trajectory action server: ");
   }
 
-  try
-  {
-    ik_base_frame_ = joint_group_->getSolverInstance()->getBaseFrame();
-    ik_tip_frame_ = joint_group_->getSolverInstance()->getTipFrame();    
-    this->computeIKSolverTransforms();
-  }
-  catch (tf2::TransformException &ex)
-  {
-    ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
-      << " in the SRDF and the base/tip frames defined for the IK solver");
-    throw IKSolverTransformException("Failed to compute transforms between the base/tip" 
-      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
-  }
-
   return;
 }
 
