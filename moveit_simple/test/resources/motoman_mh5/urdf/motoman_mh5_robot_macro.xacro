@@ -1,0 +1,86 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
+  <xacro:property name="DEG_TO_RAD" value="0.01745329251994329577"/>
+
+  <xacro:include filename="$(find moveit_simple)/test/resources/motoman_mh5/urdf/mh5_macro.xacro"/>
+
+  <xacro:macro name="motoman_mh5_robot" params="prefix">
+    <xacro:motoman_mh5 prefix=""/>
+
+    <!-- Links -->
+    <link name="world"/>
+    <link name="${prefix}tool0"/>
+
+    <link name="${prefix}ee_link">
+      <visual>
+        <origin xyz="0 0 0.075"/>
+        <geometry>
+          <cylinder length="0.15" radius="0.015"/>
+        </geometry>
+        <material name="green">
+          <color rgba="0 1 0 1"/>
+        </material>
+      </visual>
+    </link>
+
+    <link name="${prefix}tool_custom"/>
+    <!-- End Links -->
+
+    <!-- Joints -->
+    <joint name="${prefix}world_to_base" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="world"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}joint_t_tool0_joint" type="fixed">
+      <parent link="${prefix}link_t"/>
+      <child link="${prefix}tool0"/>
+      <origin rpy="0 1.57 0" xyz="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}ee_joint" type="fixed">
+      <parent link="${prefix}tool0"/>
+      <child link="${prefix}ee_link"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}tool_custom_joint" type="fixed">
+      <parent link="${prefix}ee_link"/>
+      <child link="${prefix}tool_custom"/>
+      <origin rpy="0 0 0" xyz="0 0 0.15"/>
+    </joint>    
+    <!-- End Joints -->
+
+    <!-- Waypoints for testing -->
+    <link name="wp1"/>
+    <joint name="base-waypoint1" type="fixed">
+      <parent link="world"/>
+      <child link="wp1"/>
+      <origin xyz="0.7 0.1 0.4" rpy="0.0 1.7 0.0"/>
+    </joint>
+
+    <link name="wp2"/>
+    <joint name="base-waypoint2" type="fixed">
+      <parent link="world"/>
+      <child link="wp2"/>
+      <origin xyz="0.65 -0.1 0.2" rpy="0.0 2.3 0.0"/>
+    </joint>
+
+    <link name="wp3"/>
+    <joint name="base-waypoint3" type="fixed">
+      <parent link="world"/>
+      <child link="wp3"/>
+      <origin xyz="0.65 0.0 0.9" rpy="0.0 1.2 0.0"/>
+    </joint>
+
+    <link name="wp4"/>
+    <joint name="base-waypoint4" type="fixed">
+      <parent link="world"/>
+      <child link="wp4"/>
+      <origin xyz="0.23 0.402 1.799" rpy="0.000 0.000 0.000"/>
+    </joint>
+    <!-- End Waypoints -->
+  </xacro:macro>
+</robot>

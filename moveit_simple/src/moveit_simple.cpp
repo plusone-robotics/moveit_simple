@@ -23,9 +23,6 @@
 
 namespace moveit_simple
 {
-
-
-
 Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
                                          const std::string &group_name):
   tf_buffer_(),
@@ -59,10 +56,41 @@ Robot::Robot(const ros::NodeHandle & nh, const std::string &robot_description,
   params_.fromParamServer();
   dynamic_reconfig_server_.setCallback(boost::bind(&Robot::reconfigureRequest, this, _1, _2));
 
+  try
+  {
+    ik_base_frame_ = joint_group_->getSolverInstance()->getBaseFrame();
+    ik_tip_frame_ = joint_group_->getSolverInstance()->getTipFrame();      
+    this->computeIKSolverTransforms();
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
+      << " in the SRDF and the base/tip frames defined for the IK solver");
+    throw IKSolverTransformException("Failed to compute transforms between the base/tip" 
+      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
+  }
+
   return;
 }
 
-
+Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
+  const std::string &group_name, const std::string &ik_base_frame,
+  const std::string &ik_tip_frame) : Robot(nh, robot_description, group_name)
+{ 
+  try
+  {
+    ik_base_frame_ = ik_base_frame;
+    ik_tip_frame_ = ik_tip_frame;    
+    this->computeIKSolverTransforms();
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
+      << " in the SRDF and the base/tip frames defined for the IK solver");
+    throw IKSolverTransformException("Failed to compute transforms between the base/tip" 
+      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
+  }
+}
 
 OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
                const std::string &robot_description,
@@ -95,11 +123,27 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
     ROS_ERROR_STREAM("Failed to connect to joint trajectory action server: ");
   }
 
-
   return;
 }
 
-
+OnlineRobot::OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_description,
+  const std::string &group_name, const std::string &ik_base_frame,
+  const std::string &ik_tip_frame) : OnlineRobot(nh, robot_description, group_name)
+{ 
+  try
+  {
+    ik_base_frame_ = ik_base_frame;
+    ik_tip_frame_ = ik_tip_frame;    
+    this->computeIKSolverTransforms();
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
+      << " in the SRDF and the base/tip frames defined for the IK solver");
+    throw IKSolverTransformException("Failed to compute transforms between the base/tip" 
+      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
+  }
+}
 
 void Robot::addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
                          const std::string & frame, double time,
@@ -895,7 +939,45 @@ bool Robot::toJointTrajectory(const std::string traj_name,
   return true;
 }
 
+void Robot::computeIKSolverTransforms()
+{
+  ROS_INFO_STREAM("Computing transforms between the base/tip frames defined in the SRDF"
+    " and the base/tip frames defined for the IK solver");
+  try
+  {
+    ROS_INFO_STREAM("Looking up transform from: " << joint_group_->getSolverInstance()->getBaseFrame()
+      << " to: " << ik_base_frame_);
+    geometry_msgs::TransformStamped transform_msg;
+    transform_msg = tf_buffer_.lookupTransform(ik_base_frame_,
+      joint_group_->getSolverInstance()->getBaseFrame(), ros::Time::now(), ros::Duration(5.0));
+    tf::transformMsgToEigen(transform_msg.transform, srdf_base_to_ik_base_);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR_STREAM("Failed to calculate transform from: " << joint_group_->getSolverInstance()->getBaseFrame()
+      << " to: " << ik_base_frame_);
+    throw ex;
+  }
 
+  try
+  {
+    ROS_INFO_STREAM("Looking up transform from: " << ik_tip_frame_
+      << " to: " << joint_group_->getSolverInstance()->getTipFrame());
+    geometry_msgs::TransformStamped transform_msg;
+    transform_msg = tf_buffer_.lookupTransform(joint_group_->getSolverInstance()->getTipFrame(), 
+      ik_tip_frame_, ros::Time::now(), ros::Duration(5.0));
+    tf::transformMsgToEigen(transform_msg.transform, ik_tip_to_srdf_tip_);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR_STREAM("Failed to calculate transfrom from: " << ik_tip_frame_
+      << " to: " << joint_group_->getSolverInstance()->getTipFrame());
+    throw ex;
+  }
+
+  ROS_INFO_STREAM("Transforms between the base/tip frames defined in the SRDF"
+    " and the base/tip frames defined for the IK solver have been computed");
+}
 
 bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
            std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
@@ -1206,15 +1288,9 @@ bool Robot::getFK(const std::vector<double> & joint_point,
                   Eigen::Affine3d &pose) const
 {
   virtual_robot_state_->setJointGroupPositions(joint_group_, joint_point);
-  const std::vector<std::string> link_names = joint_group_->getLinkModelNames();
-  const int vc =  (int) virtual_robot_state_->getVariableCount();
-  if ( joint_point.size() == vc)
-  {
-    pose = virtual_robot_state_->getFrameTransform(link_names.back());
-    return true;
-  }else{
-    return false;
-  }
+  Eigen::Affine3d ik_base_to_ik_tip = virtual_robot_state_->getFrameTransform(ik_tip_frame_);
+  pose = srdf_base_to_ik_base_ * ik_base_to_ik_tip * ik_tip_to_srdf_tip_.inverse();
+  return true;
 }
 
 
@@ -1232,7 +1308,8 @@ bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
 bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> & joint_point,
                   double timeout, unsigned int attempts) const
 {
-  if ( virtual_robot_state_->setFromIK(joint_group_, pose, attempts, timeout) )
+  Eigen::Affine3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
+  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, attempts, timeout))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();
@@ -1240,8 +1317,9 @@ bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> & joint_point,
     virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
     virtual_visual_tools_->publishContactPoints(*virtual_robot_state_, &(*planning_scene_));  
     ros::spinOnce();
-    return true;
+    return true;     
   }
+
   return false;
 }
 

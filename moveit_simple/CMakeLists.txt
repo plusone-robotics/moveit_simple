@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(moveit_simple)
 
+add_compile_options(-std=c++11)
+
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   cmake_modules
@@ -61,15 +63,17 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_genparam)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
-target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
-  set(UTEST_SRC_FILES test/utest.cpp
-      test/moveit_simple.cpp)
 
-  add_rostest_gtest(${PROJECT_NAME}_utest test/launch/utest.launch ${UTEST_SRC_FILES})
-  target_link_libraries(${PROJECT_NAME}_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+  set(KUKA_KR210_SRC_FILES test/kuka_kr210_utest.cpp test/kuka_kr210.cpp)
+  add_rostest_gtest(kuka_kr210_utest test/launch/kuka_kr210_utest.launch ${KUKA_KR210_SRC_FILES})
+  target_link_libraries(kuka_kr210_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+  set(MOTOMAN_MH5_SRC_FILES test/motoman_mh5_utest.cpp test/motoman_mh5.cpp)
+  add_rostest_gtest(motoman_mh5_utest test/launch/motoman_mh5_utest.launch ${MOTOMAN_MH5_SRC_FILES})
+  target_link_libraries(motoman_mh5_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif()
 
 install(TARGETS ${PROJECT_NAME}
