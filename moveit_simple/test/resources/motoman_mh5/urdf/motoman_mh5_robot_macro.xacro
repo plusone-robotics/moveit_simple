@@ -31,7 +31,7 @@
     <joint name="${prefix}world_to_base" type="fixed">
       <parent link="${prefix}base_link"/>
       <child link="world"/>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0.25 0 0"/>
     </joint>
 
     <joint name="${prefix}joint_t_tool0_joint" type="fixed">
