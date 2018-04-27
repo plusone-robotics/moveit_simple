@@ -340,19 +340,20 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
   {
     ROS_INFO_STREAM("Looked up named cart target from robot model: " << name);
     virtual_robot_state_->update();  //Updating state for frame tansform below
-    Eigen::Affine3d pose =  virtual_robot_state_->getFrameTransform(name);
+    Eigen::Affine3d ik_base_to_ik_tip =  virtual_robot_state_->getFrameTransform(name);
+    Eigen::Affine3d pose = srdf_base_to_ik_base_ * ik_base_to_ik_tip;
     ROS_INFO_STREAM("Getting urdf/robot_state target: " << name << " frame: " << std::endl << pose.matrix());
     return std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose, time, name));
   }
 
-  else if( tf_buffer_.canTransform(name, robot_model_ptr_->getRootLinkName(), ros::Time::now(), ros::Duration(0.1)) )
+  else if (tf_buffer_.canTransform(name, ik_base_frame_, ros::Time::now(), ros::Duration(0.1)))
   {
     try
     {
       ROS_INFO_STREAM("Looked up tf named frame: " << name);
       geometry_msgs::TransformStamped trans_msg;
       Eigen::Affine3d pose;
-      trans_msg = tf_buffer_.lookupTransform(robot_model_ptr_->getRootLinkName(), name,
+      trans_msg = tf_buffer_.lookupTransform(ik_base_frame_, name,
                                            ros::Time::now(), ros::Duration(5.0));
       tf::transformMsgToEigen(trans_msg.transform,pose);
       ROS_INFO_STREAM("Using TF to lookup transform " << name << " frame: " << std::endl << pose.matrix());
@@ -943,6 +944,11 @@ void Robot::computeIKSolverTransforms()
 {
   ROS_INFO_STREAM("Computing transforms between the base/tip frames defined in the SRDF"
     " and the base/tip frames defined for the IK solver");
+
+  // Check if transform is available first
+  tf_buffer_.canTransform(joint_group_->getSolverInstance()->getBaseFrame(),
+    ik_base_frame_, ros::Time::now(), ros::Duration(15.0));
+
   try
   {
     ROS_INFO_STREAM("Looking up transform from: " << joint_group_->getSolverInstance()->getBaseFrame()
@@ -958,6 +964,10 @@ void Robot::computeIKSolverTransforms()
       << " to: " << ik_base_frame_);
     throw ex;
   }
+
+  // Check if transform is available first
+  tf_buffer_.canTransform(ik_tip_frame_, joint_group_->getSolverInstance()->getTipFrame(),
+    ros::Time::now(), ros::Duration(15.0));
 
   try
   {
@@ -1266,7 +1276,7 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in,
   try
   {
     geometry_msgs::TransformStamped frame_rel_robot_msg =
-        tf_buffer_.lookupTransform(in_frame, robot_model_ptr_->getRootLinkName(),
+        tf_buffer_.lookupTransform(in_frame, ik_base_frame_,
                                  ros::Time::now(), ros::Duration(5.0));
     Eigen::Affine3d frame_rel_robot;
     tf::transformMsgToEigen(frame_rel_robot_msg.transform, frame_rel_robot);
@@ -1276,7 +1286,7 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in,
   catch (tf2::TransformException &ex)
   {
     ROS_WARN_STREAM("Transform lookup from: " << in_frame << " into robot base: "
-                     << robot_model_ptr_->getRootLinkName() << "::" << ex.what());
+                     << ik_base_frame_ << "::" << ex.what());
     throw ex;
   }
   return out;
