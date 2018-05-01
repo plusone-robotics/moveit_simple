@@ -6,7 +6,7 @@
 mkdir moveit_simple_ws && cd moveit_simple_ws
 mkdir src && cd src
 catkin_init_workspace
-git clone https://github.com/shaun-edwards/moveit_simple.git
+git clone -b kinetic-devel https://github.com/plusone-robotics/moveit_simple.git
 ```
 
 2. Source Dependencies
@@ -38,4 +38,4 @@ Example:
 rostest moveit_simple motoman_mh5_utest.launch -r
 ```
 
-Refresh the RobotModel by unchecking and rechecking the checkbox.
+Refresh the RobotModel by un-checking and re-checking the checkbox.
