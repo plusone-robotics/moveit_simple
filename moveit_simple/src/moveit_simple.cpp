@@ -92,6 +92,8 @@ Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
   }
 }
 
+Robot::~Robot() { }
+
 OnlineRobot::OnlineRobot(const ros::NodeHandle & nh,
                const std::string &robot_description,
                       const std::string &group_name):
