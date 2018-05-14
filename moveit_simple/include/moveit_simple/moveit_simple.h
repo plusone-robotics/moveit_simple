@@ -98,6 +98,11 @@ public:
    const std::string &group_name, const std::string &ik_base_frame,
    const std::string &ik_tip_frame);
 
+  /**
+  * @brief Destructor
+  */   
+  ~Robot();
+
    /**
    * @brief isInCollision  returns true if joint_point results in robot config that is
    * in collision with the environment as defined by the URDF.
