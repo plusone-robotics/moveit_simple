@@ -585,6 +585,24 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
 }
 
 
+bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string &frame, 
+  const std::string &joint_seed, double timeout) const
+{
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  return this->isInCollision(pose, frame, timeout, joints);
+}
+
 
 bool Robot::isReachable(const std::string & name, double timeout,
                         std::vector<double> joint_seed) const
@@ -656,6 +674,24 @@ bool Robot::isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout
   return reacheable;
 }
 
+
+bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame, 
+  const std::string &joint_seed, double timeout) const
+{
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  return this->isReachable(pose, frame, timeout, joints);
+}
 
 
 void Robot::clearTrajectory(const::std::string traj_name)
