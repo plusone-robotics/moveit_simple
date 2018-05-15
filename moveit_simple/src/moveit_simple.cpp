@@ -586,7 +586,7 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string & frame,
 
 
 bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string &frame, 
-  double timeout, const std::string &joint_seed) const
+  const std::string &joint_seed, double timeout) const
 {
   std::map<std::string, double> m;
   if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
@@ -676,7 +676,7 @@ bool Robot::isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout
 
 
 bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame, 
-  double timeout, const std::string &joint_seed) const
+  const std::string &joint_seed, double timeout) const
 {
   std::map<std::string, double> m;
   if (!joint_group_->getVariableDefaultPositions(joint_seed, m))

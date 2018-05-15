@@ -131,12 +131,12 @@ public:
    * in collision with the environment as defined by the URDF.
    * @param pose - cartesian pose of the tool to check
    * @param frame - tool pose relative to frame
+   * @param joint_seed - named seed to use defined in srdf
    * @param timeout - (optional) timeout for IK
-   * @param joint_seed (optional) - named seed to use defined in srdf
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d pose, const std::string &frame, double timeout = 10.0,
-                     const std::string &joint_seed = "") const;
+  bool isInCollision(const Eigen::Affine3d pose, const std::string &frame, 
+                     const std::string &joint_seed, double timeout = 10.0) const;
 
 
   /**
@@ -168,11 +168,11 @@ public:
    * @param pose - pose to check
    * @param frame - frame in which pose is expressed
    * @param timeout - (optional) timeout for IK
-   * @param joint_seed (optional) - seed to use
+   * @param joint_seed - seed to use
    * @return
    */
-  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame, double timeout = 10.0,
-                   const std::string &joint_seed = "") const;
+  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame, 
+    const std::string &joint_seed, double timeout = 10.0) const;
 
 
   /**
