@@ -124,6 +124,21 @@ public:
   bool isInCollision(const Eigen::Affine3d pose, const std::string & frame,
                      double timeout = 10.0,
                      std::vector<double> joint_seed = std::vector<double>() ) const;
+
+
+  /**
+   * @brief isInCollision  returns true if pose results in robot config that is
+   * in collision with the environment as defined by the URDF.
+   * @param pose - cartesian pose of the tool to check
+   * @param frame - tool pose relative to frame
+   * @param timeout - (optional) timeout for IK
+   * @param joint_seed (optional) - named seed to use defined in srdf
+   * @return
+   */
+  bool isInCollision(const Eigen::Affine3d pose, const std::string &frame, double timeout = 10.0,
+                     const std::string &joint_seed = "") const;
+
+
   /**
    * @brief isReachable - check if point is reacheable.
    * @param name - name of point to check
@@ -140,12 +155,24 @@ public:
    * @param pose - pose to check
    * @param frame - frame in which pose is expressed
    * @param timeout - (optional) timeout for IK
-   * @param joint_seed (optional) - seed to use
+   * @param joint_seed (optional) - named seed to use defined in srdf
    * @return
    */
   bool isReachable(const Eigen::Affine3d & pose, const std::string & frame,
                    double timeout = 10.0,
                    std::vector<double> joint_seed = std::vector<double>() ) const;
+
+
+  /**
+   * @brief isReachable - check if pose (relative to named frame) is reacheable.
+   * @param pose - pose to check
+   * @param frame - frame in which pose is expressed
+   * @param timeout - (optional) timeout for IK
+   * @param joint_seed (optional) - seed to use
+   * @return
+   */
+  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame, double timeout = 10.0,
+                   const std::string &joint_seed = "") const;
 
 
   /**
