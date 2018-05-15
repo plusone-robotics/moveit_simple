@@ -591,8 +591,7 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string &frame,
   std::map<std::string, double> m;
   if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
   {
-    // Log Something here, possibly throw an error
-    return false;
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
   }
 
   std::vector<double> joints;
@@ -682,8 +681,7 @@ bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
   std::map<std::string, double> m;
   if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
   {
-    // Log something here, possibly throw an error
-    return false;
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
   }
 
   std::vector<double> joints;

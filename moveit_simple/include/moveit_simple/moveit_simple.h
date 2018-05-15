@@ -778,5 +778,10 @@ public:
   CollisionDetected(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
 };
 
+class JointSeedException : public std::runtime_error
+{
+public:
+  JointSeedException(const std::string error_description) : std::runtime_error(error_description) { }
+};
 
 }
