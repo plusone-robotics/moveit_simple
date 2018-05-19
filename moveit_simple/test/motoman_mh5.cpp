@@ -34,10 +34,11 @@ class UserRobotTest : public ::testing::Test
 {
 protected:
   std::unique_ptr<moveit_simple::OnlineRobot> user_robot;
+  
   virtual void SetUp()
   {      
     user_robot = std::unique_ptr<moveit_simple::OnlineRobot> (new moveit_simple::OnlineRobot
-                    (ros::NodeHandle(), "robot_description", "manipulator", "base_link", "link_t"));
+      (ros::NodeHandle(), "robot_description", "manipulator", "base_link", "link_t"));
     
     ros::Duration(2.0).sleep();  //wait for tf tree to populate
   }

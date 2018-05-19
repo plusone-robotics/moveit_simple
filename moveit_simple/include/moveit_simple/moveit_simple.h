@@ -16,62 +16,61 @@
  * limitations under the License.
  */
 
+#ifndef MOVEIT_SIMPLE_H
+#define MOVEIT_SIMPLE_H
 
-#pragma once
-
-#include <vector>
 #include <map>
-#include <string>
 #include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
 
+#include <actionlib/client/simple_action_client.h>
+#include <control_msgs/FollowJointTrajectoryAction.h>
+#include <dynamic_reconfigure/server.h>
 #include <eigen3/Eigen/Geometry>
-
-#include <ros/ros.h>
-
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit_simple/moveit_simple_dynamic_reconfigure_Parameters.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
-
+#include <ros/ros.h>
+#include <sensor_msgs/JointState.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
 #include <trajectory_msgs/JointTrajectoryPoint.h>
-#include <actionlib/client/simple_action_client.h>
-#include <control_msgs/FollowJointTrajectoryAction.h>
-#include <sensor_msgs/JointState.h>
-
-#include <dynamic_reconfigure/server.h>
-#include <moveit_simple/moveit_simple_dynamic_reconfigure_Parameters.h>
 
 namespace moveit_simple
 {
-
 class TrajectoryPoint;
 class JointTrajectoryPoint;
 class CartTrajectoryPoint;
+
 class Robot;
 class OnlineRobot;
+
 class ExecutionFailureException;
 class IKFailException;
 
 namespace interpolation_type
 {
-  enum InterpolationType
-    {
-      UNKNOWN = 0,
-      JOINT = 1,
-      CARTESIAN = 2
-    };
+enum InterpolationType
+{
+  UNKNOWN = 0,
+  JOINT = 1,
+  CARTESIAN = 2
+};
 }
+
 typedef interpolation_type::InterpolationType InterpolationType;
 
-struct TrajectoryPointInfo {
+struct TrajectoryPointInfo
+{
   std::unique_ptr<TrajectoryPoint> point;
   InterpolationType type;
   unsigned int num_steps;
 };
+
 typedef std::vector<TrajectoryPointInfo> TrajectoryInfo;
 
 /**
@@ -85,32 +84,32 @@ typedef std::vector<TrajectoryPointInfo> TrajectoryInfo;
 class Robot
 {
 public:
-   Robot(const ros::NodeHandle & nh, const std::string &robot_description,
-                                     const std::string &group_name);
-  
+  Robot(const ros::NodeHandle &nh, const std::string &robot_description,
+    const std::string &group_name);
+
   /**
   * @brief Constructor for the case where the IK implementation does not match the
   * SRDF. For example: IKFast solutions are generally solved for the base_link to
   * tool0 of a robot, and the robot_description is defined for some world_frame to
   * some tcp frame. The transforms to to the IK frames are assumed to be static.
-  */   
+  */
   Robot(const ros::NodeHandle &nh, const std::string &robot_description,
-   const std::string &group_name, const std::string &ik_base_frame,
-   const std::string &ik_tip_frame);
+    const std::string &group_name, const std::string &ik_base_frame,
+    const std::string &ik_tip_frame);
 
   /**
   * @brief Destructor
-  */   
+  */
   ~Robot();
 
-   /**
-   * @brief isInCollision  returns true if joint_point results in robot config that is
-   * in collision with the environment as defined by the URDF.
-   * @param joint_point(optional) - joint position of the robot to check
-   * If no joint point is provided current position is checked for collision
-   * @return
-   */
-  bool isInCollision(const std::vector<double> & joint_point = std::vector<double>() ) const;
+  /**
+  * @brief isInCollision  returns true if joint_point results in robot config that is
+  * in collision with the environment as defined by the URDF.
+  * @param joint_point(optional) - joint position of the robot to check
+  * If no joint point is provided current position is checked for collision
+  * @return
+  */
+  bool isInCollision(const std::vector<double> &joint_point = std::vector<double>()) const;
 
   /**
    * @brief isInCollision  returns true if pose results in robot config that is
@@ -121,10 +120,8 @@ public:
    * @param joint_seed (optional) - seed to use
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d pose, const std::string & frame,
-                     double timeout = 10.0,
-                     std::vector<double> joint_seed = std::vector<double>() ) const;
-
+  bool isInCollision(const Eigen::Affine3d pose, const std::string &frame,
+    double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
    * @brief isInCollision  returns true if pose results in robot config that is
@@ -135,9 +132,8 @@ public:
    * @param timeout - (optional) timeout for IK
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d pose, const std::string &frame, 
-                     const std::string &joint_seed, double timeout = 10.0) const;
-
+  bool isInCollision(const Eigen::Affine3d pose, const std::string &frame,
+    const std::string &joint_seed, double timeout = 10.0) const;
 
   /**
    * @brief isReachable - check if point is reacheable.
@@ -146,9 +142,9 @@ public:
    * @param timeout - (optional) timeout for IK
    * @return
    */
-  bool isReachable(const std::string & name, double timeout = 10.0,
-                   std::vector<double> joint_seed = std::vector<double>() ) const;
-
+  bool isReachable(const std::string &name,
+      double timeout = 10.0,
+      std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
    * @brief isReachable - check if pose (relative to named frame) is reacheable.
@@ -158,10 +154,8 @@ public:
    * @param joint_seed (optional) - named seed to use defined in srdf
    * @return
    */
-  bool isReachable(const Eigen::Affine3d & pose, const std::string & frame,
-                   double timeout = 10.0,
-                   std::vector<double> joint_seed = std::vector<double>() ) const;
-
+  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame,
+    double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
    * @brief isReachable - check if pose (relative to named frame) is reacheable.
@@ -171,9 +165,8 @@ public:
    * @param joint_seed - seed to use
    * @return
    */
-  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame, 
+  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame,
     const std::string &joint_seed, double timeout = 10.0) const;
-
 
   /**
    * @brief addTrajPoint - add point to trajectory.
@@ -187,9 +180,10 @@ public:
    * @throws <std::invalid_argument> (point_name is not found)
    * @throws <tf2::TransformException> (transform of TF named point_name fails)
    */
-  void addTrajPoint(const std::string & traj_name, const std::string & point_name,
-                    double time, const InterpolationType & type = interpolation_type::JOINT,
-                    const unsigned int num_steps = 0);
+  void addTrajPoint(const std::string &traj_name, const std::string &point_name,
+    double time, const InterpolationType &type = interpolation_type::JOINT,
+    const unsigned int num_steps = 0);
+
   /**
    * @brief Add trajectory point to motion buffer.
    * @param traj_name - name of trajectory buffer to add point to
@@ -203,12 +197,9 @@ public:
    * @param point_name - (optional) name of point (used in log messages)
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
-  void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
-                    const std::string & frame, double time,
-                    const InterpolationType & type = interpolation_type::JOINT,
-                    const unsigned int num_steps = 0,
-                    const std::string & point_name = std::string());
-
+  void addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pose,
+    const std::string &frame, double time, const InterpolationType &type = interpolation_type::JOINT,
+    const unsigned int num_steps = 0, const std::string &point_name = std::string());
 
   /**
    * @brief addTrajPoint - add point to trajectory.
@@ -224,10 +215,10 @@ public:
    * @throws <std::invalid_argument> (point_name is not found)
    * @throws <tf2::TransformException> (transform of TF named point_name fails)
    */
-  void addTrajPoint(const std::string & traj_name, const std::string & point_name,
-                    const std::string & tool_name,
-                    double time, const InterpolationType & type = interpolation_type::JOINT,
-                    const unsigned int num_steps = 0);
+  void addTrajPoint(const std::string &traj_name, const std::string &point_name,
+    const std::string &tool_name, double time, const InterpolationType &type = interpolation_type::JOINT,
+    const unsigned int num_steps = 0);
+
   /**
    * @brief Add trajectory point to motion buffer.
    * @brief This function supports custom tool frame for adding traj points.
@@ -243,12 +234,10 @@ public:
    * @param point_name - (optional) name of point (used in log messages)
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
-  void addTrajPoint(const std::string & traj_name, const Eigen::Affine3d pose,
-                    const std::string & pose_frame, const std::string & tool_name,
-                    double time, const InterpolationType & type = interpolation_type::JOINT,
-                    const unsigned int num_steps = 0,
-                    const std::string & point_name = std::string());
-
+  void addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pose,
+    const std::string &pose_frame, const std::string &tool_name, double time,
+    const InterpolationType &type = interpolation_type::JOINT, const unsigned int num_steps = 0,
+    const std::string &point_name = std::string());
 
   /**
    * @brief getJointSolution returns joint solution for cartesian pose.
@@ -259,9 +248,8 @@ public:
    * @param joint_point - joint solution for pose
    * @return true if joint solution found
    */
-  bool getJointSolution(const Eigen::Affine3d & pose, double timeout,
-                        const std::vector<double> & seed,
-                        std::vector<double> & joint_point) const;
+  bool getJointSolution(const Eigen::Affine3d &pose, double timeout, const std::vector<double> &seed,
+    std::vector<double> &joint_point) const;
 
   /**
    * @brief getJointSolution returns joint solution for cartesian pose.
@@ -274,9 +262,8 @@ public:
    * @param joint_point - joint solution for pose
    * @return true if joint solution found
    */
-  bool getJointSolution(const Eigen::Affine3d &pose, const std::string& tool_name,
-                        double timeout, const std::vector<double> & seed,
-                        std::vector<double> & joint_point) const;
+  bool getJointSolution(const Eigen::Affine3d &pose, const std::string &tool_name,
+    double timeout, const std::vector<double> &seed, std::vector<double> &joint_point) const;
 
   /**
    * @brief getPose finds cartesian pose for the given joint positions.
@@ -284,8 +271,7 @@ public:
    * @param pose - pose corresponding to joint_pose
    * @return true if pose is found
    */
-  bool getPose(const std::vector<double> & joint_point,
-             Eigen::Affine3d & pose) const;
+  bool getPose(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const;
 
   /**
    * @brief getPose finds cartesian pose for the given joint positions.
@@ -295,15 +281,14 @@ public:
    * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @return true if pose is found
    */
-  bool getPose(const std::vector<double> & joint_point,
-             const std::string& tool_name,
-             Eigen::Affine3d & pose) const;
+  bool getPose(const std::vector<double> &joint_point, const std::string &tool_name,
+    Eigen::Affine3d &pose) const;
 
   /**
    * @brief clearTrajectory - clears stored trajectory
    * @param traj_name - trajectory to clear
    */
-  void clearTrajectory(const::std::string traj_name);
+  void clearTrajectory(const ::std::string traj_name);
 
   /**
    * @brief plan out a given trajectory
@@ -316,7 +301,7 @@ public:
    * in Collision with itself or environment)
    */
   std::vector<moveit_simple::JointTrajectoryPoint> plan(const std::string traj_name,
-                                                        bool collision_check = false);
+    bool collision_check = false);
 
   /**
    * @brief interpolate - returns the pose interpolated from \e from pose towards \e to
@@ -325,9 +310,8 @@ public:
    * @param to: final pose
    * @param t: parameteric time
    */
-  Eigen::Affine3d interpolate( const Eigen::Affine3d & from,
-                               const Eigen::Affine3d & to,
-                               double t) const;
+  Eigen::Affine3d interpolate(const Eigen::Affine3d &from, const Eigen::Affine3d &to,
+    double t) const;
 
   /**
    * @brief interpolate - returns the joint point interpolated from \e from joint point
@@ -336,9 +320,8 @@ public:
    * @param to: final joint point
    * @param t: parameteric time
    */
-  std::vector<double> interpolate( const std::vector<double> & from,
-                                  const std::vector<double> & to,
-                                  double t) const;
+  std::vector<double> interpolate(const std::vector<double> &from, const std::vector<double> &to,
+    double t) const;
 
   /**
    * @brief isNearSingular: returns true if joint_point results in robot config that
@@ -347,8 +330,7 @@ public:
    * If no joint point is provided current position is checked for singularity
    * @throws <std::invalid_argument> (joint_group is not a chain)
    */
-
-  bool isNearSingular(const std::vector<double> & joint_point = std::vector<double>() ) const;
+  bool isNearSingular(const std::vector<double> &joint_point = std::vector<double>()) const;
 
   /**
    * @brief setSpeedModifier - Setter method for the execution speed modifier of the
@@ -368,8 +350,7 @@ public:
 protected:
   Robot();
 
-  Eigen::Affine3d transformToBase(const Eigen::Affine3d &in,
-                                  const std::string &in_frame) const;
+  Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, const std::string &in_frame) const;
 
   /**
    * @brief transformPoseBetweenFrames transforms frame_in to frame_out.
@@ -379,25 +360,22 @@ protected:
    * @param
    */
   Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose,
-                                         const std::string& frame_in,
-                                         const std::string& frame_out) const;
+    const std::string &frame_in, const std::string &frame_out) const;
 
-  std::vector<moveit_simple::JointTrajectoryPoint>
-    toJointTrajectoryPoint(std::vector<trajectory_msgs::JointTrajectoryPoint> & ROS_joint_trajectory_points)  const;
+  std::vector<moveit_simple::JointTrajectoryPoint> toJointTrajectoryPoint(
+    std::vector<trajectory_msgs::JointTrajectoryPoint> &ROS_joint_trajectory_points) const;
 
-  control_msgs::FollowJointTrajectoryGoal
-    toFollowJointTrajectoryGoal(const std::vector<moveit_simple::JointTrajectoryPoint> & joint_trajectory_points)  const;
+  control_msgs::FollowJointTrajectoryGoal toFollowJointTrajectoryGoal(
+    const std::vector<moveit_simple::JointTrajectoryPoint> &joint_trajectory_points) const;
 
-  bool toJointTrajectory(const std::string traj_name,
-                         std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
-                         bool collision_check = false);
+  bool toJointTrajectory(const std::string traj_name, std::vector<trajectory_msgs::JointTrajectoryPoint> &points,
+    bool collision_check = false);
 
   /**
    * @brief computeIKTransforms - Computes the transforms between the base/tip
    * frames defined in the URDF and the base/tip frames defined for the IK solver.
    */
   void computeIKSolverTransforms();
-
 
   /**
    * @brief  jointInterpolation - joint Interpolation from last added point to
@@ -408,9 +386,9 @@ protected:
    * @param collision_check - bool to turn check for collision on\off
    * @return true if all the points including traj_point are added to the points.
    */
-  bool jointInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
-           std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
-           const unsigned int num_steps, bool collision_check = false);
+  bool jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_point,
+    std::vector<trajectory_msgs::JointTrajectoryPoint> &points, const unsigned int num_steps,
+    bool collision_check = false);
 
   /**
    * @brief  cartesianInterpolation - Cartesian Interpolation from last added point to
@@ -421,9 +399,9 @@ protected:
    * @param collision_check - bool to turn check for collision on\off
    * @return true if all the points including traj_point are added to the points.
    */
-  bool cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> & traj_point,
-           std::vector<trajectory_msgs::JointTrajectoryPoint> & points,
-           const unsigned int num_steps, bool collision_check = false);
+  bool cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_point,
+    std::vector<trajectory_msgs::JointTrajectoryPoint> &points, const unsigned int num_steps,
+    bool collision_check = false);
 
   /**
    * @brief interpolate - Cartesian interpolation from \e from point towards \e to
@@ -433,10 +411,9 @@ protected:
    * @param t: parameteric time
    * @param point: interpolated Cartesian point
    */
-  void interpolate( const std::unique_ptr<CartTrajectoryPoint>& from,
-                    const std::unique_ptr<CartTrajectoryPoint>& to,
-                    double t,
-                    std::unique_ptr<CartTrajectoryPoint> & point) const;
+  void interpolate(const std::unique_ptr<CartTrajectoryPoint> &from, 
+    const std::unique_ptr<CartTrajectoryPoint> &to, double t,
+    std::unique_ptr<CartTrajectoryPoint> &point) const;
 
   /**
    * @brief interpolate - Joint interpolation from \e from point towards \e to
@@ -446,21 +423,19 @@ protected:
    * @param t: parameteric time
    * @param point: interpolated Joint point
    */
-  void interpolate( const std::unique_ptr<JointTrajectoryPoint>& from,
-                    const std::unique_ptr<JointTrajectoryPoint>& to,
-                    double t,
-                    std::unique_ptr<JointTrajectoryPoint> & point) const;
+  void interpolate(const std::unique_ptr<JointTrajectoryPoint> &from,
+    const std::unique_ptr<JointTrajectoryPoint> &to, double t,
+    std::unique_ptr<JointTrajectoryPoint> &point) const;
 
-  void addTrajPoint(const std::string & traj_name,
-                    std::unique_ptr<TrajectoryPoint> &point,
-                    const InterpolationType & type = interpolation_type::JOINT,
-                    const unsigned int num_steps = 0);
+  void addTrajPoint(const std::string &traj_name, std::unique_ptr<TrajectoryPoint> &point,
+    const InterpolationType &type = interpolation_type::JOINT,
+    const unsigned int num_steps = 0);
 
-  bool isReachable(std::unique_ptr<TrajectoryPoint> & point, double timeout,
-                   std::vector<double> joint_seed = std::vector<double>() ) const;
+  bool isReachable(std::unique_ptr<TrajectoryPoint> &point, double timeout,
+    std::vector<double> joint_seed = std::vector<double>()) const;
 
-  int trajCollisionCheck(control_msgs::FollowJointTrajectoryGoal & goal,
-                                     bool collision_check = false);
+  int trajCollisionCheck(control_msgs::FollowJointTrajectoryGoal &goal,
+    bool collision_check = false);
 
   /**
   * @brief getJointState - Returns a vector<double> of the
@@ -470,20 +445,18 @@ protected:
   */
   virtual std::vector<double> getJointState(void) const;
 
-  bool getIK(const Eigen::Affine3d pose, const std::vector<double> & seed,
-             std::vector<double> & joint_point, double timeout=1,
-              unsigned int attempts=1) const;
-  bool getIK(const Eigen::Affine3d pose, std::vector<double> & joint_point,
-             double timeout=1, unsigned int attempts=1) const;
+  bool getIK(const Eigen::Affine3d pose, const std::vector<double> &seed,
+    std::vector<double> &joint_point, double timeout = 1, unsigned int attempts = 1) const;
 
-  bool getFK(const std::vector<double> & joint_point,
-                               Eigen::Affine3d &pose) const;
+  bool getIK(const Eigen::Affine3d pose, std::vector<double> &joint_point,
+    double timeout = 1, unsigned int attempts = 1) const;
 
-  std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string & name,
-                                                         double time) const;
+  bool getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const;
 
-  bool isConfigChange(const std::vector<double> jp1,
-                      const std::vector<double> jp2) const;
+  std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string &name,
+    double time) const;
+
+  bool isConfigChange(const std::vector<double> jp1, const std::vector<double> jp2) const;
 
   /**
    * @brief toJointTrajPtMsg - Converts native joint point (vector + time) to ROS joint
@@ -492,11 +465,10 @@ protected:
    * @param time
    * @return
    */
-  static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
-      const std::vector<double> & joint_point, double time);
+  static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(const std::vector<double> &joint_point,
+    double time);
 
-  trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(
-      const JointTrajectoryPoint & joint_point) const;
+  trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(const JointTrajectoryPoint &joint_point) const;
 
   // Dynamic Reconfigure callback
   void reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level);
@@ -505,7 +477,7 @@ protected:
   std::map<std::string, TrajectoryInfo> traj_info_map_;
 
   // MoveIt objects
-  mutable moveit::core::RobotStatePtr virtual_robot_state_; // for IK calls
+  mutable moveit::core::RobotStatePtr virtual_robot_state_;  // for IK calls
   planning_scene::PlanningScenePtr planning_scene_;
   const moveit::core::JointModelGroup *joint_group_;
   robot_model::RobotModelConstPtr robot_model_ptr_;
@@ -527,8 +499,7 @@ protected:
   // Dynamic Reconfigure
   double speed_modifier_;
   moveit_simple_dynamic_reconfigure_Parameters params_;
-  dynamic_reconfigure::Server
-  <moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
+  dynamic_reconfigure::Server<moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
 
   // Kinematics
   std::string ik_base_frame_;
@@ -537,30 +508,25 @@ protected:
   Eigen::Affine3d srdf_base_to_ik_base_;
 };
 
-
-
-
 /**
  * @brief OnlineRobot is a wrapper around standard MoveIt objects.
  It inherits from Robot. Added assumption:
  - motion is executed via a "JointTrajectoryAction" interface
 */
-
 class OnlineRobot : public Robot
 {
 public:
-  OnlineRobot(const ros::NodeHandle & nh, const std::string &robot_description,
-        const std::string &group_name);
+  OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_description,
+    const std::string &group_name);
 
   /**
   * @brief Constructor for the case where the IK implementation does not match the
   * SRDF. For example: IKFast solutions are generally solved for the base_link to
   * tool0 of a robot, and the robot_description is defined for some world_frame to
   * some tcp frame.
-  */   
+  */
   OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_description,
-    const std::string &group_name, const std::string &ik_base_frame,
-    const std::string &ik_tip_frame);
+    const std::string &group_name, const std::string &ik_base_frame, const std::string &ik_tip_frame);
 
   /**
    * @brief execute a given trajectory
@@ -575,7 +541,6 @@ public:
    */
   void execute(const std::string traj_name, bool collision_check = false);
 
-
   /**
    * @brief execute a given planned joint trajectory
    * @param goal - Joint Trajectory goal which is a known 'Plan'
@@ -584,8 +549,8 @@ public:
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void execute(std::vector<moveit_simple::JointTrajectoryPoint> & goal, bool collision_check = false);
-
+  void execute(std::vector<moveit_simple::JointTrajectoryPoint> &goal,
+    bool collision_check = false);
 
   /**
   * @brief getJointState - Returns a vector<double> of the
@@ -598,7 +563,8 @@ public:
 protected:
   OnlineRobot();
 
-  void updateCurrentState(const sensor_msgs::JointStateConstPtr& msg);
+  void updateCurrentState(const sensor_msgs::JointStateConstPtr &msg);
+
   mutable moveit::core::RobotStatePtr current_robot_state_;
 
   // Visualizations
@@ -611,177 +577,154 @@ protected:
   ros::Subscriber j_state_sub_;
 };
 
-
-
-
 class TrajectoryPoint
 {
-public:
+public: 
   friend class Robot;
-  virtual ~TrajectoryPoint() {}
+
+  virtual ~TrajectoryPoint() { }
 
   const double time() const
   {
     return t_;
   }
-  const std::string & name() const
+
+  const std::string &name() const
   {
     return name_;
   }
 
-
-
-
 protected:
   enum PointType
-     {
-        UNKNOWN = 0,
-        JOINT = 1,
-        CARTESIAN = 2
-     };
+  {
+    UNKNOWN = 0,
+    JOINT = 1,
+    CARTESIAN = 2
+  };
 
+  TrajectoryPoint(std::string name, double t, PointType type) : name_(name), t_(t), type_(type) { }
 
-  TrajectoryPoint(std::string name, double t, PointType type): name_(name),t_(t), type_(type){}
-
-  const PointType & type() const
+  const PointType &type() const
   {
     return type_;
   }
 
-  virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(
-      const Robot & robot,  double timeout, const std::vector<double> & seed) const=0;
+  virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(const Robot &robot,
+    double timeout, const std::vector<double> &seed) const = 0;
 
-  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(
-      const Robot & robot) const=0;
+  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(const Robot &robot) const = 0;
 
   double t_;
   std::string name_;
   PointType type_;
-
-
 };
-
-
-
 
 class JointTrajectoryPoint : public TrajectoryPoint
 {
 public:
-  JointTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::JOINT) {}
-  virtual ~JointTrajectoryPoint() {}
+  JointTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::JOINT) { }
+  
+  virtual ~JointTrajectoryPoint() { }
 
-  JointTrajectoryPoint(std::vector<double> & joint_point, double t,
-                       std::string name = std::string()) :
-    TrajectoryPoint(name, t, PointType::JOINT),
-    joint_point_(joint_point)
-  {
-  }
+  JointTrajectoryPoint(std::vector<double> &joint_point, double t, std::string name = std::string())
+    : TrajectoryPoint(name, t, PointType::JOINT), joint_point_(joint_point) { }
 
-  const std::vector<double> & jointPoint() const
+  const std::vector<double> &jointPoint() const
   {
     return joint_point_;
   }
 
 protected:
+  virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(const Robot &robot,
+    double timeout, const std::vector<double> &seed) const;
 
-  virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(
-      const Robot & robot,  double timeout, const std::vector<double> & seed) const;
-
-  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(
-      const Robot & robot) const;
+  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(const Robot &robot) const;
 
 private:
   std::vector<double> joint_point_;
 };
 
-
-
-
 class CartTrajectoryPoint : public TrajectoryPoint
 {
 public:
-  CartTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::CARTESIAN) {}
-  CartTrajectoryPoint(const Eigen::Affine3d pose, const double t,
-                      std::string name = std::string()):
-    TrajectoryPoint(name, t, PointType::CARTESIAN),
-    pose_(pose)
-  {
-  }
+  CartTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::CARTESIAN) { }
 
-  virtual ~CartTrajectoryPoint() {}
+  CartTrajectoryPoint(const Eigen::Affine3d pose, const double t, std::string name = std::string())
+    : TrajectoryPoint(name, t, PointType::CARTESIAN), pose_(pose) { }
 
-  const Eigen::Affine3d & pose() const
+  virtual ~CartTrajectoryPoint() { }
+
+  const Eigen::Affine3d &pose() const
   {
     return pose_;
   }
 
 protected:
+  virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(const Robot &robot,
+    double timeout, const std::vector<double> &seed) const;
 
-  virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(
-      const Robot & robot,  double timeout, const std::vector<double> & seed) const;
-
-  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(
-      const Robot & robot) const;
+  virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(const Robot &robot) const;
 
 private:
   Eigen::Affine3d pose_;
 };
 
-
-  /**
-   * @brief ExecutionFailureException: An exception class to notify
-   * execution failure
-   *
-   * This inherits from std::runtime_error.
-   * This is an exception class to be thrown when sendGoalAndWait method
-   * has failed execution.
-   */
-
-class ExecutionFailureException: public std::runtime_error
+/**
+ * @brief ExecutionFailureException: An exception class to notify
+ * execution failure
+ *
+ * This inherits from std::runtime_error.
+ * This is an exception class to be thrown when sendGoalAndWait method
+ * has failed execution.
+ */
+class ExecutionFailureException : public std::runtime_error
 {
 public:
-  ExecutionFailureException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
+  ExecutionFailureException(const std::string errorDescription)
+    : std::runtime_error(errorDescription) { }
 };
 
-
-  /**
-   * @brief IKFailException: An exception class to notify IK failure
-   *
-   * This inherits from std::runtime_error.
-   * This is an exception class to be thrown when IK call fails to return
-   * joint solution.
-   */
-
-class IKFailException: public std::runtime_error
+/**
+ * @brief IKFailException: An exception class to notify IK failure
+ *
+ * This inherits from std::runtime_error.
+ * This is an exception class to be thrown when IK call fails to return
+ * joint solution.
+ */
+class IKFailException : public std::runtime_error
 {
 public:
-  IKFailException(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
+  IKFailException(const std::string errorDescription) 
+    : std::runtime_error(errorDescription) { }
 };
 
-class IKSolverTransformException: public std::runtime_error
+class IKSolverTransformException : public std::runtime_error
 {
 public:
-  IKSolverTransformException(const std::string error_description) : std::runtime_error(error_description) { }
+  IKSolverTransformException(const std::string error_description)
+    : std::runtime_error(error_description) { }
 };
 
-  /**
-   * @brief CollisionDetected: An exception class to notify collision
-   *
-   * This inherits from std::runtime_error.
-   * This is an exception class to be thrown when collision is detected
-   * at any interpolated point in the tarjectory.
-   */
-
-class CollisionDetected: public std::runtime_error
+/**
+ * @brief CollisionDetected: An exception class to notify collision
+ *
+ * This inherits from std::runtime_error.
+ * This is an exception class to be thrown when collision is detected
+ * at any interpolated point in the tarjectory.
+ */
+class CollisionDetected : public std::runtime_error
 {
 public:
-  CollisionDetected(const std::string errorDescription) : std::runtime_error(errorDescription) { ; };
+  CollisionDetected(const std::string errorDescription) 
+    : std::runtime_error(errorDescription) { }
 };
 
 class JointSeedException : public std::runtime_error
 {
 public:
-  JointSeedException(const std::string error_description) : std::runtime_error(error_description) { }
+  JointSeedException(const std::string error_description) 
+    : std::runtime_error(error_description) { }
 };
 
-}
+} // namespace moveit_simple
+#endif // MOVEIT_SIMPLE_H
