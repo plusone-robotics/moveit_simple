@@ -84,8 +84,6 @@ public:
   virtual std::vector<double> getJointState(void) const;
 
 protected:
-  OnlineRobot();
-
   void updateCurrentState(const sensor_msgs::JointStateConstPtr &msg);
 
 protected:

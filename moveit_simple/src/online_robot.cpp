@@ -158,8 +158,6 @@ std::vector<double> OnlineRobot::getJointState(void) const
   return current_joint_positions;
 }
 
-OnlineRobot::OnlineRobot() { }
-
 void OnlineRobot::updateCurrentState(const sensor_msgs::JointStateConstPtr &msg)
 {
   current_robot_state_->setVariablePositions(msg->name, msg->position);
