@@ -600,6 +600,46 @@ bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
   return this->isReachable(pose, frame, timeout, joints);
 }
 
+bool Robot::isReachableStatic(const Eigen::Affine3d &pose, const std::string &frame,
+  double timeout, std::vector<double> joint_seed)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  bool reacheable = false;
+  try
+  {
+    Eigen::Affine3d pose_rel_robot = transformToBaseStatic(pose, frame);
+    std::unique_ptr<TrajectoryPoint> point =
+        std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+    reacheable = isReachable(point, timeout, joint_seed);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN_STREAM("Reacheability failed for arbitrary pose point: " << ex.what());
+    reacheable = false;
+  }
+
+  return reacheable;
+}
+
+bool Robot::isReachableStatic(const Eigen::Affine3d &pose, const std::string &frame,
+  const std::string &joint_seed, double timeout)
+{
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  return this->isReachable(pose, frame, timeout, joints);
+}
+
 void Robot::clearTrajectory(const ::std::string traj_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -1132,6 +1172,20 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, const std::str
     throw ex;
   }
   return out;
+}
+
+Eigen::Affine3d Robot::transformToBaseStatic(const Eigen::Affine3d &in, const std::string &in_frame)
+{
+  if (transform_to_base_static_frame_ == in_frame)
+  {
+    return transform_to_base_static_;
+  }
+  else
+  {
+    transform_to_base_static_frame_ = in_frame;
+    transform_to_base_static_ = this->transformToBase(in, in_frame);
+    return transform_to_base_static_;
+  }
 }
 
 bool Robot::getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const
