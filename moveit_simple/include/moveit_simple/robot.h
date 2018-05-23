@@ -103,6 +103,30 @@ public:
     const std::string &joint_seed, double timeout = 10.0) const;
 
   /**
+   * @brief isInCollision  returns true if pose results in robot config that is
+   * in collision with the environment as defined by the URDF.
+   * @param pose - cartesian pose of the tool to check
+   * @param frame - tool pose relative to static frame
+   * @param timeout - (optional) timeout for IK
+   * @param joint_seed (optional) - seed to use
+   * @return
+   */
+  bool isInCollisionStatic(const Eigen::Affine3d &pose, const std::string &frame,
+    double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>());
+
+  /**
+   * @brief isInCollision  returns true if pose results in robot config that is
+   * in collision with the environment as defined by the URDF.
+   * @param pose - cartesian pose of the tool to check
+   * @param frame - tool pose relative to static frame
+   * @param joint_seed - named seed to use defined in srdf
+   * @param timeout - (optional) timeout for IK
+   * @return
+   */
+  bool isInCollisionStatic(const Eigen::Affine3d &pose, const std::string &frame,
+    const std::string &joint_seed, double timeout = 10.0);
+
+  /**
    * @brief isReachable - check if point is reacheable.
    * @param name - name of point to check
    * @param joint_seed - (optional) tries to find joint solutions closest to seed
@@ -499,7 +523,7 @@ protected:
   Eigen::Affine3d srdf_base_to_ik_base_;
 
   // transformToBaseStatic
-  Eigen::Affine3d transform_to_base_static_;
+  geometry_msgs::TransformStamped transform_to_base_static_;
   std::string transform_to_base_static_frame_;
 };
 } // namespace moveit_simple

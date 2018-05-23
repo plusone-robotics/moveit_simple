@@ -514,6 +514,47 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string &frame,
   return this->isInCollision(pose, frame, timeout, joints);
 }
 
+bool Robot::isInCollisionStatic(const Eigen::Affine3d &pose, const std::string &frame,
+  double timeout, std::vector<double> joint_seed)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  bool inCollision = true;
+  try
+  {
+    Eigen::Affine3d pose_rel_robot = transformToBaseStatic(pose, frame);
+    std::unique_ptr<TrajectoryPoint> point =
+        std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+    virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
+    inCollision = planning_scene_->isStateColliding(*virtual_robot_state_, joint_group_->getName());
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN_STREAM("IsInCollisionStatic failed for arbitrary pose point: " << ex.what());
+    inCollision = true;
+  }
+
+  return inCollision;
+}
+
+bool Robot::isInCollisionStatic(const Eigen::Affine3d &pose, const std::string &frame,
+  const std::string &joint_seed, double timeout)
+{
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  return this->isInCollisionStatic(pose, frame, timeout, joints);
+}
+
 bool Robot::isReachable(const std::string &name, double timeout,
   std::vector<double> joint_seed) const
 {
@@ -637,7 +678,7 @@ bool Robot::isReachableStatic(const Eigen::Affine3d &pose, const std::string &fr
     joints.push_back(it->second);
   }
 
-  return this->isReachable(pose, frame, timeout, joints);
+  return this->isReachableStatic(pose, frame, timeout, joints);
 }
 
 void Robot::clearTrajectory(const ::std::string traj_name)
@@ -1176,16 +1217,32 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, const std::str
 
 Eigen::Affine3d Robot::transformToBaseStatic(const Eigen::Affine3d &in, const std::string &in_frame)
 {
+  geometry_msgs::TransformStamped frame_rel_robot_msg;
   if (transform_to_base_static_frame_ == in_frame)
   {
-    return transform_to_base_static_;
+    frame_rel_robot_msg = transform_to_base_static_;
   }
   else
   {
+    try
+    {
+      frame_rel_robot_msg = tf_buffer_.lookupTransform(in_frame, ik_base_frame_, 
+        ros::Time::now(), ros::Duration(5.0));
+    }
+    catch (tf2::TransformException &ex)
+    {
+      ROS_WARN_STREAM("Transform lookup from: " << in_frame << " into robot base: " << ik_base_frame_
+        << "::" << ex.what());
+      throw ex;
+    }
+
     transform_to_base_static_frame_ = in_frame;
-    transform_to_base_static_ = this->transformToBase(in, in_frame);
-    return transform_to_base_static_;
+    transform_to_base_static_ = frame_rel_robot_msg;
   }
+
+  Eigen::Affine3d frame_rel_robot;
+  tf::transformMsgToEigen(frame_rel_robot_msg.transform, frame_rel_robot);
+  return (frame_rel_robot.inverse() * in);  
 }
 
 bool Robot::getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const
