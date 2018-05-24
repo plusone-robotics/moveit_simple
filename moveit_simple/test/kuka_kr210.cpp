@@ -647,15 +647,18 @@ TEST_F(UserRobotTest, copy_current_pose)
   // Before the first execution robot should be at position "home"
   before_execution_1 = robot->getJointState();
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  ros::Duration(0.5).sleep();
 
   // Second Execution
   // Robot should be at "waypoint3" at all checkpoints from here on out.
   before_execution_2 = robot->getJointState();
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  ros::Duration(0.5).sleep();
 
   // Third Execution
   before_execution_3 = robot->getJointState();
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+  ros::Duration(0.5).sleep();
 
   // Final Position
   final_position = robot->getJointState();
