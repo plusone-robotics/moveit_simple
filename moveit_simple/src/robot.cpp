@@ -1195,6 +1195,74 @@ bool Robot::isConfigChange(const std::vector<double> jp1, const std::vector<doub
   return false;
 }
 
+void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
+  const std::string &joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  this->updateRvizRobotState(pose, in_frame, joints, timeout);
+}
+
+void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
+  std::vector<double> joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  try
+  {
+    auto frame_rel_robot = this->lookupTransformToBase(in_frame);
+    this->updateRvizRobotState(pose, frame_rel_robot, joint_seed, timeout);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN_STREAM("Unable to find transform to: " << ik_base_frame_ 
+      << " for frame: " << in_frame << " exception: " << ex.what());
+  }
+}
+
+void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, 
+  const geometry_msgs::TransformStamped &frame_to_robot_base,
+  const std::string &joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  this->updateRvizRobotState(pose, frame_to_robot_base, joints, timeout);
+}
+
+void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, 
+  const geometry_msgs::TransformStamped &frame_to_robot_base,
+  std::vector<double> joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
+  auto point = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+  auto update_rviz = point->toJointTrajPoint(*this, timeout, joint_seed);
+}
+
 geometry_msgs::TransformStamped Robot::lookupTransformToBase(const std::string &in_frame) const
 {
   geometry_msgs::TransformStamped frame_rel_robot_msg;

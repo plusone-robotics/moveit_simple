@@ -363,6 +363,22 @@ public:
    */
   double getSpeedModifier(void) const;
 
+  void updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
+    const std::string &joint_seed, double timeout = 10.0) const;
+
+  void updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
+    std::vector<double> joint_seed = std::vector<double>(), double timeout = 10.0) const;
+
+  void updateRvizRobotState(const Eigen::Affine3d &pose, 
+    const geometry_msgs::TransformStamped &frame_to_robot_base,
+    const std::string &joint_seed, double timeout = 10.0) const;
+
+  void updateRvizRobotState(const Eigen::Affine3d &pose, 
+    const geometry_msgs::TransformStamped &frame_to_robot_base,
+    std::vector<double> joint_seed = std::vector<double>(),
+    double timeout = 10.0) const;
+
+
   geometry_msgs::TransformStamped lookupTransformToBase(const std::string &in_frame) const;
 
 protected:
