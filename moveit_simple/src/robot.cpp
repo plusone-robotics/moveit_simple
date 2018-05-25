@@ -1213,13 +1213,11 @@ geometry_msgs::TransformStamped Robot::lookupTransformToBase(const std::string &
 
 Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, const std::string &in_frame) const
 {
-  Eigen::Affine3d out;
+  geometry_msgs::TransformStamped frame_rel_robot_msg;
+
   try
   {
-    geometry_msgs::TransformStamped frame_rel_robot_msg = this->lookupTransformToBase(in_frame);
-    Eigen::Affine3d frame_rel_robot;
-    tf::transformMsgToEigen(frame_rel_robot_msg.transform, frame_rel_robot);
-    out = frame_rel_robot.inverse() * in;
+    frame_rel_robot_msg = this->lookupTransformToBase(in_frame);
   }
   catch (tf2::TransformException &ex)
   {
@@ -1227,6 +1225,19 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, const std::str
       << "::" << ex.what());
     throw ex;
   }
+
+  return this->transformToBase(in, frame_rel_robot_msg);
+}
+
+Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, 
+  const geometry_msgs::TransformStamped &transform_msg) const
+{
+  Eigen::Affine3d out;
+
+  Eigen::Affine3d frame_rel_robot;
+  tf::transformMsgToEigen(transform_msg.transform, frame_rel_robot);
+  out = frame_rel_robot.inverse() * in;
+
   return out;
 }
 
@@ -1254,9 +1265,7 @@ Eigen::Affine3d Robot::transformToBaseStatic(const Eigen::Affine3d &in, const st
     transform_to_base_static_ = frame_rel_robot_msg;
   }
 
-  Eigen::Affine3d frame_rel_robot;
-  tf::transformMsgToEigen(frame_rel_robot_msg.transform, frame_rel_robot);
-  return (frame_rel_robot.inverse() * in);  
+  return this->transformToBase(in, frame_rel_robot_msg);
 }
 
 bool Robot::getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const

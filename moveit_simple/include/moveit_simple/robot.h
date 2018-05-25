@@ -367,6 +367,9 @@ protected:
 
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, const std::string &in_frame) const;
 
+  Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, 
+    const geometry_msgs::TransformStamped &transform_msg) const;
+
   Eigen::Affine3d transformToBaseStatic(const Eigen::Affine3d &in, const std::string &in_frame);
 
   /**
