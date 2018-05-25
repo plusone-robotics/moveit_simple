@@ -455,6 +455,47 @@ bool Robot::getPose(const std::vector<double> &joint_point, const std::string &t
   return get_pose;
 }
 
+bool Robot::isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
+  const std::string &joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  } 
+  
+  return this->isInCollision(pose, frame, timeout, joints); 
+}
+
+bool Robot::isInCollision(const Eigen::Affine3d &pose, 
+  const geometry_msgs::TransformStamped &frame_to_robot_base,
+  const std::string &joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  return this->isInCollision(pose, frame_to_robot_base, timeout, joints);  
+}
+
 bool Robot::isInCollision(const std::vector<double> &joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -473,7 +514,7 @@ bool Robot::isInCollision(const std::vector<double> &joint_point) const
   return inCollision;
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string &frame,
+bool Robot::isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
   double timeout, std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -481,11 +522,8 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string &frame,
   bool inCollision = true;
   try
   {
-    Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
-    std::unique_ptr<TrajectoryPoint> point =
-        std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
-    virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
-    inCollision = planning_scene_->isStateColliding(*virtual_robot_state_, joint_group_->getName());
+    auto pose_rel_robot = this->lookupTransformToBase(frame);
+    inCollision = isInCollision(pose, pose_rel_robot, timeout, joint_seed);
   }
   catch (tf2::TransformException &ex)
   {
@@ -496,22 +534,20 @@ bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string &frame,
   return inCollision;
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d pose, const std::string &frame,
-  const std::string &joint_seed, double timeout) const
+bool Robot::isInCollision(const Eigen::Affine3d &pose, 
+  const geometry_msgs::TransformStamped &frame_to_robot_base,
+  double timeout, std::vector<double> joint_seed) const
 {
-  std::map<std::string, double> m;
-  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
-  {
-    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
-  }
+  std::lock_guard<std::recursive_mutex> guard(m_);
 
-  std::vector<double> joints;
-  for (auto it = m.begin(); it != m.end(); ++it)
-  {
-    joints.push_back(it->second);
-  }
+  bool in_collision = true;
 
-  return this->isInCollision(pose, frame, timeout, joints);
+  auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
+  std::unique_ptr<TrajectoryPoint> point = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+  virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
+  in_collision = planning_scene_->isStateColliding(*virtual_robot_state_, joint_group_->getName());
+
+  return in_collision;
 }
 
 bool Robot::isInCollisionStatic(const Eigen::Affine3d &pose, const std::string &frame,
@@ -574,58 +610,10 @@ bool Robot::isReachable(const std::string &name, double timeout,
 }
 
 bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
-  double timeout, std::vector<double> joint_seed) const
+  const std::string &joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  bool reacheable = false;
-  try
-  {
-    Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
-    std::unique_ptr<TrajectoryPoint> point =
-        std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
-    reacheable = isReachable(point, timeout, joint_seed);
-  }
-  catch (tf2::TransformException &ex)
-  {
-    ROS_WARN_STREAM("Reacheability failed for arbitrary pose point: " << ex.what());
-    reacheable = false;
-  }
-
-  return reacheable;
-}
-
-bool Robot::isReachable(std::unique_ptr<TrajectoryPoint> &point, double timeout,
-  std::vector<double> joint_seed) const
-{
-  bool reacheable = false;
-
-  if (point)
-  {
-    if (joint_seed.empty())
-    {
-      ROS_DEBUG_STREAM("Empty seed passed to reach check, using current state");
-      virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
-    }
-
-    std::unique_ptr<JointTrajectoryPoint> dummy = point->toJointTrajPoint(*this, timeout, joint_seed);
-    if (dummy)
-    {
-      reacheable = true;
-    }
-  }
-  else
-  {
-    ROS_ERROR_STREAM("Invalid point for reach check");
-    reacheable = false;
-  }
-
-  return reacheable;
-}
-
-bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
-  const std::string &joint_seed, double timeout) const
-{
   std::map<std::string, double> m;
   if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
   {
@@ -639,6 +627,93 @@ bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
   }
 
   return this->isReachable(pose, frame, timeout, joints);
+}
+
+bool Robot::isReachable(const Eigen::Affine3d &pose,
+  const geometry_msgs::TransformStamped &frame_to_robot_base,
+  const std::string &joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  return this->isReachable(pose, frame_to_robot_base, timeout, joints);
+}
+
+bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
+  double timeout, std::vector<double> joint_seed) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  bool reachable = false;
+  try
+  {
+    auto frame_rel_robot = this->lookupTransformToBase(frame);
+    reachable = isReachable(pose, frame_rel_robot, timeout, joint_seed);
+
+    // Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
+    // std::unique_ptr<TrajectoryPoint> point =
+    //     std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+    // reachable = isReachable(point, timeout, joint_seed);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN_STREAM("Reacheability failed for arbitrary pose point: " << ex.what());
+    reachable = false;
+  }
+
+  return reachable;
+}
+
+bool Robot::isReachable(const Eigen::Affine3d &pose,
+  const geometry_msgs::TransformStamped &frame_to_robot_base,
+  double timeout, std::vector<double> joint_seed) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
+  std::unique_ptr<TrajectoryPoint> point = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+  return this->isReachable(point, timeout, joint_seed);
+}
+
+bool Robot::isReachable(std::unique_ptr<TrajectoryPoint> &point, double timeout,
+  std::vector<double> joint_seed) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  bool reachable = false;
+
+  if (point)
+  {
+    if (joint_seed.empty())
+    {
+      ROS_DEBUG_STREAM("Empty seed passed to reach check, using current state");
+      virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
+    }
+
+    std::unique_ptr<JointTrajectoryPoint> dummy = point->toJointTrajPoint(*this, timeout, joint_seed);
+    if (dummy)
+    {
+      reachable = true;
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Invalid point for reach check");
+    reachable = false;
+  }
+
+  return reachable;
 }
 
 bool Robot::isReachableStatic(const Eigen::Affine3d &pose, const std::string &frame,
