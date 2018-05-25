@@ -1271,7 +1271,7 @@ bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> &joint_point,
     virtual_visual_tools_->deleteAllMarkers();
     virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
     virtual_visual_tools_->publishContactPoints(*virtual_robot_state_, &(*planning_scene_));
-    ros::spinOnce();
+    virtual_visual_tools_->trigger();
     return true;
   }
 
