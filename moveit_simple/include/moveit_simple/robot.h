@@ -129,30 +129,6 @@ public:
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
-   * @brief isInCollision  returns true if pose results in robot config that is
-   * in collision with the environment as defined by the URDF.
-   * @param pose - cartesian pose of the tool to check
-   * @param frame - tool pose relative to static frame
-   * @param timeout - (optional) timeout for IK
-   * @param joint_seed (optional) - seed to use
-   * @return
-   */
-  bool isInCollisionStatic(const Eigen::Affine3d &pose, const std::string &frame,
-    double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>());
-
-  /**
-   * @brief isInCollision  returns true if pose results in robot config that is
-   * in collision with the environment as defined by the URDF.
-   * @param pose - cartesian pose of the tool to check
-   * @param frame - tool pose relative to static frame
-   * @param joint_seed - named seed to use defined in srdf
-   * @param timeout - (optional) timeout for IK
-   * @return
-   */
-  bool isInCollisionStatic(const Eigen::Affine3d &pose, const std::string &frame,
-    const std::string &joint_seed, double timeout = 10.0);
-
-  /**
    * @brief isReachable - check if point is reacheable.
    * @param name - name of point to check
    * @param joint_seed - (optional) tries to find joint solutions closest to seed
@@ -207,28 +183,6 @@ public:
   bool isReachable(const Eigen::Affine3d &pose, 
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
-
-  /**
-   * @brief isReachable - check if pose (relative to named static frame) is reacheable.
-   * @param pose - pose to check
-   * @param frame - frame in which pose is expressed
-   * @param timeout - (optional) timeout for IK
-   * @param joint_seed (optional) - named seed to use defined in srdf
-   * @return
-   */
-  bool isReachableStatic(const Eigen::Affine3d &pose, const std::string &frame,
-    double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>());
-
-  /**
-   * @brief isReachable - check if pose (relative to named static frame) is reacheable.
-   * @param pose - pose to check
-   * @param frame - frame in which pose is expressed
-   * @param timeout - (optional) timeout for IK
-   * @param joint_seed - seed to use
-   * @return
-   */
-  bool isReachableStatic(const Eigen::Affine3d &pose, const std::string &frame,
-    const std::string &joint_seed, double timeout = 10.0);
 
   /**
    * @brief addTrajPoint - add point to trajectory.
@@ -419,8 +373,6 @@ protected:
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, 
     const geometry_msgs::TransformStamped &transform_msg) const;
 
-  Eigen::Affine3d transformToBaseStatic(const Eigen::Affine3d &in, const std::string &in_frame);
-
   /**
    * @brief transformPoseBetweenFrames transforms frame_in to frame_out.
    * @param target_pose - goal pose for IK
@@ -575,10 +527,6 @@ protected:
   std::string ik_tip_frame_;
   Eigen::Affine3d ik_tip_to_srdf_tip_;
   Eigen::Affine3d srdf_base_to_ik_base_;
-
-  // transformToBaseStatic
-  geometry_msgs::TransformStamped transform_to_base_static_;
-  std::string transform_to_base_static_frame_;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H
