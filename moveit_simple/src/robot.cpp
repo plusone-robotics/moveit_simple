@@ -540,17 +540,25 @@ bool Robot::isInCollision(const Eigen::Affine3d &pose,
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  bool in_collision = true;
-
   auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
+  auto point = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
 
-  std::unique_ptr<TrajectoryPoint> point 
-    = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+  if (point)
+  {
+    if (joint_seed.empty())
+    {
+      ROS_DEBUG_STREAM("Empty seed passed to collision check, using current state");
+      virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
+    }    
     
-  virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
-  in_collision = planning_scene_->isStateColliding(*virtual_robot_state_, joint_group_->getName());
+    auto joint_traj_point = point->toJointTrajPoint(*this, timeout, joint_seed);
+    if (joint_traj_point)
+    {
+      return this->isInCollision(joint_traj_point->jointPoint());
+    }
+  }
 
-  return in_collision;
+  return true;
 }
 
 bool Robot::isReachable(const std::string &name, double timeout,
