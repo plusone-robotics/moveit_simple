@@ -70,6 +70,31 @@ public:
   ~Robot();
 
   /**
+   * @brief isInCollision  returns true if pose results in robot config that is
+   * in collision with the environment as defined by the URDF.
+   * @param pose - cartesian pose of the tool to check
+   * @param frame - tool pose relative to frame
+   * @param joint_seed - named seed to use defined in srdf
+   * @param timeout - (optional) timeout for IK
+   * @return
+   */
+  bool isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
+    const std::string &joint_seed, double timeout = 10.0) const;
+
+  /**
+   * @brief isInCollision  returns true if pose results in robot config that is
+   * in collision with the environment as defined by the URDF.
+   * @param pose - cartesian pose of the tool to check
+   * @param  frame_to_robot_base - transform from frame of pose to robot base frame
+   * @param joint_seed - named seed to use defined in srdf
+   * @param timeout - (optional) timeout for IK
+   * @return
+   */
+  bool isInCollision(const Eigen::Affine3d &pose, 
+    const geometry_msgs::TransformStamped &frame_to_robot_base,
+    const std::string &joint_seed, double timeout = 10.0) const;
+
+  /**
   * @brief isInCollision  returns true if joint_point results in robot config that is
   * in collision with the environment as defined by the URDF.
   * @param joint_point(optional) - joint position of the robot to check
@@ -87,20 +112,21 @@ public:
    * @param joint_seed (optional) - seed to use
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d pose, const std::string &frame,
+  bool isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
    * @brief isInCollision  returns true if pose results in robot config that is
    * in collision with the environment as defined by the URDF.
    * @param pose - cartesian pose of the tool to check
-   * @param frame - tool pose relative to frame
-   * @param joint_seed - named seed to use defined in srdf
+   * @param frame_to_robot_base - transform from frame of pose to robot base frame
    * @param timeout - (optional) timeout for IK
+   * @param joint_seed (optional) - seed to use
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d pose, const std::string &frame,
-    const std::string &joint_seed, double timeout = 10.0) const;
+  bool isInCollision(const Eigen::Affine3d &pose, 
+    const geometry_msgs::TransformStamped &frame_to_robot_base,
+    double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
    * @brief isReachable - check if point is reacheable.
@@ -109,9 +135,31 @@ public:
    * @param timeout - (optional) timeout for IK
    * @return
    */
-  bool isReachable(const std::string &name,
-      double timeout = 10.0,
-      std::vector<double> joint_seed = std::vector<double>()) const;
+  bool isReachable(const std::string &name, double timeout = 10.0,
+    std::vector<double> joint_seed = std::vector<double>()) const;
+
+  /**
+   * @brief isReachable - check if pose (relative to named frame) is reacheable.
+   * @param pose - pose to check
+   * @param frame - frame in which pose is expressed
+   * @param timeout - (optional) timeout for IK
+   * @param joint_seed - seed to use
+   * @return
+   */
+  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame,
+    const std::string &joint_seed, double timeout = 10.0) const;
+
+  /**
+  * @brief isReachable - check if pose (relative to named frame) is reacheable.
+  * @param pose - pose to check
+  * @param frame_to_robot_base - transform from frame of pose to robot base frame
+  * @param timeout - (optional) timeout for IK
+  * @param joint_seed - seed to use
+  * @return
+  */
+  bool isReachable(const Eigen::Affine3d &pose, 
+    const geometry_msgs::TransformStamped &frame_to_robot_base,
+    const std::string &joint_seed, double timeout = 10.0) const;
 
   /**
    * @brief isReachable - check if pose (relative to named frame) is reacheable.
@@ -127,13 +175,14 @@ public:
   /**
    * @brief isReachable - check if pose (relative to named frame) is reacheable.
    * @param pose - pose to check
-   * @param frame - frame in which pose is expressed
+   * @param frame_to_robot_base - transform from frame of pose to robot base frame
    * @param timeout - (optional) timeout for IK
-   * @param joint_seed - seed to use
+   * @param joint_seed (optional) - named seed to use defined in srdf
    * @return
    */
-  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame,
-    const std::string &joint_seed, double timeout = 10.0) const;
+  bool isReachable(const Eigen::Affine3d &pose, 
+    const geometry_msgs::TransformStamped &frame_to_robot_base,
+    double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
    * @brief addTrajPoint - add point to trajectory.
@@ -314,10 +363,31 @@ public:
    */
   double getSpeedModifier(void) const;
 
+  void updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
+    const std::string &joint_seed, double timeout = 10.0) const;
+
+  void updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
+    std::vector<double> joint_seed = std::vector<double>(), double timeout = 10.0) const;
+
+  void updateRvizRobotState(const Eigen::Affine3d &pose, 
+    const geometry_msgs::TransformStamped &frame_to_robot_base,
+    const std::string &joint_seed, double timeout = 10.0) const;
+
+  void updateRvizRobotState(const Eigen::Affine3d &pose, 
+    const geometry_msgs::TransformStamped &frame_to_robot_base,
+    std::vector<double> joint_seed = std::vector<double>(),
+    double timeout = 10.0) const;
+
+
+  geometry_msgs::TransformStamped lookupTransformToBase(const std::string &in_frame) const;
+
 protected:
   Robot();
 
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, const std::string &in_frame) const;
+
+  Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, 
+    const geometry_msgs::TransformStamped &transform_msg) const;
 
   /**
    * @brief transformPoseBetweenFrames transforms frame_in to frame_out.
