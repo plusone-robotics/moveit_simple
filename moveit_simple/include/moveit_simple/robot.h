@@ -360,6 +360,8 @@ public:
    */
   double getSpeedModifier(void) const;
 
+  geometry_msgs::TransformStamped lookupTransformToBase(const std::string &in_frame) const;
+
 protected:
   Robot();
 

@@ -1192,19 +1192,34 @@ bool Robot::isConfigChange(const std::vector<double> jp1, const std::vector<doub
   return false;
 }
 
+geometry_msgs::TransformStamped Robot::lookupTransformToBase(const std::string &in_frame) const
+{
+  geometry_msgs::TransformStamped frame_rel_robot_msg;
+
+  try
+  {
+    frame_rel_robot_msg = tf_buffer_.lookupTransform(in_frame, ik_base_frame_, 
+      ros::Time::now(), ros::Duration(5.0));
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN_STREAM("Transform lookup from: " << in_frame << " into robot base: " << ik_base_frame_
+      << "::" << ex.what());
+    throw ex;    
+  }
+
+  return frame_rel_robot_msg;
+}
+
 Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, const std::string &in_frame) const
 {
   Eigen::Affine3d out;
-  bool success = false;
   try
   {
-    geometry_msgs::TransformStamped frame_rel_robot_msg =
-        tf_buffer_.lookupTransform(in_frame, ik_base_frame_, ros::Time::now(), ros::Duration(5.0));
-
+    geometry_msgs::TransformStamped frame_rel_robot_msg = this->lookupTransformToBase(in_frame);
     Eigen::Affine3d frame_rel_robot;
     tf::transformMsgToEigen(frame_rel_robot_msg.transform, frame_rel_robot);
     out = frame_rel_robot.inverse() * in;
-    success = true;
   }
   catch (tf2::TransformException &ex)
   {
@@ -1226,8 +1241,7 @@ Eigen::Affine3d Robot::transformToBaseStatic(const Eigen::Affine3d &in, const st
   {
     try
     {
-      frame_rel_robot_msg = tf_buffer_.lookupTransform(in_frame, ik_base_frame_, 
-        ros::Time::now(), ros::Duration(5.0));
+      frame_rel_robot_msg = this->lookupTransformToBase(in_frame);
     }
     catch (tf2::TransformException &ex)
     {
