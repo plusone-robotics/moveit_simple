@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#include <prettyprint/prettyprint.hpp>
+#include <moveit_simple/prettyprint.hpp>
 #include <ros/ros.h>
 
 #include <moveit_simple/point_types.h>

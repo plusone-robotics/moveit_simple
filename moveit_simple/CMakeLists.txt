@@ -13,7 +13,6 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_core
   moveit_ros_planning
   moveit_visual_tools
-  prettyprint
   roscpp
   rosparam_handler
   sensor_msgs
