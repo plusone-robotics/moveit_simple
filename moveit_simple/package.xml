@@ -4,13 +4,10 @@
   <version>0.1.0</version>
   <description>Includes simple wrappers for calling MoveIt as a ROS based library.  Similar function as MoveGroup but all calls are made locally using direct MoveIt objects.  This library assumes that MoveIt is being used in a broader ROS system (i.e. certain parameters, like robot_description exist)</description>
   
-  <maintainer email="Edwards@todo.todo">Shaun Edwards</maintainer>
+  <maintainer email="shaun.edwards@gmail.com">Shaun Edwards</maintainer>
   
-  <!-- moveit_simple -->
-  <license>Apache 2.0</license>
-  
-  <!-- prettyprint -->
-  <license>Boost Software License</license>
+  <!-- moveit_simple, prettyprint -->
+  <license>Apache 2.0, Boost Software License</license>
 
   <author>Shaun Edwards</author>
 
