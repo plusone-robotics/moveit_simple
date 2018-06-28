@@ -20,7 +20,6 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <gtest/gtest.h>
 #include <moveit_simple/moveit_simple.h>
-#include <prettyprint/prettyprint.hpp>
 
 using testing::Types;
 
