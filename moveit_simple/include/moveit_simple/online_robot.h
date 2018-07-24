@@ -72,8 +72,21 @@ public:
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void execute(std::vector<moveit_simple::JointTrajectoryPoint> &goal,
-    bool collision_check = false);
+  void execute(std::vector<moveit_simple::JointTrajectoryPoint> &goal, bool collision_check = false);
+
+  bool setExecuteGoal(const std::string &traj_name, bool collision_check = false);
+
+  bool setExecuteGoal(const std::vector<moveit_simple::JointTrajectoryPoint> &goal_points, bool collision_check = false);
+
+  void startExecution();
+
+  void stopExecution();
+
+  bool isExecuting();
+
+  bool checkGoalInCollision();
+
+  bool getExecutionTimeout(ros::Duration &timeout);
 
   /**
   * @brief getJointState - Returns a vector<double> of the
@@ -91,6 +104,10 @@ protected:
   moveit_visual_tools::MoveItVisualToolsPtr online_visual_tools_;
   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> action_;
   ros::Subscriber j_state_sub_;
+
+  control_msgs::FollowJointTrajectoryGoal execution_goal_;
+  bool execute_collision_check_ = false;
+  int execute_collision_points_ = 0;
 };
 } // namespace moveit_simple
 #endif // ONLINE_ROBOT_H

@@ -145,6 +145,102 @@ void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> &join
   }
 }
 
+bool OnlineRobot::setExecuteGoal(const std::string &traj_name, bool collision_check)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  bool success = false;
+  execute_collision_check_ = collision_check;
+
+  try
+  {
+    auto goal_points = this->plan(traj_name, execute_collision_check_);
+    success = this->setExecuteGoal(goal_points, execute_collision_check_);
+  }
+  catch (IKFailException &ik)
+  {
+    ROS_ERROR_STREAM("IK Failed for trajectory: [" << traj_name << "]");
+    success = false;
+  }
+  catch (CollisionDetected &cd)
+  {
+    ROS_ERROR_STREAM("Collision detected in trajectory");
+    success = false;
+  }
+  catch (std::invalid_argument &ia)
+  {
+    ROS_ERROR_STREAM("Invalid trajectory name: [" << traj_name << "]");
+    success = false;
+  }
+
+  return success;
+}
+
+bool OnlineRobot::setExecuteGoal(const std::vector<moveit_simple::JointTrajectoryPoint> &goal_points, bool collision_check)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  execute_collision_check_ = collision_check;
+  execution_goal_ = this->toFollowJointTrajectoryGoal(goal_points);
+  return true;
+}
+
+void OnlineRobot::startExecution()
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  action_.sendGoal(execution_goal_);
+}
+
+void OnlineRobot::stopExecution()
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  action_.cancelGoal();
+}
+
+bool OnlineRobot::isExecuting()
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  auto action_state = action_.getState();
+
+  if (action_state == actionlib::SimpleClientGoalState::PENDING || action_state == actionlib::SimpleClientGoalState::ACTIVE)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool OnlineRobot::checkGoalInCollision()
+{
+  auto collision_points = this->trajCollisionCheck(execution_goal_, execute_collision_check_);
+  if (collision_points == 0)
+  {
+    return false;
+  }
+  else
+  {
+    return true;
+  }
+}
+
+bool OnlineRobot::getExecutionTimeout(ros::Duration &timeout)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  const double TIMEOUT_SCALE = 1.25;
+  if (!this->checkGoalInCollision())
+  {
+    ROS_ERROR_STREAM("cows go moo");
+    auto traj_time = execution_goal_.trajectory.points[execution_goal_.trajectory.points.size() - 1].time_from_start;
+    timeout = ros::Duration(TIMEOUT_SCALE*traj_time.toSec());
+    return true;
+  }
+
+  return false;
+}
+
 std::vector<double> OnlineRobot::getJointState(void) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
