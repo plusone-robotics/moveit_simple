@@ -74,18 +74,45 @@ public:
    */
   void execute(std::vector<moveit_simple::JointTrajectoryPoint> &goal, bool collision_check = false);
 
+  /**
+   * @brief Set the goal to execute a given trajectory
+   * @param traj_name - name of trajectory to be executed (must be filled with
+   * prior calls to "addTrajPoint".
+   * @param collision_check - bool to turn check for collision on\off
+   */
   bool setExecuteGoal(const std::string &traj_name, bool collision_check = false);
 
+  /**
+   * @brief Set the goal to execute a given trajectory
+   * @param traj_name - name of trajectory to be executed (must be filled with
+   * prior calls to "addTrajPoint".
+   * @param collision_check - bool to turn check for collision on\off
+   */
   bool setExecuteGoal(const std::vector<moveit_simple::JointTrajectoryPoint> &goal_points, bool collision_check = false);
 
+  /**
+   * @brief Executes the given planned trajectory
+   */
   void startExecution();
 
+  /**
+   * @brief Stops executing the given planned trajectory
+   */
   void stopExecution();
 
+  /**
+   * @brief Checks if the given planned trajectory is in pending / active state
+   */
   bool isExecuting();
 
+  /**
+   * @brief Checks if the given planned trajectory goal is in collision
+   */
   bool checkGoalInCollision();
 
+  /**
+   * @brief Gets the timeout for the given planned trajectory
+   */
   bool getExecutionTimeout(ros::Duration &timeout);
 
   /**
