@@ -225,6 +225,24 @@ bool OnlineRobot::checkGoalInCollision()
   }
 }
 
+bool OnlineRobot::checkExecutionStopped()
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  auto action_state = action_.getState();
+
+  if (action_state == actionlib::SimpleClientGoalState::RECALLED 
+  || action_state == actionlib::SimpleClientGoalState::PREEMPTED
+  || action_state == actionlib::SimpleClientGoalState::ABORTED)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
 bool OnlineRobot::getExecutionTimeout(ros::Duration &timeout)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);

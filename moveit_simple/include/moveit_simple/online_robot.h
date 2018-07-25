@@ -111,6 +111,11 @@ public:
   bool checkGoalInCollision();
 
   /**
+   * @brief Checks if the given planned trajectory goal is stopped
+   */
+  bool checkExecutionStopped();
+
+  /**
    * @brief Gets the timeout for the given planned trajectory
    */
   bool getExecutionTimeout(ros::Duration &timeout);
