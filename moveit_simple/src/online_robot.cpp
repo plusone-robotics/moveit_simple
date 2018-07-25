@@ -250,7 +250,6 @@ bool OnlineRobot::getExecutionTimeout(ros::Duration &timeout)
   const double TIMEOUT_SCALE = 1.25;
   if (!this->checkGoalInCollision())
   {
-    ROS_ERROR_STREAM("cows go moo");
     auto traj_time = execution_goal_.trajectory.points[execution_goal_.trajectory.points.size() - 1].time_from_start;
     timeout = ros::Duration(TIMEOUT_SCALE*traj_time.toSec());
     return true;
