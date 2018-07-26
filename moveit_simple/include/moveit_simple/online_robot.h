@@ -108,12 +108,12 @@ public:
   /**
    * @brief Checks if the given planned trajectory goal is in collision
    */
-  bool checkGoalInCollision();
+  bool isGoalInCollision();
 
   /**
    * @brief Checks if the given planned trajectory goal is stopped
    */
-  bool checkExecutionStopped();
+  bool isExecutionStopped();
 
   /**
    * @brief Gets the timeout for the given planned trajectory
@@ -139,7 +139,6 @@ protected:
 
   control_msgs::FollowJointTrajectoryGoal execution_goal_;
   bool execute_collision_check_ = false;
-  int execute_collision_points_ = 0;
 };
 } // namespace moveit_simple
 #endif // ONLINE_ROBOT_H

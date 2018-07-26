@@ -212,7 +212,7 @@ bool OnlineRobot::isExecuting()
   }
 }
 
-bool OnlineRobot::checkGoalInCollision()
+bool OnlineRobot::isGoalInCollision()
 {
   auto collision_points = this->trajCollisionCheck(execution_goal_, execute_collision_check_);
   if (collision_points == 0)
@@ -225,7 +225,7 @@ bool OnlineRobot::checkGoalInCollision()
   }
 }
 
-bool OnlineRobot::checkExecutionStopped()
+bool OnlineRobot::isExecutionStopped()
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -248,7 +248,7 @@ bool OnlineRobot::getExecutionTimeout(ros::Duration &timeout)
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   const double TIMEOUT_SCALE = 1.25;
-  if (!this->checkGoalInCollision())
+  if (!this->isGoalInCollision())
   {
     auto traj_time = execution_goal_.trajectory.points[execution_goal_.trajectory.points.size() - 1].time_from_start;
     timeout = ros::Duration(TIMEOUT_SCALE*traj_time.toSec());
