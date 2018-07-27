@@ -291,7 +291,7 @@ TEST_F(DeveloperRobotTest, planning)
   ROS_INFO_STREAM(" pose_out[11]: " << std::endl << pose_out[11].matrix());
 
   EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[12],1e-3));
-  ROS_INFO_STREAM(" pose_out[12]: " << std::endl << pose_out[12].matrix());Untitled Diagram
+  ROS_INFO_STREAM(" pose_out[12]: " << std::endl << pose_out[12].matrix());
   ROS_INFO_STREAM(" cart_interpolated_expected_pose: " << std::endl
                        << cart_interpolated_expected_pose.matrix());
 
@@ -768,7 +768,6 @@ TEST_F(UserRobotTest, non_blocking_execution)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, joint));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0));
 
   EXPECT_TRUE(robot->setExecuteGoal(TRAJECTORY_NAME));
 

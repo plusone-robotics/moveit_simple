@@ -877,21 +877,21 @@ TEST_F(UserRobotTest, non_blocking_execution)
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2", 3.0));
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", 4.0, joint));
 
-  EXPECT_TRUE(robot->setExecuteGoal(TRAJECTORY_NAME));
+  EXPECT_TRUE(user_robot->setExecuteGoal(TRAJECTORY_NAME));
 
-  robot->startExecution();
+  user_robot->startExecution();
 
   ros::Duration timeout;
-  EXPECT_TRUE(robot->getExecutionTimeout(timeout));
-  EXPECT_FALSE(robot->isGoalInCollision());
+  EXPECT_TRUE(user_robot->getExecutionTimeout(timeout));
+  EXPECT_FALSE(user_robot->isGoalInCollision());
 
   auto end_time = ros::Time::now() + timeout;
   while (ros::Time::now() < end_time)
   {
-    EXPECT_TRUE(robot->isExecuting());
-    EXPECT_FALSE(robot->isExecutionStopped());
+    EXPECT_TRUE(user_robot->isExecuting());
+    EXPECT_FALSE(user_robot->isExecutionStopped());
   }
 
-  EXPECT_TRUE(robot->isExecutionStopped);
+  EXPECT_TRUE(user_robot->isExecutionStopped);
 }
 }
