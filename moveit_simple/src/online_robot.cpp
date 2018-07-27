@@ -187,7 +187,9 @@ bool OnlineRobot::setExecuteGoal(const std::vector<moveit_simple::JointTrajector
 void OnlineRobot::startExecution()
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
-  action_.sendGoal(execution_goal_);
+
+  if (!this->isGoalInCollision())
+    action_.sendGoal(execution_goal_);
 }
 
 void OnlineRobot::stopExecution()
