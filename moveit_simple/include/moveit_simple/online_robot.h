@@ -79,6 +79,7 @@ public:
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
    * @param collision_check - bool to turn check for collision on\off
+   * @return Goal successfully set without errors
    */
   bool setExecuteGoal(const std::string &traj_name, bool collision_check = false);
 
@@ -87,6 +88,7 @@ public:
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
    * @param collision_check - bool to turn check for collision on\off
+   * @return Goal successfully set without errors
    */
   bool setExecuteGoal(const std::vector<moveit_simple::JointTrajectoryPoint> &goal_points, bool collision_check = false);
 
