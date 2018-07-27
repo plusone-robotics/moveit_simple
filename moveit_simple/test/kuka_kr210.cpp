@@ -291,7 +291,7 @@ TEST_F(DeveloperRobotTest, planning)
   ROS_INFO_STREAM(" pose_out[11]: " << std::endl << pose_out[11].matrix());
 
   EXPECT_TRUE(cart_interpolated_expected_pose.isApprox(pose_out[12],1e-3));
-  ROS_INFO_STREAM(" pose_out[12]: " << std::endl << pose_out[12].matrix());
+  ROS_INFO_STREAM(" pose_out[12]: " << std::endl << pose_out[12].matrix());Untitled Diagram
   ROS_INFO_STREAM(" cart_interpolated_expected_pose: " << std::endl
                        << cart_interpolated_expected_pose.matrix());
 
@@ -755,5 +755,36 @@ TEST(MoveitSimpleTest, Singularity)
   EXPECT_TRUE(robot.isNearSingular(joint4));
   // Boundary Singularity (occurs because of elbow and wrist singularity)
   EXPECT_TRUE(robot.isNearSingular(joint5));
+}
+
+TEST_F(UserRobotTest, non_blocking_execution)
+{
+  const std::string TRAJECTORY_NAME("non_blocking_execution_traj");
+  const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, joint));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0));
+
+  EXPECT_TRUE(robot->setExecuteGoal(TRAJECTORY_NAME));
+
+  robot->startExecution();
+
+  ros::Duration timeout;
+  EXPECT_TRUE(robot->getExecutionTimeout(timeout));
+  EXPECT_FALSE(robot->isGoalInCollision());
+
+  auto end_time = ros::Time::now() + timeout;
+  while (ros::Time::now() < end_time)
+  {
+    EXPECT_TRUE(robot->isExecuting());
+    EXPECT_FALSE(robot->isExecutionStopped());
+  }
+
+  EXPECT_TRUE(robot->isExecutionStopped);
 }
 }
