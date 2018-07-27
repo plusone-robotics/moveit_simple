@@ -784,6 +784,6 @@ TEST_F(UserRobotTest, non_blocking_execution)
     EXPECT_FALSE(robot->isExecutionStopped());
   }
 
-  EXPECT_TRUE(robot->isExecutionStopped);
+  EXPECT_TRUE(robot->isExecutionStopped());
 }
 }
