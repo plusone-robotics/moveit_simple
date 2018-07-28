@@ -781,6 +781,12 @@ TEST_F(UserRobotTest, non_blocking_execution)
     EXPECT_FALSE(robot->isExecutionStopped());
   }
 
+  if (!robot->isExecutionStopped())
+    robot->stopExecution();
+
+  // Give it a second to stop
+  ros::Duration(1.0).sleep();
+
   EXPECT_TRUE(robot->isExecutionStopped());
 }
 }
