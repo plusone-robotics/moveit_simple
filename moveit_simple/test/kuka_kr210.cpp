@@ -806,9 +806,10 @@ TEST_F(UserRobotTest, stop_execution)
   EXPECT_TRUE(robot->getExecutionTimeout(timeout));
 
   auto end_time = ros::Time::now() + timeout;
+  auto stop_time = ros::Time::now() + timeout / 2.0;
   while (ros::Time::now() < end_time && robot->isExecuting())
   {
-    if (ros::Time::now() > end_time / 4.0)
+    if (ros::Time::now() > stop_time)
       robot->stopExecution();
   }
 
