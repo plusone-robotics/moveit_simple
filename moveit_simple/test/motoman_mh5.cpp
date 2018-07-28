@@ -879,16 +879,14 @@ TEST_F(UserRobotTest, non_blocking_execution)
 
   EXPECT_TRUE(user_robot->setExecuteGoal(TRAJECTORY_NAME));
 
-  user_robot->startExecution();
+  ASSERT_TRUE(user_robot->startExecution());
 
   ros::Duration timeout;
   EXPECT_TRUE(user_robot->getExecutionTimeout(timeout));
-  EXPECT_FALSE(user_robot->isGoalInCollision());
 
   auto end_time = ros::Time::now() + timeout;
-  while (ros::Time::now() < end_time)
+  while (ros::Time::now() < end_time && user_robot->isExecuting())
   {
-    EXPECT_TRUE(user_robot->isExecuting());
     EXPECT_FALSE(user_robot->isExecutionStopped());
   }
 
