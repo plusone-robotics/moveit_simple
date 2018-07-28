@@ -776,13 +776,41 @@ TEST_F(UserRobotTest, non_blocking_execution)
   EXPECT_TRUE(robot->getExecutionTimeout(timeout));
 
   auto end_time = ros::Time::now() + timeout;
-  while (ros::Time::now() < end_time && robot->isExecuting())
-  {
-    EXPECT_FALSE(robot->isExecutionStopped());
-  }
+  while (ros::Time::now() < end_time && robot->isExecuting()) { }
 
   if (!robot->isExecutionStopped())
     robot->stopExecution();
+
+  // Give it a second to stop
+  ros::Duration(1.0).sleep();
+
+  EXPECT_TRUE(robot->isExecutionStopped());
+}
+
+TEST_F(UserRobotTest, stop_execution)
+{
+  const std::string TRAJECTORY_NAME("stop_execution_traj");
+  const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, joint));
+
+  EXPECT_TRUE(robot->setExecuteGoal(TRAJECTORY_NAME));
+
+  ASSERT_TRUE(robot->startExecution());
+  ros::Duration timeout;
+  EXPECT_TRUE(robot->getExecutionTimeout(timeout));
+
+  auto end_time = ros::Time::now() + timeout;
+  while (ros::Time::now() < end_time && robot->isExecuting())
+  {
+    if (ros::Time::now() > end_time / 4.0)
+      robot->stopExecution();
+  }
 
   // Give it a second to stop
   ros::Duration(1.0).sleep();
