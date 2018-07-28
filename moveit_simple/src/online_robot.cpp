@@ -243,7 +243,8 @@ bool OnlineRobot::isExecutionStopped()
 
   if (action_state == actionlib::SimpleClientGoalState::RECALLED 
   || action_state == actionlib::SimpleClientGoalState::PREEMPTED
-  || action_state == actionlib::SimpleClientGoalState::ABORTED)
+  || action_state == actionlib::SimpleClientGoalState::ABORTED
+  || action_state == actionlib::SimpleClientGoalState::SUCCEEDED)
   {
     return true;
   }
