@@ -184,12 +184,20 @@ bool OnlineRobot::setExecuteGoal(const std::vector<moveit_simple::JointTrajector
   return true;
 }
 
-void OnlineRobot::startExecution()
+bool OnlineRobot::startExecution()
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   if (!this->isGoalInCollision())
+  {
     action_.sendGoal(execution_goal_);
+    return true;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Execution goal: " << execution_goal_ << " is in collision");
+    return false;
+  }
 }
 
 void OnlineRobot::stopExecution()

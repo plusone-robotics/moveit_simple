@@ -94,8 +94,9 @@ public:
 
   /**
    * @brief Executes the given planned trajectory
+   * @return True if execution starts successfully
    */
-  void startExecution();
+  bool startExecution();
 
   /**
    * @brief Stops executing the given planned trajectory
