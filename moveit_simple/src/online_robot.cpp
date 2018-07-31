@@ -247,12 +247,15 @@ std::vector<double> OnlineRobot::getJointState(void) const
 
 void OnlineRobot::executing(const ros::Time &timeout)
 {
-  while (ros::Time::now() <= timeout)
+  auto action_state = action_.getState();
+  while (ros::Time::now() <= timeout && action_state == actionlib::SimpleClientGoalState::ACTIVE)
   {
     is_timed_out_ = false;
+    action_state = action_.getState();
   }
 
-  is_timed_out_ = true;
+  if (action_state == actionlib::SimpleClientGoalState::ACTIVE)
+    is_timed_out_ = true;
 }
 
 void OnlineRobot::updateCurrentState(const sensor_msgs::JointStateConstPtr &msg)
