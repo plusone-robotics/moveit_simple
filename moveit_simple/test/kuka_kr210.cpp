@@ -756,4 +756,31 @@ TEST(MoveitSimpleTest, Singularity)
   // Boundary Singularity (occurs because of elbow and wrist singularity)
   EXPECT_TRUE(robot.isNearSingular(joint5));
 }
+
+TEST_F(UserRobotTest, stop_execution)
+{
+  const std::string TRAJECTORY_NAME("stop_execution_traj");
+  const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, joint));
+
+  robot->startExecution(TRAJECTORY_NAME);
+
+  auto stop_time = ros::Time::now() + ros::Duration(1.5);
+  while (robot->isExecuting())
+  {
+    if (ros::Time::now() > stop_time)
+    {
+      robot->stopExecution();
+      break;
+    }
+  }
+
+  EXPECT_FALSE(robot->isExecuting());
+}
 }

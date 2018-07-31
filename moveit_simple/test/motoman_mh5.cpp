@@ -864,4 +864,31 @@ TEST_F(UserRobotTest, singularity)
   EXPECT_TRUE(user_robot->isNearSingular(joint5));
 }
 */
+
+TEST_F(UserRobotTest, stop_execution)
+{
+  const std::string TRAJECTORY_NAME("stop_execution_traj");
+  const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", 1.0, joint, 5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2", 3.0));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", 4.0, joint));
+
+  user_robot->startExecution(TRAJECTORY_NAME);
+
+  auto stop_time = ros::Time::now() + ros::Duration(1.5);
+  while (user_robot->isExecuting())
+  {
+    if (ros::Time::now() > stop_time)
+    {
+      user_robot->stopExecution();
+      break;
+    }
+  }
+
+  EXPECT_FALSE(user_robot->isExecuting());
+}
 }
