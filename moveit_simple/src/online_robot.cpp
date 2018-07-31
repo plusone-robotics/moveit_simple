@@ -145,57 +145,74 @@ void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> &join
   }
 }
 
-bool OnlineRobot::setExecuteGoal(const std::string &traj_name, bool collision_check)
+void OnlineRobot::startExecution(const std::string &traj_name, bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  bool success = false;
-  execute_collision_check_ = collision_check;
-
   try
   {
-    auto goal_points = this->plan(traj_name, execute_collision_check_);
-    success = this->setExecuteGoal(goal_points, execute_collision_check_);
+    std::vector<moveit_simple::JointTrajectoryPoint> joint_trajectory_points;
+    joint_trajectory_points = plan(traj_name, collision_check);
+
+    const double TIMEOUT_SCALE = 1.25;
+    control_msgs::FollowJointTrajectoryGoal goal = this->toFollowJointTrajectoryGoal(joint_trajectory_points);
+
+    auto collision_points = this->trajCollisionCheck(goal, collision_check);
+
+    if (collision_points == 0)
+    {
+      auto traj_time = goal.trajectory.points[goal.trajectory.points.size() - 1].time_from_start;
+      auto timeout = ros::Time::now() + ros::Duration(TIMEOUT_SCALE*traj_time.toSec());
+
+      action_.sendGoal(goal);
+      is_timed_out_ = false;
+      std::thread execution_thread(&OnlineRobot::executing, this, timeout);
+      execution_thread.detach();
+    }
+    else
+    {
+      ROS_ERROR_STREAM("Collision detected in trajectory: " << traj_name);
+      throw CollisionDetected("Collision detected while interpolating ");
+    }
   }
   catch (IKFailException &ik)
   {
     ROS_ERROR_STREAM("IK Failed for trajectory: [" << traj_name << "]");
-    success = false;
-  }
-  catch (CollisionDetected &cd)
-  {
-    ROS_ERROR_STREAM("Collision detected in trajectory");
-    success = false;
+    throw ik;
   }
   catch (std::invalid_argument &ia)
   {
     ROS_ERROR_STREAM("Invalid trajectory name: [" << traj_name << "]");
-    success = false;
+    throw ia;
   }
-
-  return success;
-}
-
-bool OnlineRobot::setExecuteGoal(const std::vector<moveit_simple::JointTrajectoryPoint> &goal_points, bool collision_check)
-{
-  std::lock_guard<std::recursive_mutex> guard(m_);
-  execute_collision_check_ = collision_check;
-  execution_goal_ = this->toFollowJointTrajectoryGoal(goal_points);
-  return true;
-}
-
-bool OnlineRobot::startExecution()
-{
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
-  if (!this->isGoalInCollision())
+  catch (ExecutionFailureException &ef)
   {
-    action_.sendGoal(execution_goal_);
-    return true;
+    ROS_ERROR_STREAM("Trajectory [" << traj_name << "] failed to execute");
+    throw ef;
+  }
+}
+
+bool OnlineRobot::isExecuting()
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  if (!is_timed_out_)
+  {
+    auto action_state = action_.getState();
+    if (action_state == actionlib::SimpleClientGoalState::PENDING || action_state == actionlib::SimpleClientGoalState::ACTIVE)
+    {
+      return true;
+    }
+    else
+    {
+      this->stopExecution();
+      return false;
+    }
   }
   else
   {
-    ROS_ERROR_STREAM("Execution goal: " << execution_goal_ << " is in collision");
+    this->stopExecution();
+    ROS_ERROR_STREAM("Execution timed out");
     return false;
   }
 }
@@ -203,70 +220,16 @@ bool OnlineRobot::startExecution()
 void OnlineRobot::stopExecution()
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
+
   action_.cancelGoal();
-}
-
-bool OnlineRobot::isExecuting()
-{
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
   auto action_state = action_.getState();
-
-  if (action_state == actionlib::SimpleClientGoalState::PENDING || action_state == actionlib::SimpleClientGoalState::ACTIVE)
+  while (action_state != actionlib::SimpleClientGoalState::RECALLED
+         && action_state != actionlib::SimpleClientGoalState::PREEMPTED
+         && action_state != actionlib::SimpleClientGoalState::ABORTED
+         && action_state != actionlib::SimpleClientGoalState::SUCCEEDED)
   {
-    return true;
+    action_state = action_.getState();
   }
-  else
-  {
-    return false;
-  }
-}
-
-bool OnlineRobot::isGoalInCollision()
-{
-  auto collision_points = this->trajCollisionCheck(execution_goal_, execute_collision_check_);
-  if (collision_points == 0)
-  {
-    return false;
-  }
-  else
-  {
-    return true;
-  }
-}
-
-bool OnlineRobot::isExecutionStopped()
-{
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
-  auto action_state = action_.getState();
-
-  if (action_state == actionlib::SimpleClientGoalState::RECALLED 
-  || action_state == actionlib::SimpleClientGoalState::PREEMPTED
-  || action_state == actionlib::SimpleClientGoalState::ABORTED
-  || action_state == actionlib::SimpleClientGoalState::SUCCEEDED)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
-bool OnlineRobot::getExecutionTimeout(ros::Duration &timeout)
-{
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
-  const double TIMEOUT_SCALE = 1.25;
-  if (!this->isGoalInCollision())
-  {
-    auto traj_time = execution_goal_.trajectory.points[execution_goal_.trajectory.points.size() - 1].time_from_start;
-    timeout = ros::Duration(TIMEOUT_SCALE*traj_time.toSec());
-    return true;
-  }
-
-  return false;
 }
 
 std::vector<double> OnlineRobot::getJointState(void) const
@@ -280,6 +243,16 @@ std::vector<double> OnlineRobot::getJointState(void) const
   current_robot_state_->copyJointGroupPositions(joint_group_->getName(), current_joint_positions);
 
   return current_joint_positions;
+}
+
+void OnlineRobot::executing(const ros::Time &timeout)
+{
+  while (ros::Time::now() <= timeout)
+  {
+    is_timed_out_ = false;
+  }
+
+  is_timed_out_ = true;
 }
 
 void OnlineRobot::updateCurrentState(const sensor_msgs::JointStateConstPtr &msg)

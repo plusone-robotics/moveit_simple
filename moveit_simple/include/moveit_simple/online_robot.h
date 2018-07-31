@@ -20,6 +20,9 @@
 #ifndef ONLINE_ROBOT_H
 #define ONLINE_ROBOT_H
 
+#include <atomic>
+#include <thread>
+
 #include <actionlib/client/simple_action_client.h>
 #include <ros/ros.h>
 
@@ -75,53 +78,28 @@ public:
   void execute(std::vector<moveit_simple::JointTrajectoryPoint> &goal, bool collision_check = false);
 
   /**
-   * @brief Set the goal to execute a given trajectory
+   * @brief Starts execution for a given trajectory, non blocking
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
    * @param collision_check - bool to turn check for collision on\off
-   * @return Goal successfully set without errors
+   * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
+   * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
+   * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
+   * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
+   * in Collision with itself or environment)
    */
-  bool setExecuteGoal(const std::string &traj_name, bool collision_check = false);
+  void startExecution(const std::string &traj_name, bool collision_check = false);
 
   /**
-   * @brief Set the goal to execute a given trajectory
-   * @param traj_name - name of trajectory to be executed (must be filled with
-   * prior calls to "addTrajPoint".
-   * @param collision_check - bool to turn check for collision on\off
-   * @return Goal successfully set without errors
-   */
-  bool setExecuteGoal(const std::vector<moveit_simple::JointTrajectoryPoint> &goal_points, bool collision_check = false);
-
-  /**
-   * @brief Executes the given planned trajectory
-   * @return True if execution starts successfully
-   */
-  bool startExecution();
-
-  /**
-   * @brief Stops executing the given planned trajectory
-   */
-  void stopExecution();
-
-  /**
-   * @brief Checks if the given planned trajectory is in pending / active state
-   */
+  * @brief Checks if the non-blocking execute is still executing
+  * @return bool - true if it is, false if not
+  */
   bool isExecuting();
 
   /**
-   * @brief Checks if the given planned trajectory goal is in collision
-   */
-  bool isGoalInCollision();
-
-  /**
-   * @brief Checks if the given planned trajectory goal is stopped
-   */
-  bool isExecutionStopped();
-
-  /**
-   * @brief Gets the timeout for the given planned trajectory
-   */
-  bool getExecutionTimeout(ros::Duration &timeout);
+  * @brief Stops the non-blocking execution
+  */
+  void stopExecution();
 
   /**
   * @brief getJointState - Returns a vector<double> of the
@@ -132,6 +110,8 @@ public:
   virtual std::vector<double> getJointState(void) const;
 
 protected:
+  void executing(const ros::Time &timeout);
+
   void updateCurrentState(const sensor_msgs::JointStateConstPtr &msg);
 
 protected:
@@ -139,9 +119,7 @@ protected:
   moveit_visual_tools::MoveItVisualToolsPtr online_visual_tools_;
   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> action_;
   ros::Subscriber j_state_sub_;
-
-  control_msgs::FollowJointTrajectoryGoal execution_goal_;
-  bool execute_collision_check_ = false;
+  std::atomic<bool> is_timed_out_;
 };
 } // namespace moveit_simple
 #endif // ONLINE_ROBOT_H
