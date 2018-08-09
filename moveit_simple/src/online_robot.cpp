@@ -226,7 +226,8 @@ void OnlineRobot::stopExecution()
   while (action_state != actionlib::SimpleClientGoalState::RECALLED
          && action_state != actionlib::SimpleClientGoalState::PREEMPTED
          && action_state != actionlib::SimpleClientGoalState::ABORTED
-         && action_state != actionlib::SimpleClientGoalState::SUCCEEDED)
+         && action_state != actionlib::SimpleClientGoalState::SUCCEEDED
+         && action_state != actionlib::SimpleClientGoalState::REJECTED)
   {
     action_state = action_.getState();
   }
