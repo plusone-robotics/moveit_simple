@@ -127,7 +127,7 @@ void Robot::addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pos
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
+  auto moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name 
     << " relative to " << pose_frame << " at time " << time << " and custom_tool_frame ["
@@ -138,13 +138,11 @@ void Robot::addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pos
     ROS_INFO_STREAM("Transforming Pose to custom_tool_frame frame [" << tool_name
       << "] from moveit_end_link [" << moveit_tool_link << "]");
 
-    const Eigen::Affine3d target_pose_buffer =
-        transformPoseBetweenFrames(pose, moveit_tool_link, tool_name);
-
-    Eigen::Affine3d pose_rel_robot = transformToBase(target_pose_buffer, pose_frame);
-
-    geometry_msgs::Pose pose_buffer1;
-    tf::poseEigenToMsg(pose_rel_robot, pose_buffer1);
+    auto pose_rel_robot = this->transformToBase(pose, pose_frame);
+    auto custom_tool_to_moveit_tool = this->lookupTransformMoveitToolAndCustomTool(tool_name);
+    Eigen::Affine3d custom_tool_to_moveit_tool_eigen;
+    tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
+    pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
 
     std::unique_ptr<TrajectoryPoint> point =
         std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
@@ -496,6 +494,51 @@ bool Robot::isInCollision(const Eigen::Affine3d &pose,
   return this->isInCollision(pose, frame_to_robot_base, timeout, joints);  
 }
 
+bool Robot::isInCollision(const Eigen::Affine3d &pose,
+                          const geometry_msgs::TransformStamped &frame_to_robot_base,
+                          const geometry_msgs::TransformStamped &custom_tool_to_moveit_tool,
+                          const std::string &joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  // Note(gChiou): This is a weird case where we need to do some calculations in a different order from the rest
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
+  Eigen::Affine3d custom_tool_to_moveit_tool_eigen;
+  tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
+  pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
+
+  auto point = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+
+  if (point)
+  {
+    if (joint_seed.empty())
+    {
+      ROS_DEBUG_STREAM("Empty seed passed to collision check, using current state");
+      virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joints);
+    }
+
+    auto joint_traj_point = point->toJointTrajPoint(*this, timeout, joints);
+    if (joint_traj_point)
+    {
+      return this->isInCollision(joint_traj_point->jointPoint());
+    }
+  }
+
+  return true;
+}
+
 bool Robot::isInCollision(const std::vector<double> &joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -618,6 +661,38 @@ bool Robot::isReachable(const Eigen::Affine3d &pose,
   }
 
   return this->isReachable(pose, frame_to_robot_base, timeout, joints);
+}
+
+bool Robot::isReachable(const Eigen::Affine3d &pose,
+                        const geometry_msgs::TransformStamped &frame_to_robot_base,
+                        const geometry_msgs::TransformStamped &custom_tool_to_moveit_tool,
+                        const std::string &joint_seed,
+                        double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  // Note(gChiou): This is a weird case where we need to do some calculations in a different order from the rest
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
+  Eigen::Affine3d custom_tool_to_moveit_tool_eigen;
+  tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
+  pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
+
+  std::unique_ptr<TrajectoryPoint> point
+    = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+
+  return this->isReachable(point, timeout, joints);
 }
 
 bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
@@ -1261,6 +1336,31 @@ void Robot::updateRvizRobotState(const Eigen::Affine3d &pose,
   auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
   auto point = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
   auto update_rviz = point->toJointTrajPoint(*this, timeout, joint_seed);
+}
+
+geometry_msgs::TransformStamped Robot::lookupTransformMoveitToolAndCustomTool(const std::string tool_frame)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  auto moveit_tool = joint_group_->getSolverInstance()->getTipFrame();
+
+  return this->lookupTransformBetweenFrames(tool_frame, moveit_tool);
+}
+
+geometry_msgs::TransformStamped Robot::lookupTransformBetweenFrames(const std::string &target_frame,
+                                                                    const std::string &source_frame) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  try
+  {
+    auto transform = tf_buffer_.lookupTransform(target_frame, source_frame, ros::Time(0), ros::Duration(5.0));
+    return transform;
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR_STREAM("TF transform lookup between target frame: " << target_frame
+                     << " and source frame: " << source_frame << " failed");
+    throw ex;
+  }
 }
 
 geometry_msgs::TransformStamped Robot::lookupTransformToBase(const std::string &in_frame) const
