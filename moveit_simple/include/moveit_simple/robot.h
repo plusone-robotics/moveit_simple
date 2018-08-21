@@ -95,6 +95,21 @@ public:
     const std::string &joint_seed, double timeout = 10.0) const;
 
   /**
+   * @brief isInCollision  returns true if pose results in robot config that is
+   * in collision with the environment as defined by the URDF.
+   * @param pose - cartesian pose of the tool to check
+   * @param frame_to_robot_base - transform from frame of pose to robot base frame
+   * @param custom_tool_to_moveit_tool - transform from custom tool frame to moveit_tool frame
+   * @param joint_seed - named seed to use defined in srdf
+   * @param timeout - (optional) timeout for IK
+   * @return
+   */
+  bool isInCollision(const Eigen::Affine3d &pose,
+                     const geometry_msgs::TransformStamped &frame_to_robot_base,
+                     const geometry_msgs::TransformStamped &custom_tool_to_moveit_tool,
+                     const std::string &joint_seed, double timeout = 10.0) const;
+
+  /**
   * @brief isInCollision  returns true if joint_point results in robot config that is
   * in collision with the environment as defined by the URDF.
   * @param joint_point(optional) - joint position of the robot to check
@@ -160,6 +175,21 @@ public:
   bool isReachable(const Eigen::Affine3d &pose, 
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     const std::string &joint_seed, double timeout = 10.0) const;
+
+  /**
+  * @brief isReachable - check if pose (relative to named frame) is reacheable.
+  * @param pose - pose to check
+  * @param frame_to_robot_base - transform from frame of pose to robot base frame
+  * @param custom_tool_to_moveit_tool - transform from custom_tool frame to moveit_tool_frame
+  * @param timeout - (optional) timeout for IK
+  * @param joint_seed - seed to use
+  * @return
+  */
+  bool isReachable(const Eigen::Affine3d &pose,
+                   const geometry_msgs::TransformStamped &frame_to_robot_base,
+                   const geometry_msgs::TransformStamped &custom_tool_to_moveit_tool,
+                   const std::string &joint_seed,
+                   double timeout = 10.0) const;
 
   /**
    * @brief isReachable - check if pose (relative to named frame) is reacheable.
@@ -378,6 +408,10 @@ public:
     std::vector<double> joint_seed = std::vector<double>(),
     double timeout = 10.0) const;
 
+  geometry_msgs::TransformStamped lookupTransformMoveitToolAndCustomTool(const std::string tool_frame);
+
+  geometry_msgs::TransformStamped lookupTransformBetweenFrames(const std::string &target_frame,
+                                                               const std::string &source_frame) const;
 
   geometry_msgs::TransformStamped lookupTransformToBase(const std::string &in_frame) const;
 
