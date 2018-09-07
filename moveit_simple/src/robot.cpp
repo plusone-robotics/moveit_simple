@@ -25,9 +25,9 @@
 #include <ros/ros.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-
 #include <moveit_simple/exceptions.h>
 #include <moveit_simple/point_types.h>
+#include <moveit_simple/prettyprint.hpp>
 #include <moveit_simple/robot.h>
 
 namespace moveit_simple
