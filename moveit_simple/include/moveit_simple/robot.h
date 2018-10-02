@@ -69,6 +69,8 @@ public:
   */
   ~Robot();
 
+  void refreshRobot();
+
   /**
    * @brief isInCollision  returns true if pose results in robot config that is
    * in collision with the environment as defined by the URDF.
@@ -577,6 +579,9 @@ protected:
   std::string ik_tip_frame_;
   Eigen::Affine3d ik_tip_to_srdf_tip_;
   Eigen::Affine3d srdf_base_to_ik_base_;
+
+  std::string planning_group_;
+  std::string robot_description_;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H
