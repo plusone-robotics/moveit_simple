@@ -35,28 +35,10 @@ namespace moveit_simple
 Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
   const std::string &group_name) : tf_buffer_(), tf_listener_(tf_buffer_), 
   nh_(nh), params_(ros::NodeHandle("~/moveit_simple")), speed_modifier_(1.0), 
-  dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple"))
+  dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple")),
+  robot_description_(robot_description), planning_group_(group_name)
 {
-  ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description
-    << ", group name: " << group_name);
-
-  robot_model_loader_.reset(new robot_model_loader::RobotModelLoader(robot_description));
-  robot_model_ptr_ = robot_model_loader_->getModel();
-
-  virtual_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
-  virtual_robot_state_->setToDefaultValues();
-
-  planning_scene_.reset(new planning_scene::PlanningScene(robot_model_ptr_));
-
-  joint_group_ = robot_model_ptr_->getJointModelGroup(group_name);
-
-  ROS_INFO_STREAM("Calculating all positions assuming, root: " << robot_model_ptr_->getRootLinkName()
-    << ", and tool: " << robot_model_ptr_->getLinkModelNames());
-  ROS_INFO_STREAM("MoveIt object loaded");
-
-  virtual_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(robot_model_ptr_->getRootLinkName(),
-    nh_.getNamespace() + "/rviz_visual_tools", robot_model_ptr_));
-  virtual_visual_tools_->loadRobotStatePub(nh_.getNamespace() + "/display_robot_state");
+  this->refreshRobot();
 
   // Dynamic Reconfigure Parameters with rosparam_handler
   params_.fromParamServer();
@@ -97,6 +79,33 @@ Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
 }
 
 Robot::~Robot() { }
+
+void Robot::refreshRobot()
+{
+  ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description_
+    << ", group name: " << planning_group_);
+
+  std::lock_guard<std::recursive_mutex> guard(m_);
+  robot_model_loader_.reset(new robot_model_loader::RobotModelLoader(robot_description_));
+  robot_model_ptr_ = robot_model_loader_->getModel();
+
+  virtual_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
+  virtual_robot_state_->setToDefaultValues();
+
+  planning_scene_.reset(new planning_scene::PlanningScene(robot_model_ptr_));
+
+  joint_group_ = robot_model_ptr_->getJointModelGroup(planning_group_);
+
+  ROS_INFO_STREAM("Calculating all positions assuming, root: " << robot_model_ptr_->getRootLinkName()
+    << ", and tool: " << robot_model_ptr_->getLinkModelNames());
+  ROS_INFO_STREAM("MoveIt object loaded");
+
+  virtual_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(robot_model_ptr_->getRootLinkName(),
+    nh_.getNamespace() + "/rviz_visual_tools", robot_model_ptr_));
+  virtual_visual_tools_->loadRobotStatePub(nh_.getNamespace() + "/display_robot_state");
+  virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
+  virtual_visual_tools_->trigger();
+}
 
 void Robot::addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pose,
   const std::string &frame, double time, const InterpolationType &type,
