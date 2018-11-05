@@ -58,6 +58,8 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME} 
+  src/joint_lock_options.cpp
+  src/joint_locker.cpp
   src/online_robot.cpp
   src/point_types.cpp
   src/robot.cpp
@@ -70,6 +72,7 @@ add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_genparam)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
 if(CATKIN_ENABLE_TESTING)
+
   find_package(rostest REQUIRED)
 
   set(KUKA_KR210_SRC_FILES test/kuka_kr210_utest.cpp test/kuka_kr210.cpp)
@@ -79,6 +82,11 @@ if(CATKIN_ENABLE_TESTING)
   set(MOTOMAN_MH5_SRC_FILES test/motoman_mh5_utest.cpp test/motoman_mh5.cpp)
   add_rostest_gtest(motoman_mh5_utest test/launch/motoman_mh5_utest.launch ${MOTOMAN_MH5_SRC_FILES})
   target_link_libraries(motoman_mh5_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+  set(MOVEIT_SIMPLE_TEST_SRC_FILES test/moveit_simple_utest.cpp test/joint_locker.cpp test/joint_lock_options.cpp)
+  catkin_add_gtest(moveit_simple_utest ${MOVEIT_SIMPLE_TEST_SRC_FILES})
+  target_link_libraries(moveit_simple_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
 endif()
 
 install(TARGETS ${PROJECT_NAME}
