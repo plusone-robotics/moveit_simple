@@ -139,23 +139,92 @@ TEST(MoveitSimpleTest, joint_locker_lock_all)
   ASSERT_EQ(lock_all, lock_all_expected)  ;
 }
 
+TEST(MoveitSimpleTest, resolve_to_string_empty)
+{
+  auto str = JointLocker::resolveToString();
+  auto str_expected = std::string("LOCK_NONE");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_none)
+{
+  auto str = JointLocker::resolveToString();
+  auto str_expected = std::string("LOCK_NONE");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_single_j1)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_1);
+  auto str_expected = std::string("LOCK_JOINT_1");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_single_j2)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_2);
+  auto str_expected = std::string("LOCK_JOINT_2");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_single_j3)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_3);
+  auto str_expected = std::string("LOCK_JOINT_3");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_single_j4)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_4);
+  auto str_expected = std::string("LOCK_JOINT_4");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_single_j5)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_5);
+  auto str_expected = std::string("LOCK_JOINT_5");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_single_j6)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_6);
+  auto str_expected = std::string("LOCK_JOINT_6");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_double)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_1 | JointLockOptions::LOCK_JOINT_3);
+  auto str_expected = std::string("LOCK_JOINT_1, LOCK_JOINT_3");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_triple)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_1 | JointLockOptions::LOCK_JOINT_2 |
+                                          JointLockOptions::LOCK_JOINT_4);
+  auto str_expected = std::string("LOCK_JOINT_1, LOCK_JOINT_2, LOCK_JOINT_4");
+  ASSERT_EQ(str, str_expected);
+}
 
+TEST(MoveitSimpleTest, resolve_to_string_quad)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_1 | JointLockOptions::LOCK_JOINT_3 |
+                                          JointLockOptions::LOCK_JOINT_5 | JointLockOptions::LOCK_JOINT_6);
+  auto str_expected = std::string("LOCK_JOINT_1, LOCK_JOINT_3, LOCK_JOINT_5, LOCK_JOINT_6");
+  ASSERT_EQ(str, str_expected);
+}
 
-
-
-
-
-
-
-
+TEST(MoveitSimpleTest, resolve_to_string_all)
+{
+  auto str = JointLocker::resolveToString(JointLockOptions::LOCK_JOINT_1 | JointLockOptions::LOCK_JOINT_2 |
+                                          JointLockOptions::LOCK_JOINT_3 | JointLockOptions::LOCK_JOINT_4 |
+                                          JointLockOptions::LOCK_JOINT_5 | JointLockOptions::LOCK_JOINT_6);
+  auto str_expected = std::string("LOCK_JOINT_1, LOCK_JOINT_2, LOCK_JOINT_3, LOCK_JOINT_4, LOCK_JOINT_5, LOCK_JOINT_6");
+  ASSERT_EQ(str, str_expected);
+}
 
 } // namespace moveit_simple_test

@@ -54,4 +54,61 @@ void JointLocker::lockJoints(const std::vector<double> &prev_joints, std::vector
   }
 }
 
+std::string JointLocker::resolveToString(const JointLockOptions options)
+{
+  std::vector<std::string> locked_joints;
+
+  if ((options & JointLockOptions::LOCK_JOINT_1) != JointLockOptions::LOCK_NONE)
+  {
+    locked_joints.push_back("LOCK_JOINT_1");
+  }
+
+  if ((options & JointLockOptions::LOCK_JOINT_2) != JointLockOptions::LOCK_NONE)
+  {
+    locked_joints.push_back("LOCK_JOINT_2");
+  }
+
+  if ((options & JointLockOptions::LOCK_JOINT_3) != JointLockOptions::LOCK_NONE)
+  {
+    locked_joints.push_back("LOCK_JOINT_3");
+  }
+
+  if ((options & JointLockOptions::LOCK_JOINT_4) != JointLockOptions::LOCK_NONE)
+  {
+    locked_joints.push_back("LOCK_JOINT_4");
+  }
+
+  if ((options & JointLockOptions::LOCK_JOINT_5) != JointLockOptions::LOCK_NONE)
+  {
+    locked_joints.push_back("LOCK_JOINT_5");
+  }
+
+  if ((options & JointLockOptions::LOCK_JOINT_6) != JointLockOptions::LOCK_NONE)
+  {
+    locked_joints.push_back("LOCK_JOINT_6");
+  }
+
+  if (locked_joints.size() == 0)
+  {
+    return std::string("LOCK_NONE");
+  }
+  else
+  {
+    std::string locked_joints_str;
+    for (size_t i = 0; i < locked_joints.size(); ++i)
+    {
+      if (i == 0)
+      {
+        locked_joints_str += locked_joints[i];
+      }
+      else
+      {
+        locked_joints_str += ", " + locked_joints[i];
+      }
+    }
+
+    return locked_joints_str;
+  }
+}
+
 } // namespace moveit_simple

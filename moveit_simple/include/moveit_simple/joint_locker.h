@@ -20,6 +20,7 @@
 #define JOINT_LOCKER_H
 
 #include <moveit_simple/joint_lock_options.h>
+#include <string>
 #include <vector>
 
 namespace moveit_simple
@@ -29,6 +30,8 @@ struct JointLocker
 {
   static void lockJoints(const std::vector<double> &prev_joints, std::vector<double> &current_joints,
                          JointLockOptions options = JointLockOptions::LOCK_NONE);
+
+  static std::string resolveToString(const JointLockOptions options = JointLockOptions::LOCK_NONE);
 };
 
 
