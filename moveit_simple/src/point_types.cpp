@@ -25,6 +25,17 @@
 
 namespace moveit_simple
 {
+
+void TrajectoryPoint::setJointLockOptions(const JointLockOptions &options)
+{
+  joint_lock_options_ = options;
+}
+
+JointLockOptions TrajectoryPoint::getJointLockOptions()
+{
+  return joint_lock_options_;
+}
+
 std::unique_ptr<JointTrajectoryPoint> JointTrajectoryPoint::toJointTrajPoint(
   const Robot &robot, double timeout, const std::vector<double> &seed) const
 {
@@ -70,4 +81,5 @@ std::unique_ptr<CartTrajectoryPoint> CartTrajectoryPoint::toCartTrajPoint(const 
   ROS_DEBUG_STREAM("CartTrajectoryPoint: passing through cartesian trajectory point");
   return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(*this));
 }
+
 } // namespace moveit_simple

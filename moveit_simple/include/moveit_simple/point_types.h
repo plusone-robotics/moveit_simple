@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include <moveit_simple/joint_lock_options.h>
 #include <eigen3/Eigen/Geometry>
 
 namespace moveit_simple
@@ -71,6 +72,10 @@ public:
     return name_;
   }
 
+  void setJointLockOptions(const JointLockOptions &options);
+
+  JointLockOptions getJointLockOptions();
+
 protected:
   enum PointType
   {
@@ -94,6 +99,7 @@ protected:
   double t_;
   std::string name_;
   PointType type_;
+  JointLockOptions joint_lock_options_ = JointLockOptions::LOCK_NONE;
 };
 
 class JointTrajectoryPoint : public TrajectoryPoint
