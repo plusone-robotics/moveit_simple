@@ -787,14 +787,17 @@ TEST_F(UserRobotTest, stop_execution)
 
 TEST_F(DeveloperRobotTest, planning_locked_joints_no_interp_single)
 {
-  const std::string TRAJECTORY_NAME("planning_locked_traj_single");
+  const std::string TRAJECTORY_NAME("planning_locked_joints_no_interp_single");
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
   EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "home", 0.5, joint, 0));
   EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 0));
-  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "tf_pub1", 2.0, joint, 0, moveit_simple::JointLockOptions::LOCK_JOINT_2));
-  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint2", 3.0, joint, 0, moveit_simple::JointLockOptions::LOCK_JOINT_3));
-  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint3", 4.0, joint, 0, moveit_simple::JointLockOptions::LOCK_JOINT_4));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "tf_pub1", 2.0, joint, 0,
+                                                moveit_simple::JointLockOptions::LOCK_JOINT_2));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint2", 3.0, joint, 0,
+                                                moveit_simple::JointLockOptions::LOCK_JOINT_3));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint3", 4.0, joint, 0,
+                                                moveit_simple::JointLockOptions::LOCK_JOINT_4));
 
   auto planned_traj = robot2->plan(TRAJECTORY_NAME);
 
@@ -806,14 +809,18 @@ TEST_F(DeveloperRobotTest, planning_locked_joints_no_interp_single)
 
 TEST_F(DeveloperRobotTest, planning_locked_joints_no_interp_multi)
 {
-  const std::string TRAJECTORY_NAME("planning_locked_traj_multi");
+  const std::string TRAJECTORY_NAME("planning_locked_joints_no_interp_multi");
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
   EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "home", 0.5, joint, 0));
   EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 0));
-  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "tf_pub1", 2.0, joint, 0, moveit_simple::JointLockOptions::LOCK_JOINT_2 | moveit_simple::JointLockOptions::LOCK_JOINT_3));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "tf_pub1", 2.0, joint, 0,
+                                                moveit_simple::JointLockOptions::LOCK_JOINT_2 |
+                                                moveit_simple::JointLockOptions::LOCK_JOINT_3));
   EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint2", 3.0, joint, 0));
-  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint3", 4.0, joint, 0, moveit_simple::JointLockOptions::LOCK_JOINT_4 | moveit_simple::JointLockOptions::LOCK_JOINT_5));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint3", 4.0, joint, 0,
+                                                moveit_simple::JointLockOptions::LOCK_JOINT_4 |
+                                                moveit_simple::JointLockOptions::LOCK_JOINT_5));
 
   auto planned_traj = robot2->plan(TRAJECTORY_NAME);
 
@@ -822,6 +829,52 @@ TEST_F(DeveloperRobotTest, planning_locked_joints_no_interp_multi)
   ASSERT_EQ(planned_traj[3].jointPoint()[2], planned_traj[2].jointPoint()[2]);
   ASSERT_EQ(planned_traj[5].jointPoint()[3], planned_traj[4].jointPoint()[3]);
   ASSERT_EQ(planned_traj[5].jointPoint()[4], planned_traj[4].jointPoint()[4]);
+}
+
+TEST_F(DeveloperRobotTest, planning_locked_joints_interp_single)
+{
+  const std::string TRAJECTORY_NAME("planning_locked_joints_interp_single");
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+  auto interp_steps = 10;
+
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "home", 0.5, joint, 0));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 0));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "tf_pub1", 2.0, joint, 0));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint2", 3.0, joint, interp_steps,
+                                                         moveit_simple::JointLockOptions::LOCK_JOINT_4));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint3", 4.0, joint, 0));
+
+  auto planned_traj = robot2->plan(TRAJECTORY_NAME);
+
+  ASSERT_EQ(planned_traj.size(), 16);
+  for (auto i = 4; i < 15; ++i)
+  {
+    ASSERT_EQ(planned_traj[i].jointPoint()[3], planned_traj[i-1].jointPoint()[3]);
+  }
+}
+
+TEST_F(DeveloperRobotTest, planning_locked_joints_interp_multi)
+{
+  const std::string TRAJECTORY_NAME("planning_locked_joints_interp_multi");
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+  auto interp_steps = 10;
+
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "home", 0.5, joint, 0));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 0));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "tf_pub1", 2.0, joint, interp_steps,
+                                                         moveit_simple::JointLockOptions::LOCK_JOINT_2 |
+                                                         moveit_simple::JointLockOptions::LOCK_JOINT_3));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint2", 3.0, joint, 0));
+  EXPECT_NO_THROW(robot2->addTrajPointJointLock(TRAJECTORY_NAME, "waypoint3", 4.0, joint, 0));
+
+  auto planned_traj = robot2->plan(TRAJECTORY_NAME);
+
+  ASSERT_EQ(planned_traj.size(), 16);
+  for (auto i = 3; i < 14; ++i)
+  {
+    ASSERT_EQ(planned_traj[i].jointPoint()[1], planned_traj[i-1].jointPoint()[1]);
+    ASSERT_EQ(planned_traj[i].jointPoint()[2], planned_traj[i-1].jointPoint()[2]);
+  }
 }
 
 }
