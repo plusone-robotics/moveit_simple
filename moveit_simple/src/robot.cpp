@@ -26,6 +26,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <moveit_simple/exceptions.h>
+#include <moveit_simple/joint_locker.h>
 #include <moveit_simple/point_types.h>
 #include <moveit_simple/prettyprint.hpp>
 #include <moveit_simple/robot.h>
@@ -262,6 +263,67 @@ void Robot::addTrajPoint(const std::string &traj_name, std::unique_ptr<Trajector
   const InterpolationType &type, const unsigned int num_steps)
 {
   traj_info_map_[traj_name].push_back({std::move(point), type, num_steps});
+}
+
+void Robot::addTrajPointJointLock(const std::string &traj_name, const std::string &point_name,
+  double time, const InterpolationType &type, const unsigned int num_steps, JointLockOptions options)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " at time " << time);
+
+  try
+  {
+    std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
+    point->setJointLockOptions(options);
+    addTrajPoint(traj_name, point, type, num_steps);
+  }
+  catch (std::invalid_argument &ia)
+  {
+    ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
+    throw ia;
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
+    throw ex;
+  }
+}
+
+void Robot::addTrajPointJointLock(const std::string &traj_name, const Eigen::Affine3d pose,
+  const std::string &pose_frame, const std::string &tool_name, double time, const InterpolationType &type,
+  const unsigned int num_steps, const std::string &point_name, JointLockOptions options)
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  auto moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
+
+  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name
+    << " relative to " << pose_frame << " at time " << time << " and custom_tool_frame ["
+    << tool_name << "]");
+
+  try
+  {
+    ROS_INFO_STREAM("Transforming Pose to custom_tool_frame frame [" << tool_name
+      << "] from moveit_end_link [" << moveit_tool_link << "]");
+
+    auto pose_rel_robot = this->transformToBase(pose, pose_frame);
+    auto custom_tool_to_moveit_tool = this->lookupTransformMoveitToolAndCustomTool(tool_name);
+    Eigen::Affine3d custom_tool_to_moveit_tool_eigen;
+    tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
+    pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
+
+    std::unique_ptr<TrajectoryPoint> point =
+        std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name, options));
+
+    addTrajPoint(traj_name, point, type, num_steps);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point in Frame["
+      << tool_name << "]: "  << ex.what());
+    throw ex;
+  }
 }
 
 std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string &name,
@@ -797,6 +859,7 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string t
           toJointTrajectoryPoint(ROS_trajectory_points);
 
         ROS_INFO_STREAM("Successfully planned out trajectory: [" << traj_name << "]");
+
         return goal;
       }
       else
@@ -958,6 +1021,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
       return false;
     }
   }
+
   return true;
 }
 
@@ -1015,6 +1079,8 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_poin
   bool collision_check)
 {
   const double IK_TIMEOUT = 0.250;  // 250 ms for IK solving
+
+  auto options = traj_point->getJointLockOptions();
 
   // Create a local vector for storing interpolated points
   std::vector<trajectory_msgs::JointTrajectoryPoint> points_local;
@@ -1091,7 +1157,12 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_poin
       }
       else
       {
-        points_local.push_back(toJointTrajPtMsg(*new_point));
+        // Lock the joints
+        auto new_point_joints = new_point->jointPoint();
+        JointLocker::lockJoints(prev_point, new_point_joints, options);
+        auto locked_new_point = std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(new_point_joints, new_point->time(), ""));
+
+        points_local.push_back(toJointTrajPtMsg(*locked_new_point));
         points_added++;
         ROS_INFO_STREAM(points_added << " points among " << (num_steps + 1)
           << " successfully interpolated for " << traj_point->name());
