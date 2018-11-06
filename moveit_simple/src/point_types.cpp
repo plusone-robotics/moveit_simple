@@ -37,7 +37,7 @@ JointLockOptions TrajectoryPoint::getJointLockOptions()
 }
 
 std::unique_ptr<JointTrajectoryPoint> JointTrajectoryPoint::toJointTrajPoint(
-  const Robot &robot, double timeout, const std::vector<double> &seed) const
+  const Robot &robot, double timeout, const std::vector<double> &seed, JointLockOptions options) const
 {
   ROS_DEBUG_STREAM("JointTrajectoryPoint: passing through joint trajectory point");
   return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(*this));
@@ -60,14 +60,14 @@ std::unique_ptr<CartTrajectoryPoint> JointTrajectoryPoint::toCartTrajPoint(const
 }
 
 std::unique_ptr<JointTrajectoryPoint> CartTrajectoryPoint::toJointTrajPoint(
-  const Robot &robot, double timeout, const std::vector<double> &seed) const
+  const Robot &robot, double timeout, const std::vector<double> &seed, JointLockOptions options) const
 {
   std::vector<double> joints;
 
   ROS_DEBUG_STREAM("CartTrajectoryPoint: Calculating IK for joint trajectory point");
   if (robot.getJointSolution(pose_, timeout, seed, joints))
   {
-    return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(joints, time(), name()));
+    return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(joints, time(), name(), options));
   }
   else
   {
