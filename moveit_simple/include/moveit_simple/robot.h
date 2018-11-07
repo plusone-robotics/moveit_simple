@@ -222,11 +222,11 @@ public:
    * @param point_name - name of point to add
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
-   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * By default, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
-   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * By default, it is set to 0 and only adds the given point to the Trajectory
    * @throws <std::invalid_argument> (point_name is not found)
-   * @throws <tf2::TransformException> (transform of TF named point_name fails)
+   * @throws <tf2::TransformException> (transform if TF named point_name fails)
    */
   void addTrajPoint(const std::string &traj_name, const std::string &point_name,
     double time, const InterpolationType &type = interpolation_type::JOINT,
@@ -239,9 +239,9 @@ public:
    * @param frame - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
-   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * By default, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
-   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * By default, it is set to 0 and only adds the given point to the Trajectory
    * @param point_name - (optional) name of point (used in log messages)
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
@@ -257,11 +257,11 @@ public:
    * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
-   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * By default, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
-   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * By default, it is set to 0 and only adds the given point to the Trajectory
    * @throws <std::invalid_argument> (point_name is not found)
-   * @throws <tf2::TransformException> (transform of TF named point_name fails)
+   * @throws <tf2::TransformException> (transform if TF named point_name fails)
    */
   void addTrajPoint(const std::string &traj_name, const std::string &point_name,
     const std::string &tool_name, double time, const InterpolationType &type = interpolation_type::JOINT,
@@ -276,9 +276,9 @@ public:
    * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
-   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * By default, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
-   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * By default, it is set to 0 and only adds the given point to the Trajectory
    * @param point_name - (optional) name of point (used in log messages)
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
@@ -293,12 +293,12 @@ public:
    * @param point_name - name of point to add
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
-   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * By default, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
-   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * By default, it is set to 0 and only adds the given point to the Trajectory
    * @param options (optional) - Locks the joints when moving from the previous point
    * @throws <std::invalid_argument> (point_name is not found)
-   * @throws <tf2::TransformException> (transform of TF named point_name fails)
+   * @throws <tf2::TransformException> (transform if TF named point_name fails)
    */
   void addTrajPointJointLock(const std::string &traj_name, const std::string &point_name,
     double time, const InterpolationType &type = interpolation_type::JOINT,
@@ -313,9 +313,9 @@ public:
    * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @param time - time from start of trajectory to reach point
    * @param type - Type of interpolation from last point to this point
-   * By deafult, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
+   * By default, it is set to JOINT. Can be set to "CARTESIAN" for cartesian Interpolation
    * @param num_steps - number of points to be interpolated
-   * By deafult, it is set to 0 and only adds the given point to the Trajectory
+   * By default, it is set to 0 and only adds the given point to the Trajectory
    * @param point_name - (optional) name of point (used in log messages)
    * @param options - (optional) - Locks the joints when moving from the previous point
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
