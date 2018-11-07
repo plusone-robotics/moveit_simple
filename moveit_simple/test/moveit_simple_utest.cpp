@@ -1,7 +1,6 @@
 /*
  * Software License Agreement (Apache License)
  *
- * Copyright (c) 2016 Shaun Edwards
  * Copyright (c) 2018 Plus One Robotics
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +16,10 @@
  * limitations under the License.
  */
 
-#ifndef MOVEIT_SIMPLE_H
-#define MOVEIT_SIMPLE_H
+#include <gtest/gtest.h>
 
-#include <moveit_simple/exceptions.h>
-#include <moveit_simple/robot.h>
-#include <moveit_simple/online_robot.h>
-
-#endif // MOVEIT_SIMPLE_H
+int main(int argc, char **argv)
+{
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

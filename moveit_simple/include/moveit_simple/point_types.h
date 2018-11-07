@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include <moveit_simple/joint_lock_options.h>
 #include <eigen3/Eigen/Geometry>
 
 namespace moveit_simple
@@ -71,6 +72,10 @@ public:
     return name_;
   }
 
+  void setJointLockOptions(const JointLockOptions &options);
+
+  JointLockOptions getJointLockOptions();
+
 protected:
   enum PointType
   {
@@ -79,7 +84,8 @@ protected:
     CARTESIAN = 2
   };
 
-  TrajectoryPoint(std::string name, double t, PointType type) : name_(name), t_(t), type_(type) { }
+  TrajectoryPoint(std::string name, double t, PointType type, JointLockOptions options = JointLockOptions::LOCK_NONE)
+    : name_(name), t_(t), type_(type), joint_lock_options_(options) { }
 
   const PointType &type() const
   {
@@ -87,13 +93,14 @@ protected:
   }
 
   virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(const Robot &robot,
-    double timeout, const std::vector<double> &seed) const = 0;
+    double timeout, const std::vector<double> &seed, JointLockOptions options = JointLockOptions::LOCK_NONE) const = 0;
 
   virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(const Robot &robot) const = 0;
 
   double t_;
   std::string name_;
   PointType type_;
+  JointLockOptions joint_lock_options_ = JointLockOptions::LOCK_NONE;
 };
 
 class JointTrajectoryPoint : public TrajectoryPoint
@@ -103,8 +110,9 @@ public:
   
   virtual ~JointTrajectoryPoint() { }
 
-  JointTrajectoryPoint(std::vector<double> &joint_point, double t, std::string name = std::string())
-    : TrajectoryPoint(name, t, PointType::JOINT), joint_point_(joint_point) { }
+  JointTrajectoryPoint(std::vector<double> &joint_point, double t, std::string name = std::string(),
+                       JointLockOptions options = JointLockOptions::LOCK_NONE)
+                       : TrajectoryPoint(name, t, PointType::JOINT, options), joint_point_(joint_point) { }
 
   const std::vector<double> &jointPoint() const
   {
@@ -113,7 +121,7 @@ public:
 
 protected:
   virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(const Robot &robot,
-    double timeout, const std::vector<double> &seed) const;
+    double timeout, const std::vector<double> &seed, JointLockOptions options = JointLockOptions::LOCK_NONE) const;
 
   virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(const Robot &robot) const;
 
@@ -126,8 +134,9 @@ class CartTrajectoryPoint : public TrajectoryPoint
 public:
   CartTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::CARTESIAN) { }
 
-  CartTrajectoryPoint(const Eigen::Affine3d pose, const double t, std::string name = std::string())
-    : TrajectoryPoint(name, t, PointType::CARTESIAN), pose_(pose) { }
+  CartTrajectoryPoint(const Eigen::Affine3d pose, const double t, std::string name = std::string(),
+                      JointLockOptions options = JointLockOptions::LOCK_NONE)
+    : TrajectoryPoint(name, t, PointType::CARTESIAN, options), pose_(pose) { }
 
   virtual ~CartTrajectoryPoint() { }
 
@@ -138,7 +147,7 @@ public:
 
 protected:
   virtual std::unique_ptr<JointTrajectoryPoint> toJointTrajPoint(const Robot &robot,
-    double timeout, const std::vector<double> &seed) const;
+    double timeout, const std::vector<double> &seed, JointLockOptions options = JointLockOptions::LOCK_NONE) const;
 
   virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(const Robot &robot) const;
 

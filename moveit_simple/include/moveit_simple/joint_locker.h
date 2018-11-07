@@ -1,7 +1,6 @@
 /*
  * Software License Agreement (Apache License)
  *
- * Copyright (c) 2016 Shaun Edwards
  * Copyright (c) 2018 Plus One Robotics
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +16,25 @@
  * limitations under the License.
  */
 
-#ifndef MOVEIT_SIMPLE_H
-#define MOVEIT_SIMPLE_H
+#ifndef JOINT_LOCKER_H
+#define JOINT_LOCKER_H
 
-#include <moveit_simple/exceptions.h>
-#include <moveit_simple/robot.h>
-#include <moveit_simple/online_robot.h>
+#include <moveit_simple/joint_lock_options.h>
+#include <string>
+#include <vector>
 
-#endif // MOVEIT_SIMPLE_H
+namespace moveit_simple
+{
+
+struct JointLocker
+{
+  static void lockJoints(const std::vector<double> &prev_joints, std::vector<double> &current_joints,
+                         JointLockOptions options = JointLockOptions::LOCK_NONE);
+
+  static std::string resolveToString(const JointLockOptions options = JointLockOptions::LOCK_NONE);
+};
+
+
+} // namespace moveit_simple
+
+#endif // JOINT_LOCKER_H

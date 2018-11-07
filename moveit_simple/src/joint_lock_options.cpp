@@ -1,7 +1,6 @@
 /*
  * Software License Agreement (Apache License)
  *
- * Copyright (c) 2016 Shaun Edwards
  * Copyright (c) 2018 Plus One Robotics
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +16,19 @@
  * limitations under the License.
  */
 
-#ifndef MOVEIT_SIMPLE_H
-#define MOVEIT_SIMPLE_H
+#include <moveit_simple/joint_lock_options.h>
 
-#include <moveit_simple/exceptions.h>
-#include <moveit_simple/robot.h>
-#include <moveit_simple/online_robot.h>
+namespace moveit_simple
+{
 
-#endif // MOVEIT_SIMPLE_H
+JointLockOptions operator&(JointLockOptions lhs, JointLockOptions rhs)
+{
+  return static_cast<JointLockOptions>(static_cast<uchar_t>(lhs) & static_cast<uchar_t>(rhs));
+}
+
+JointLockOptions operator|(JointLockOptions lhs, JointLockOptions rhs)
+{
+  return static_cast<JointLockOptions>(static_cast<uchar_t>(lhs) | static_cast<uchar_t>(rhs));
+}
+
+} // namespace moveit_simple

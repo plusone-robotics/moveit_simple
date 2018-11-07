@@ -1,7 +1,6 @@
 /*
  * Software License Agreement (Apache License)
  *
- * Copyright (c) 2016 Shaun Edwards
  * Copyright (c) 2018 Plus One Robotics
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +16,30 @@
  * limitations under the License.
  */
 
-#ifndef MOVEIT_SIMPLE_H
-#define MOVEIT_SIMPLE_H
+#ifndef JOINT_LOCK_OPTIONS_H
+#define JOINT_LOCK_OPTIONS_H
 
-#include <moveit_simple/exceptions.h>
-#include <moveit_simple/robot.h>
-#include <moveit_simple/online_robot.h>
+namespace moveit_simple
+{
 
-#endif // MOVEIT_SIMPLE_H
+typedef unsigned char uchar_t;
+
+// Only supports robots with 6 joints.
+enum class JointLockOptions : uchar_t
+{
+  LOCK_NONE = 0x00,
+  LOCK_JOINT_1 = 1 << 0,
+  LOCK_JOINT_2 = 1 << 1,
+  LOCK_JOINT_3 = 1 << 2,
+  LOCK_JOINT_4 = 1 << 3,
+  LOCK_JOINT_5 = 1 << 4,
+  LOCK_JOINT_6 = 1 << 5,
+};
+
+JointLockOptions operator&(JointLockOptions lhs, JointLockOptions rhs);
+
+JointLockOptions operator|(JointLockOptions lhs, JointLockOptions rhs);
+
+} // namespace moveit_simple
+
+#endif // JOINT_LOCK_OPTIONS_H
