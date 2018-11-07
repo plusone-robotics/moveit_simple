@@ -24,6 +24,7 @@ namespace moveit_simple
 
 typedef unsigned char uchar_t;
 
+// Only supports robots with 6 joints.
 enum class JointLockOptions : uchar_t
 {
   LOCK_NONE = 0x00,
