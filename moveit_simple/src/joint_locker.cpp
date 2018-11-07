@@ -23,11 +23,11 @@ namespace moveit_simple
 
 void JointLocker::lockJoints(const std::vector<double> &prev_joints, std::vector<double> &current_joints, JointLockOptions options)
 {
-  for (auto i = 1UL; i < sizeof(JointLockOptions); i++)
+  for (auto i = 0UL; i < sizeof(JointLockOptions); i++)
   {
     if ((static_cast<uchar_t>(options) & (1 << i)) != 0)
     {
-      current_joints[i - 1] = prev_joints[i - 1];
+      current_joints[i] = prev_joints[i];
     }
   }
 }
@@ -37,11 +37,11 @@ std::string JointLocker::resolveToString(const JointLockOptions options)
   std::string result;
   const std::string prefix = "LOCK_JOINT_";
 
-  for (auto i = 1UL; i < sizeof(options); i++)
+  for (auto i = 0UL; i < sizeof(options); i++)
   {
     if ((static_cast<uchar_t>(options) & (1 << i)) != 0)
     {
-      auto joint_string = prefix + std::to_string(i);
+      auto joint_string = prefix + std::to_string(i + 1);
       if (!result.empty())
       {
         result += ", ";
