@@ -33,17 +33,22 @@
 
 namespace moveit_simple
 {
-Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
-  const std::string &group_name) : tf_buffer_(), tf_listener_(tf_buffer_), 
-  nh_(nh), params_(ros::NodeHandle("~/moveit_simple")), speed_modifier_(1.0), 
-  dynamic_reconfig_server_(ros::NodeHandle("~/moveit_simple")),
-  robot_description_(robot_description), planning_group_(group_name)
+Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, const std::string& group_name)
+  : tf_buffer_()
+  , tf_listener_(tf_buffer_)
+  , nh_(nh)
+  , speed_modifier_(1.0)
+  , params_(ros::NodeHandle("~/moveit_simple"))
+  , planning_group_(group_name)
+  , robot_description_(robot_description)
 {
   this->refreshRobot();
 
   // Dynamic Reconfigure Parameters with rosparam_handler
+  dynamic_reconfig_server_ = std::make_shared<dynamic_reconfigure::Server<moveit_simple_dynamic_reconfigure_Config>>(
+      ros::NodeHandle("~/moveit_simple"));
   params_.fromParamServer();
-  dynamic_reconfig_server_.setCallback(boost::bind(&Robot::reconfigureRequest, this, _1, _2));
+  dynamic_reconfig_server_->setCallback(boost::bind(&Robot::reconfigureRequest, this, _1, _2));
 
   try
   {
@@ -51,18 +56,18 @@ Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
     ik_tip_frame_ = joint_group_->getSolverInstance()->getTipFrame();
     this->computeIKSolverTransforms();
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
-      << " in the SRDF and the base/tip frames defined for the IK solver");
+                     << " in the SRDF and the base/tip frames defined for the IK solver");
     throw IKSolverTransformException("Failed to compute transforms between the base/tip"
-      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
+                                     " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
 }
 
-Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
-  const std::string &group_name, const std::string &ik_base_frame, 
-  const std::string &ik_tip_frame) : Robot(nh, robot_description, group_name)
+Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, const std::string& group_name,
+             const std::string& ik_base_frame, const std::string& ik_tip_frame)
+  : Robot(nh, robot_description, group_name)
 {
   try
   {
@@ -70,21 +75,23 @@ Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
     ik_tip_frame_ = ik_tip_frame;
     this->computeIKSolverTransforms();
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_ERROR_STREAM("Failed to compute transforms between the base/tip frames defined"
-      << " in the SRDF and the base/tip frames defined for the IK solver");
+                     << " in the SRDF and the base/tip frames defined for the IK solver");
     throw IKSolverTransformException("Failed to compute transforms between the base/tip"
-      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
+                                     " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
 }
 
-Robot::~Robot() { }
+Robot::~Robot()
+{
+}
 
 void Robot::refreshRobot()
 {
   ROS_INFO_STREAM("Loading MoveIt objects based on, robot description: " << robot_description_
-    << ", group name: " << planning_group_);
+                                                                         << ", group name: " << planning_group_);
 
   std::lock_guard<std::recursive_mutex> guard(m_);
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader(robot_description_));
@@ -97,25 +104,25 @@ void Robot::refreshRobot()
 
   joint_group_ = robot_model_ptr_->getJointModelGroup(planning_group_);
 
-  ROS_INFO_STREAM("Calculating all positions assuming, root: " << robot_model_ptr_->getRootLinkName()
-    << ", and tool: " << robot_model_ptr_->getLinkModelNames());
+  ROS_INFO_STREAM("Calculating all positions assuming, root: " << robot_model_ptr_->getRootLinkName() << ", and tool: "
+                                                               << robot_model_ptr_->getLinkModelNames());
   ROS_INFO_STREAM("MoveIt object loaded");
 
-  virtual_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(robot_model_ptr_->getRootLinkName(),
-    nh_.getNamespace() + "/rviz_visual_tools", robot_model_ptr_));
+  virtual_visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools(
+      robot_model_ptr_->getRootLinkName(), nh_.getNamespace() + "/rviz_visual_tools", robot_model_ptr_));
   virtual_visual_tools_->loadRobotStatePub(nh_.getNamespace() + "/display_robot_state");
   virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
   virtual_visual_tools_->trigger();
 }
 
-void Robot::addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pose,
-  const std::string &frame, double time, const InterpolationType &type,
-  const unsigned int num_steps, const std::string &point_name)
+void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pose, const std::string& frame,
+                         double time, const InterpolationType& type, const unsigned int num_steps,
+                         const std::string& point_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name 
-    << "relative to" << frame << " at time " << time);
+  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << "relative to" << frame << " at time "
+                                       << time);
 
   try
   {
@@ -124,29 +131,28 @@ void Robot::addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pos
         std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
     addTrajPoint(traj_name, point, type, num_steps);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_ERROR_STREAM("Add to trajectory failed for arbitrary pose point: " << ex.what());
     throw ex;
   }
 }
 
-void Robot::addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pose,
-  const std::string &pose_frame, const std::string &tool_name, double time,
-  const InterpolationType &type, const unsigned int num_steps, const std::string &point_name)
+void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pose, const std::string& pose_frame,
+                         const std::string& tool_name, double time, const InterpolationType& type,
+                         const unsigned int num_steps, const std::string& point_name)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   auto moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
-  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name 
-    << " relative to " << pose_frame << " at time " << time << " and custom_tool_frame ["
-    << tool_name << "]");
+  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " relative to " << pose_frame
+                                       << " at time " << time << " and custom_tool_frame [" << tool_name << "]");
 
   try
   {
-    ROS_INFO_STREAM("Transforming Pose to custom_tool_frame frame [" << tool_name
-      << "] from moveit_end_link [" << moveit_tool_link << "]");
+    ROS_INFO_STREAM("Transforming Pose to custom_tool_frame frame [" << tool_name << "] from moveit_end_link ["
+                                                                     << moveit_tool_link << "]");
 
     auto pose_rel_robot = this->transformToBase(pose, pose_frame);
     auto custom_tool_to_moveit_tool = this->lookupTransformMoveitToolAndCustomTool(tool_name);
@@ -159,16 +165,15 @@ void Robot::addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pos
 
     addTrajPoint(traj_name, point, type, num_steps);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
-    ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point in Frame[" 
-      << tool_name << "]: "  << ex.what());
+    ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point in Frame[" << tool_name << "]: " << ex.what());
     throw ex;
   }
 }
 
-void Robot::addTrajPoint(const std::string &traj_name, const std::string &point_name,
-  double time, const InterpolationType &type, const unsigned int num_steps)
+void Robot::addTrajPoint(const std::string& traj_name, const std::string& point_name, double time,
+                         const InterpolationType& type, const unsigned int num_steps)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -179,26 +184,25 @@ void Robot::addTrajPoint(const std::string &traj_name, const std::string &point_
     std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
     addTrajPoint(traj_name, point, type, num_steps);
   }
-  catch (std::invalid_argument &ia)
+  catch (std::invalid_argument& ia)
   {
     ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
     throw ia;
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
     throw ex;
   }
 }
 
-void Robot::addTrajPoint(const std::string &traj_name, const std::string &point_name,
-  const std::string &tool_name, double time, const InterpolationType &type,
-  const unsigned int num_steps)
+void Robot::addTrajPoint(const std::string& traj_name, const std::string& point_name, const std::string& tool_name,
+                         double time, const InterpolationType& type, const unsigned int num_steps)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name 
-    << " at time " << time << " and custom_tool_frame [" << tool_name << "]");
+  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " at time " << time
+                                       << " and custom_tool_frame [" << tool_name << "]");
 
   // Check to see if the point under consideration is a Joint point/state
   if (virtual_robot_state_->setToDefaultValues(joint_group_, point_name))
@@ -210,12 +214,12 @@ void Robot::addTrajPoint(const std::string &traj_name, const std::string &point_
       std::unique_ptr<TrajectoryPoint> point = lookupTrajectoryPoint(point_name, time);
       addTrajPoint(traj_name, point, type, num_steps);
     }
-    catch (std::invalid_argument &ia)
+    catch (std::invalid_argument& ia)
     {
       ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
       throw ia;
     }
-    catch (tf2::TransformException &ex)
+    catch (tf2::TransformException& ex)
     {
       ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
       throw ex;
@@ -246,12 +250,12 @@ void Robot::addTrajPoint(const std::string &traj_name, const std::string &point_
 
       addTrajPoint(traj_name, pose_eigen, point_name, tool_name, time, type, num_steps, point_name);
     }
-    catch (std::invalid_argument &ia)
+    catch (std::invalid_argument& ia)
     {
       ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
       throw ia;
     }
-    catch (tf2::TransformException &ex)
+    catch (tf2::TransformException& ex)
     {
       ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
       throw ex;
@@ -259,14 +263,14 @@ void Robot::addTrajPoint(const std::string &traj_name, const std::string &point_
   }
 }
 
-void Robot::addTrajPoint(const std::string &traj_name, std::unique_ptr<TrajectoryPoint> &point,
-  const InterpolationType &type, const unsigned int num_steps)
+void Robot::addTrajPoint(const std::string& traj_name, std::unique_ptr<TrajectoryPoint>& point,
+                         const InterpolationType& type, const unsigned int num_steps)
 {
-  traj_info_map_[traj_name].push_back({std::move(point), type, num_steps});
+  traj_info_map_[traj_name].push_back({ std::move(point), type, num_steps });
 }
 
-void Robot::addTrajPointJointLock(const std::string &traj_name, const std::string &point_name,
-  double time, const InterpolationType &type, const unsigned int num_steps, JointLockOptions options)
+void Robot::addTrajPointJointLock(const std::string& traj_name, const std::string& point_name, double time,
+                                  const InterpolationType& type, const unsigned int num_steps, JointLockOptions options)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -278,34 +282,34 @@ void Robot::addTrajPointJointLock(const std::string &traj_name, const std::strin
     point->setJointLockOptions(options);
     addTrajPoint(traj_name, point, type, num_steps);
   }
-  catch (std::invalid_argument &ia)
+  catch (std::invalid_argument& ia)
   {
     ROS_ERROR_STREAM("Invalid point " << point_name << " to add to " << traj_name);
     throw ia;
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_ERROR_STREAM(" TF transform failed for " << point_name << " to add to " << traj_name);
     throw ex;
   }
 }
 
-void Robot::addTrajPointJointLock(const std::string &traj_name, const Eigen::Affine3d pose,
-  const std::string &pose_frame, const std::string &tool_name, double time, const InterpolationType &type,
-  const unsigned int num_steps, const std::string &point_name, JointLockOptions options)
+void Robot::addTrajPointJointLock(const std::string& traj_name, const Eigen::Affine3d pose,
+                                  const std::string& pose_frame, const std::string& tool_name, double time,
+                                  const InterpolationType& type, const unsigned int num_steps,
+                                  const std::string& point_name, JointLockOptions options)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   auto moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
-  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name
-    << " relative to " << pose_frame << " at time " << time << " and custom_tool_frame ["
-    << tool_name << "]");
+  ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " relative to " << pose_frame
+                                       << " at time " << time << " and custom_tool_frame [" << tool_name << "]");
 
   try
   {
-    ROS_INFO_STREAM("Transforming Pose to custom_tool_frame frame [" << tool_name
-      << "] from moveit_end_link [" << moveit_tool_link << "]");
+    ROS_INFO_STREAM("Transforming Pose to custom_tool_frame frame [" << tool_name << "] from moveit_end_link ["
+                                                                     << moveit_tool_link << "]");
 
     auto pose_rel_robot = this->transformToBase(pose, pose_frame);
     auto custom_tool_to_moveit_tool = this->lookupTransformMoveitToolAndCustomTool(tool_name);
@@ -318,16 +322,14 @@ void Robot::addTrajPointJointLock(const std::string &traj_name, const Eigen::Aff
 
     addTrajPoint(traj_name, point, type, num_steps);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
-    ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point in Frame["
-      << tool_name << "]: "  << ex.what());
+    ROS_WARN_STREAM("Add to trajectory failed for arbitrary pose point in Frame[" << tool_name << "]: " << ex.what());
     throw ex;
   }
 }
 
-std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string &name,
-  double time) const
+std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string& name, double time) const
 {
   ROS_INFO_STREAM("Looking up trajectory point: " << name);
 
@@ -348,8 +350,7 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
     Eigen::Affine3d ik_base_to_ik_tip = virtual_robot_state_->getFrameTransform(name);
     Eigen::Affine3d pose = srdf_base_to_ik_base_ * ik_base_to_ik_tip;
 
-    ROS_INFO_STREAM("Getting urdf/robot_state target: " << name << " frame: " 
-      << std::endl << pose.matrix());
+    ROS_INFO_STREAM("Getting urdf/robot_state target: " << name << " frame: " << std::endl << pose.matrix());
 
     return std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose, time, name));
   }
@@ -361,16 +362,14 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
 
       geometry_msgs::TransformStamped trans_msg;
       Eigen::Affine3d pose;
-      trans_msg = tf_buffer_.lookupTransform(ik_base_frame_, 
-        name, ros::Time::now(), ros::Duration(5.0));
+      trans_msg = tf_buffer_.lookupTransform(ik_base_frame_, name, ros::Time::now(), ros::Duration(5.0));
       tf::transformMsgToEigen(trans_msg.transform, pose);
 
-      ROS_INFO_STREAM("Using TF to lookup transform " << name << " frame: " 
-        << std::endl << pose.matrix());
+      ROS_INFO_STREAM("Using TF to lookup transform " << name << " frame: " << std::endl << pose.matrix());
 
       return std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose, time, name));
     }
-    catch (tf2::TransformException &ex)
+    catch (tf2::TransformException& ex)
     {
       ROS_ERROR_STREAM("TF transform lookup failed: " << ex.what());
       throw ex;
@@ -383,8 +382,8 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
   }
 }
 
-bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
-  const std::vector<double> &seed, std::vector<double> &joint_point) const
+bool Robot::getJointSolution(const Eigen::Affine3d& pose, double timeout, const std::vector<double>& seed,
+                             std::vector<double>& joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -398,8 +397,8 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, double timeout,
   return getIK(pose, local_seed, joint_point, timeout);
 }
 
-bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string &tool_name,
-  double timeout, const std::vector<double> &seed, std::vector<double> &joint_point) const
+bool Robot::getJointSolution(const Eigen::Affine3d& pose, const std::string& tool_name, double timeout,
+                             const std::vector<double>& seed, std::vector<double>& joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -408,12 +407,11 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string &too
 
   try
   {
-    ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" << tool_name
-      << "] to moveit_end_link [" << moveit_tool_link << "] before performing IK");
+    ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" << tool_name << "] to moveit_end_link ["
+                                                                       << moveit_tool_link << "] before performing IK");
 
     // Transform Target/Goal Point from custom tool frame to moveit_end_link
-    const Eigen::Affine3d custom_frame_goal_pose = transformPoseBetweenFrames(pose, 
-      tool_name, moveit_tool_link);
+    const Eigen::Affine3d custom_frame_goal_pose = transformPoseBetweenFrames(pose, tool_name, moveit_tool_link);
 
     std::vector<double> local_seed = seed;
     if (seed.empty())
@@ -424,10 +422,9 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string &too
 
     get_joints = getIK(custom_frame_goal_pose, local_seed, joint_point, timeout);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
-    ROS_WARN_STREAM("getJointSolution failed for arbitrary pose in Frame[" 
-      << tool_name << "]: " << ex.what());
+    ROS_WARN_STREAM("getJointSolution failed for arbitrary pose in Frame[" << tool_name << "]: " << ex.what());
 
     get_joints = false;
   }
@@ -435,23 +432,22 @@ bool Robot::getJointSolution(const Eigen::Affine3d &pose, const std::string &too
   return get_joints;
 }
 
-Eigen::Affine3d Robot::transformPoseBetweenFrames(const Eigen::Affine3d &target_pose,
-  const std::string &frame_in, const std::string &frame_out) const
+Eigen::Affine3d Robot::transformPoseBetweenFrames(const Eigen::Affine3d& target_pose, const std::string& frame_in,
+                                                  const std::string& frame_out) const
 {
-  if (frame_in.compare(frame_out) == 0 && robot_model_ptr_->hasLinkModel(frame_in) 
-    && robot_model_ptr_->hasLinkModel(frame_out))
+  if (frame_in.compare(frame_out) == 0 && robot_model_ptr_->hasLinkModel(frame_in) &&
+      robot_model_ptr_->hasLinkModel(frame_out))
   {
-    ROS_INFO_STREAM("Returning same target_pose as input_frame [" << frame_in
-      << "] and target_frame [" << frame_out << "] both exist in Robot Model"
-      << " and are equal");
+    ROS_INFO_STREAM("Returning same target_pose as input_frame [" << frame_in << "] and target_frame [" << frame_out
+                                                                  << "] both exist in Robot Model"
+                                                                  << " and are equal");
 
     return target_pose;
   }
 
   try
   {
-    ROS_INFO_STREAM("Looked up tf named frame: " << frame_in 
-      << " because it doesn't exist in Robot Model");
+    ROS_INFO_STREAM("Looked up tf named frame: " << frame_in << " because it doesn't exist in Robot Model");
 
     geometry_msgs::PoseStamped pose_stamped_buffer;
     geometry_msgs::PoseStamped transformed_pose;
@@ -467,27 +463,25 @@ Eigen::Affine3d Robot::transformPoseBetweenFrames(const Eigen::Affine3d &target_
 
     tf::poseMsgToEigen(transformed_pose.pose, target_pose_buffer);
 
-    ROS_INFO_STREAM("Using TF to lookup transform " << frame_out << " frame: " 
-      << std::endl << target_pose_buffer.matrix());
+    ROS_INFO_STREAM("Using TF to lookup transform " << frame_out << " frame: " << std::endl
+                                                    << target_pose_buffer.matrix());
 
     return target_pose_buffer;
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
-    ROS_ERROR_STREAM("TF transform lookup failed from: " << frame_in << " into " 
-      << frame_out << "::" << ex.what());
+    ROS_ERROR_STREAM("TF transform lookup failed from: " << frame_in << " into " << frame_out << "::" << ex.what());
     throw ex;
   }
 }
 
-bool Robot::getPose(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const
+bool Robot::getPose(const std::vector<double>& joint_point, Eigen::Affine3d& pose) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
   return getFK(joint_point, pose);
 }
 
-bool Robot::getPose(const std::vector<double> &joint_point, const std::string &tool_name,
-  Eigen::Affine3d &pose) const
+bool Robot::getPose(const std::vector<double>& joint_point, const std::string& tool_name, Eigen::Affine3d& pose) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -499,18 +493,17 @@ bool Robot::getPose(const std::vector<double> &joint_point, const std::string &t
   {
     try
     {
-      ROS_INFO_STREAM("Transforming Pose from moveit_end_link frame [" << moveit_tool_link
-        << "] to custom_tool_frame [" << tool_name << "]");
+      ROS_INFO_STREAM("Transforming Pose from moveit_end_link frame [" << moveit_tool_link << "] to custom_tool_frame ["
+                                                                       << tool_name << "]");
 
       // Transform Target/Goal Point from moveit_end_link to custom tool frame
       pose = transformPoseBetweenFrames(pose_buffer, moveit_tool_link, tool_name);
 
       get_pose = true;
     }
-    catch (tf2::TransformException &ex)
+    catch (tf2::TransformException& ex)
     {
-      ROS_WARN_STREAM("getPose failed for arbitrary Joint Point in Frame[" 
-        << tool_name << "]: " << ex.what());
+      ROS_WARN_STREAM("getPose failed for arbitrary Joint Point in Frame[" << tool_name << "]: " << ex.what());
 
       get_pose = false;
     }
@@ -524,29 +517,8 @@ bool Robot::getPose(const std::vector<double> &joint_point, const std::string &t
   return get_pose;
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
-  const std::string &joint_seed, double timeout) const
-{
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
-  std::map<std::string, double> m;
-  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
-  {
-    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
-  }
-
-  std::vector<double> joints;
-  for (auto it = m.begin(); it != m.end(); ++it)
-  {
-    joints.push_back(it->second);
-  } 
-  
-  return this->isInCollision(pose, frame, timeout, joints); 
-}
-
-bool Robot::isInCollision(const Eigen::Affine3d &pose, 
-  const geometry_msgs::TransformStamped &frame_to_robot_base,
-  const std::string &joint_seed, double timeout) const
+bool Robot::isInCollision(const Eigen::Affine3d& pose, const std::string& frame, const std::string& joint_seed,
+                          double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -562,13 +534,32 @@ bool Robot::isInCollision(const Eigen::Affine3d &pose,
     joints.push_back(it->second);
   }
 
-  return this->isInCollision(pose, frame_to_robot_base, timeout, joints);  
+  return this->isInCollision(pose, frame, timeout, joints);
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d &pose,
-                          const geometry_msgs::TransformStamped &frame_to_robot_base,
-                          const geometry_msgs::TransformStamped &custom_tool_to_moveit_tool,
-                          const std::string &joint_seed, double timeout) const
+bool Robot::isInCollision(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+                          const std::string& joint_seed, double timeout) const
+{
+  std::lock_guard<std::recursive_mutex> guard(m_);
+
+  std::map<std::string, double> m;
+  if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
+  {
+    throw JointSeedException(joint_seed + " is not a named state defined in the SRDF / URDF");
+  }
+
+  std::vector<double> joints;
+  for (auto it = m.begin(); it != m.end(); ++it)
+  {
+    joints.push_back(it->second);
+  }
+
+  return this->isInCollision(pose, frame_to_robot_base, timeout, joints);
+}
+
+bool Robot::isInCollision(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+                          const geometry_msgs::TransformStamped& custom_tool_to_moveit_tool,
+                          const std::string& joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -610,7 +601,7 @@ bool Robot::isInCollision(const Eigen::Affine3d &pose,
   return true;
 }
 
-bool Robot::isInCollision(const std::vector<double> &joint_point) const
+bool Robot::isInCollision(const std::vector<double>& joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -628,8 +619,8 @@ bool Robot::isInCollision(const std::vector<double> &joint_point) const
   return inCollision;
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
-  double timeout, std::vector<double> joint_seed) const
+bool Robot::isInCollision(const Eigen::Affine3d& pose, const std::string& frame, double timeout,
+                          std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -639,7 +630,7 @@ bool Robot::isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
     auto pose_rel_robot = this->lookupTransformToBase(frame);
     inCollision = isInCollision(pose, pose_rel_robot, timeout, joint_seed);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_WARN_STREAM("IsInCollision failed for arbitrary pose point: " << ex.what());
     inCollision = true;
@@ -648,9 +639,8 @@ bool Robot::isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
   return inCollision;
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d &pose, 
-  const geometry_msgs::TransformStamped &frame_to_robot_base,
-  double timeout, std::vector<double> joint_seed) const
+bool Robot::isInCollision(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+                          double timeout, std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -663,8 +653,8 @@ bool Robot::isInCollision(const Eigen::Affine3d &pose,
     {
       ROS_DEBUG_STREAM("Empty seed passed to collision check, using current state");
       virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_seed);
-    }    
-    
+    }
+
     auto joint_traj_point = point->toJointTrajPoint(*this, timeout, joint_seed);
     if (joint_traj_point)
     {
@@ -675,8 +665,7 @@ bool Robot::isInCollision(const Eigen::Affine3d &pose,
   return true;
 }
 
-bool Robot::isReachable(const std::string &name, double timeout,
-  std::vector<double> joint_seed) const
+bool Robot::isReachable(const std::string& name, double timeout, std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -693,8 +682,8 @@ bool Robot::isReachable(const std::string &name, double timeout,
   }
 }
 
-bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
-  const std::string &joint_seed, double timeout) const
+bool Robot::isReachable(const Eigen::Affine3d& pose, const std::string& frame, const std::string& joint_seed,
+                        double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -713,12 +702,11 @@ bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
   return this->isReachable(pose, frame, timeout, joints);
 }
 
-bool Robot::isReachable(const Eigen::Affine3d &pose,
-  const geometry_msgs::TransformStamped &frame_to_robot_base,
-  const std::string &joint_seed, double timeout) const
+bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+                        const std::string& joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
-  
+
   std::map<std::string, double> m;
   if (!joint_group_->getVariableDefaultPositions(joint_seed, m))
   {
@@ -734,11 +722,9 @@ bool Robot::isReachable(const Eigen::Affine3d &pose,
   return this->isReachable(pose, frame_to_robot_base, timeout, joints);
 }
 
-bool Robot::isReachable(const Eigen::Affine3d &pose,
-                        const geometry_msgs::TransformStamped &frame_to_robot_base,
-                        const geometry_msgs::TransformStamped &custom_tool_to_moveit_tool,
-                        const std::string &joint_seed,
-                        double timeout) const
+bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+                        const geometry_msgs::TransformStamped& custom_tool_to_moveit_tool,
+                        const std::string& joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -760,14 +746,14 @@ bool Robot::isReachable(const Eigen::Affine3d &pose,
   tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
   pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
 
-  std::unique_ptr<TrajectoryPoint> point
-    = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+  std::unique_ptr<TrajectoryPoint> point =
+      std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
 
   return this->isReachable(point, timeout, joints);
 }
 
-bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
-  double timeout, std::vector<double> joint_seed) const
+bool Robot::isReachable(const Eigen::Affine3d& pose, const std::string& frame, double timeout,
+                        std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -777,7 +763,7 @@ bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
     auto frame_rel_robot = this->lookupTransformToBase(frame);
     reachable = isReachable(pose, frame_rel_robot, timeout, joint_seed);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_WARN_STREAM("Reacheability failed for arbitrary pose point: " << ex.what());
     reachable = false;
@@ -786,22 +772,20 @@ bool Robot::isReachable(const Eigen::Affine3d &pose, const std::string &frame,
   return reachable;
 }
 
-bool Robot::isReachable(const Eigen::Affine3d &pose,
-  const geometry_msgs::TransformStamped &frame_to_robot_base,
-  double timeout, std::vector<double> joint_seed) const
+bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+                        double timeout, std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
 
-  std::unique_ptr<TrajectoryPoint> point 
-    = std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
+  std::unique_ptr<TrajectoryPoint> point =
+      std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, 0.0));
 
   return this->isReachable(point, timeout, joint_seed);
 }
 
-bool Robot::isReachable(std::unique_ptr<TrajectoryPoint> &point, double timeout,
-  std::vector<double> joint_seed) const
+bool Robot::isReachable(std::unique_ptr<TrajectoryPoint>& point, double timeout, std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -836,8 +820,7 @@ void Robot::clearTrajectory(const ::std::string traj_name)
   traj_info_map_.erase(traj_name);
 }
 
-std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string traj_name,
-  bool collision_check)
+std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string traj_name, bool collision_check)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -855,8 +838,7 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string t
           ROS_trajectory_points[i].time_from_start *= (1.0 / speed_modifier_);
         }
 
-        std::vector<moveit_simple::JointTrajectoryPoint> goal =
-          toJointTrajectoryPoint(ROS_trajectory_points);
+        std::vector<moveit_simple::JointTrajectoryPoint> goal = toJointTrajectoryPoint(ROS_trajectory_points);
 
         ROS_INFO_STREAM("Successfully planned out trajectory: [" << traj_name << "]");
 
@@ -868,7 +850,7 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string t
         throw IKFailException("Conversion to joint trajectory failed for " + traj_name);
       }
     }
-    catch (CollisionDetected &cd)
+    catch (CollisionDetected& cd)
     {
       ROS_ERROR_STREAM("Collision detected in [" << traj_name << "]");
       throw cd;
@@ -881,8 +863,8 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string t
   }
 }
 
-std::vector<moveit_simple::JointTrajectoryPoint> Robot::toJointTrajectoryPoint(
-  std::vector<trajectory_msgs::JointTrajectoryPoint> &ros_joint_trajectory_points) const
+std::vector<moveit_simple::JointTrajectoryPoint>
+Robot::toJointTrajectoryPoint(std::vector<trajectory_msgs::JointTrajectoryPoint>& ros_joint_trajectory_points) const
 {
   std::vector<moveit_simple::JointTrajectoryPoint> goal;
   goal.reserve(ros_joint_trajectory_points.size());
@@ -890,7 +872,7 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::toJointTrajectoryPoint(
   for (std::size_t i = 0; i < ros_joint_trajectory_points.size(); i++)
   {
     JointTrajectoryPoint point(ros_joint_trajectory_points[i].positions,
-      ros_joint_trajectory_points[i].time_from_start.toSec(), "");
+                               ros_joint_trajectory_points[i].time_from_start.toSec(), "");
     goal.push_back(point);
   }
 
@@ -898,14 +880,14 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::toJointTrajectoryPoint(
 }
 
 control_msgs::FollowJointTrajectoryGoal Robot::toFollowJointTrajectoryGoal(
-  const std::vector<moveit_simple::JointTrajectoryPoint> &joint_trajectory_points) const
+    const std::vector<moveit_simple::JointTrajectoryPoint>& joint_trajectory_points) const
 {
   control_msgs::FollowJointTrajectoryGoal goal;
   goal.trajectory.joint_names = joint_group_->getVariableNames();
 
   std::vector<double> empty(goal.trajectory.joint_names.size(), 0.0);
 
-  for (auto &trajectory_point : joint_trajectory_points)
+  for (auto& trajectory_point : joint_trajectory_points)
   {
     trajectory_msgs::JointTrajectoryPoint goal_buffer;
     goal_buffer.positions = trajectory_point.jointPoint();
@@ -922,7 +904,7 @@ control_msgs::FollowJointTrajectoryGoal Robot::toFollowJointTrajectoryGoal(
   return goal;
 }
 
-int Robot::trajCollisionCheck(control_msgs::FollowJointTrajectoryGoal &goal, bool collision_check)
+int Robot::trajCollisionCheck(control_msgs::FollowJointTrajectoryGoal& goal, bool collision_check)
 {
   int collision_count = 0;
 
@@ -940,7 +922,7 @@ int Robot::trajCollisionCheck(control_msgs::FollowJointTrajectoryGoal &goal, boo
   return collision_count;
 }
 
-void Robot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level)
+void Robot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config& config, uint32_t level)
 {
   params_.fromConfig(config);
   if (params_.speed_modifier > 0.0)
@@ -976,11 +958,10 @@ double Robot::getSpeedModifier(void) const
   return speed_modifier_;
 }
 
-bool Robot::toJointTrajectory(const std::string traj_name, 
-  std::vector<trajectory_msgs::JointTrajectoryPoint> &points,
-  bool collision_check)
+bool Robot::toJointTrajectory(const std::string traj_name, std::vector<trajectory_msgs::JointTrajectoryPoint>& points,
+                              bool collision_check)
 {
-  const TrajectoryInfo &traj_info = traj_info_map_[traj_name];
+  const TrajectoryInfo& traj_info = traj_info_map_[traj_name];
 
   // The first point in any trajectory is the current pose
   std::vector<double> current_joint_position = getJointState();
@@ -988,7 +969,7 @@ bool Robot::toJointTrajectory(const std::string traj_name,
 
   for (size_t i = 0; i < traj_info.size(); ++i)
   {
-    const std::unique_ptr<TrajectoryPoint> &traj_point = traj_info[i].point;
+    const std::unique_ptr<TrajectoryPoint>& traj_point = traj_info[i].point;
     if (traj_info[i].type == interpolation_type::JOINT)
     {
       if (jointInterpolation(traj_point, points, traj_info[i].num_steps, collision_check))
@@ -997,8 +978,8 @@ bool Robot::toJointTrajectory(const std::string traj_name,
       }
       else
       {
-        ROS_ERROR_STREAM("Conversion to joint trajectory failed for " << traj_name
-          << " due to IK failure of " << traj_point->name());
+        ROS_ERROR_STREAM("Conversion to joint trajectory failed for " << traj_name << " due to IK failure of "
+                                                                      << traj_point->name());
         return false;
       }
     }
@@ -1010,8 +991,8 @@ bool Robot::toJointTrajectory(const std::string traj_name,
       }
       else
       {
-        ROS_ERROR_STREAM("Conversion to joint trajectory failed for " << traj_name
-          << " before adding " << traj_point->name());
+        ROS_ERROR_STREAM("Conversion to joint trajectory failed for " << traj_name << " before adding "
+                                                                      << traj_point->name());
         return false;
       }
     }
@@ -1028,55 +1009,55 @@ bool Robot::toJointTrajectory(const std::string traj_name,
 void Robot::computeIKSolverTransforms()
 {
   ROS_INFO_STREAM("Computing transforms between the base/tip frames defined in the SRDF"
-    " and the base/tip frames defined for the IK solver");
+                  " and the base/tip frames defined for the IK solver");
 
   // Check if transform is available first
-  tf_buffer_.canTransform(joint_group_->getSolverInstance()->getBaseFrame(),
-    ik_base_frame_, ros::Time::now(), ros::Duration(15.0));
+  tf_buffer_.canTransform(joint_group_->getSolverInstance()->getBaseFrame(), ik_base_frame_, ros::Time::now(),
+                          ros::Duration(15.0));
 
   try
   {
     ROS_INFO_STREAM("Looking up transform from: " << joint_group_->getSolverInstance()->getBaseFrame()
-      << " to: " << ik_base_frame_);
+                                                  << " to: " << ik_base_frame_);
     geometry_msgs::TransformStamped transform_msg;
     transform_msg = tf_buffer_.lookupTransform(ik_base_frame_, joint_group_->getSolverInstance()->getBaseFrame(),
-      ros::Time::now(), ros::Duration(5.0));
+                                               ros::Time::now(), ros::Duration(5.0));
     tf::transformMsgToEigen(transform_msg.transform, srdf_base_to_ik_base_);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_ERROR_STREAM("Failed to calculate transform from: " << joint_group_->getSolverInstance()->getBaseFrame()
-      << " to: " << ik_base_frame_);
+                                                            << " to: " << ik_base_frame_);
     throw ex;
   }
 
   // Check if transform is available first
-  tf_buffer_.canTransform(ik_tip_frame_, joint_group_->getSolverInstance()->getTipFrame(),
-    ros::Time::now(), ros::Duration(15.0));
+  tf_buffer_.canTransform(ik_tip_frame_, joint_group_->getSolverInstance()->getTipFrame(), ros::Time::now(),
+                          ros::Duration(15.0));
 
   try
   {
-    ROS_INFO_STREAM("Looking up transform from: " << ik_tip_frame_ << " to: "
-      << joint_group_->getSolverInstance()->getTipFrame());
+    ROS_INFO_STREAM("Looking up transform from: " << ik_tip_frame_
+                                                  << " to: " << joint_group_->getSolverInstance()->getTipFrame());
     geometry_msgs::TransformStamped transform_msg;
-    transform_msg = tf_buffer_.lookupTransform(joint_group_->getSolverInstance()->getTipFrame(),
-      ik_tip_frame_, ros::Time::now(), ros::Duration(5.0));
+    transform_msg = tf_buffer_.lookupTransform(joint_group_->getSolverInstance()->getTipFrame(), ik_tip_frame_,
+                                               ros::Time::now(), ros::Duration(5.0));
     tf::transformMsgToEigen(transform_msg.transform, ik_tip_to_srdf_tip_);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
-    ROS_ERROR_STREAM("Failed to calculate transfrom from: " << ik_tip_frame_ 
-      << " to: " << joint_group_->getSolverInstance()->getTipFrame());
+    ROS_ERROR_STREAM("Failed to calculate transfrom from: " << ik_tip_frame_ << " to: "
+                                                            << joint_group_->getSolverInstance()->getTipFrame());
     throw ex;
   }
 
   ROS_INFO_STREAM("Transforms between the base/tip frames defined in the SRDF"
-    " and the base/tip frames defined for the IK solver have been computed");
+                  " and the base/tip frames defined for the IK solver have been computed");
 }
 
-bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_point,
-  std::vector<trajectory_msgs::JointTrajectoryPoint> &points, unsigned int num_steps,
-  bool collision_check)
+bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint>& traj_point,
+                               std::vector<trajectory_msgs::JointTrajectoryPoint>& points, unsigned int num_steps,
+                               bool collision_check)
 {
   const double IK_TIMEOUT = 0.250;  // 250 ms for IK solving
 
@@ -1090,7 +1071,7 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_poin
 
   // Convert the previous point stored in points to Joint Trajectory Point
   std::unique_ptr<JointTrajectoryPoint> prev_traj_point =
-    std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(prev_point, prev_time, ""));
+      std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(prev_point, prev_time, ""));
 
   std::unique_ptr<JointTrajectoryPoint> target_point;
   if (traj_point->type() != TrajectoryPoint::JOINT)
@@ -1108,7 +1089,7 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_poin
         if (isConfigChange(prev_point, target_point->jointPoint()))
         {
           ROS_WARN_STREAM("Configuration change detected in move to/from cart point: ("
-            << traj_point->name() << "), of type: " << traj_point->type() << " to joint trajectory");
+                          << traj_point->name() << "), of type: " << traj_point->type() << " to joint trajectory");
         }
         else
         {
@@ -1118,14 +1099,13 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_poin
       }
       else
       {
-        ROS_WARN_STREAM("Failed to convert trajectory point:  (" << traj_point->name()
-          << "), of type: " << traj_point->type() << " to joint trajectory");
+        ROS_WARN_STREAM("Failed to convert trajectory point:  ("
+                        << traj_point->name() << "), of type: " << traj_point->type() << " to joint trajectory");
         return false;
       }
       if (num_attempts >= MAX_IK_ATTEMPTS)
       {
-        ROS_ERROR_STREAM("Failed to find proper IK (no config change) in " << num_attempts 
-          << " attempts");
+        ROS_ERROR_STREAM("Failed to find proper IK (no config change) in " << num_attempts << " attempts");
         return false;
       }
     }
@@ -1150,8 +1130,8 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_poin
     {
       if ((collision_check) && (isInCollision(new_point->jointPoint())))
       {
-        ROS_WARN_STREAM("Collision detected at " << points_added << " among " << (num_steps + 1)
-          << " points for " << traj_point->name());
+        ROS_WARN_STREAM("Collision detected at " << points_added << " among " << (num_steps + 1) << " points for "
+                                                 << traj_point->name());
         points_local.clear();
         throw CollisionDetected("Collision detected while interpolating " + traj_point->name());
       }
@@ -1160,18 +1140,20 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_poin
         // Lock the joints
         auto new_point_joints = new_point->jointPoint();
         JointLocker::lockJoints(prev_point, new_point_joints, options);
-        auto locked_new_point = std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(new_point_joints, new_point->time(), ""));
+        auto locked_new_point =
+            std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(new_point_joints, new_point->time(), ""));
 
         points_local.push_back(toJointTrajPtMsg(*locked_new_point));
         points_added++;
-        ROS_INFO_STREAM(points_added << " points among " << (num_steps + 1)
-          << " successfully interpolated for " << traj_point->name());
+        ROS_INFO_STREAM(points_added << " points among " << (num_steps + 1) << " successfully interpolated for "
+                                     << traj_point->name());
       }
     }
     else
     {
-      ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among "
-        << (num_steps + 1) << "points for " << traj_point->name() << ". Exiting without interpolation");
+      ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among " << (num_steps + 1)
+                                                                  << "points for " << traj_point->name()
+                                                                  << ". Exiting without interpolation");
       points_local.clear();
       return false;
     }
@@ -1183,9 +1165,9 @@ bool Robot::jointInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_poin
   return true;
 }
 
-bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_point,
-  std::vector<trajectory_msgs::JointTrajectoryPoint> &points, unsigned int num_steps,
-  bool collision_check)
+bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint>& traj_point,
+                                   std::vector<trajectory_msgs::JointTrajectoryPoint>& points, unsigned int num_steps,
+                                   bool collision_check)
 {
   // Create a local vector for storing interpolated points and append
   // it with last element of global points to be used for interpolation
@@ -1196,9 +1178,8 @@ bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_
   trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
 
   // Convert the previous point stored in points to Cartesian Trajectory Point
-  std::unique_ptr<TrajectoryPoint> prev_point = 
-    std::unique_ptr<TrajectoryPoint>(new JointTrajectoryPoint(
-    prev_point_info.positions, prev_point_info.time_from_start.toSec(), ""));
+  std::unique_ptr<TrajectoryPoint> prev_point = std::unique_ptr<TrajectoryPoint>(
+      new JointTrajectoryPoint(prev_point_info.positions, prev_point_info.time_from_start.toSec(), ""));
   std::unique_ptr<CartTrajectoryPoint> prev_traj_point = prev_point->toCartTrajPoint(*this);
   std::unique_ptr<CartTrajectoryPoint> target_point;
 
@@ -1224,20 +1205,21 @@ bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_
     std::unique_ptr<CartTrajectoryPoint> new_point_cart;
     interpolate(prev_traj_point, target_point, t, new_point_cart);
 
-    std::unique_ptr<TrajectoryPoint> new_point = std::unique_ptr<TrajectoryPoint>(
-        new CartTrajectoryPoint(new_point_cart->pose(), new_point_cart->time(), ""));
+    std::unique_ptr<TrajectoryPoint> new_point =
+        std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(new_point_cart->pose(), new_point_cart->time(), ""));
 
     // Add new point at the end of Joint Trajectory (named points_local)
     if (jointInterpolation(new_point, points_local, (unsigned int)0, collision_check))
     {
       points_added++;
-      ROS_INFO_STREAM(points_added << " points among " << (num_steps + 1)
-        << " added successfullyfor " << traj_point->name());
+      ROS_INFO_STREAM(points_added << " points among " << (num_steps + 1) << " added successfullyfor "
+                                   << traj_point->name());
     }
     else
     {
-      ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among "
-        << (num_steps + 1) << "points for " << traj_point->name() << ". Exiting without interpolation");
+      ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among " << (num_steps + 1)
+                                                                  << "points for " << traj_point->name()
+                                                                  << ". Exiting without interpolation");
       points_local.clear();
       return false;
     }
@@ -1250,9 +1232,9 @@ bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint> &traj_
   return true;
 }
 
-void Robot::interpolate(const std::unique_ptr<JointTrajectoryPoint> &from,
-  const std::unique_ptr<JointTrajectoryPoint> &to, double t,
-  std::unique_ptr<JointTrajectoryPoint> &point) const
+void Robot::interpolate(const std::unique_ptr<JointTrajectoryPoint>& from,
+                        const std::unique_ptr<JointTrajectoryPoint>& to, double t,
+                        std::unique_ptr<JointTrajectoryPoint>& point) const
 {
   std::vector<double> start_joint_point = from->jointPoint();
   double start_time = from->time();
@@ -1269,16 +1251,14 @@ void Robot::interpolate(const std::unique_ptr<JointTrajectoryPoint> &from,
   else
   {
     ROS_ERROR_STREAM("Interpolation between these two joint points is not possible"
-      << "as start and target points have different sizes with start: "
-      << start_joint_point.size() << " joints and target: " << target_joint_point.size()
-      << "joints respectively");
+                     << "as start and target points have different sizes with start: " << start_joint_point.size()
+                     << " joints and target: " << target_joint_point.size() << "joints respectively");
 
     point = std::unique_ptr<JointTrajectoryPoint>(nullptr);
   }
 }
 
-std::vector<double> Robot::interpolate(const std::vector<double> &from,
-  const std::vector<double> &to, double t) const
+std::vector<double> Robot::interpolate(const std::vector<double>& from, const std::vector<double>& to, double t) const
 {
   std::vector<double> joint_point(from.size());
   for (std::size_t i = 0; i < from.size(); ++i)
@@ -1289,9 +1269,9 @@ std::vector<double> Robot::interpolate(const std::vector<double> &from,
   return joint_point;
 }
 
-void Robot::interpolate(const std::unique_ptr<CartTrajectoryPoint> &from,
-  const std::unique_ptr<CartTrajectoryPoint> &to, double t,
-  std::unique_ptr<CartTrajectoryPoint> &point) const
+void Robot::interpolate(const std::unique_ptr<CartTrajectoryPoint>& from,
+                        const std::unique_ptr<CartTrajectoryPoint>& to, double t,
+                        std::unique_ptr<CartTrajectoryPoint>& point) const
 {
   Eigen::Affine3d start_pose = from->pose();
   double start_time = from->time();
@@ -1305,8 +1285,7 @@ void Robot::interpolate(const std::unique_ptr<CartTrajectoryPoint> &from,
   point = std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(pose, time, ""));
 }
 
-Eigen::Affine3d Robot::interpolate(const Eigen::Affine3d &from, const Eigen::Affine3d &to,
-  double t) const
+Eigen::Affine3d Robot::interpolate(const Eigen::Affine3d& from, const Eigen::Affine3d& to, double t) const
 {
   Eigen::Quaterniond from_quaternion(from.rotation());
   Eigen::Quaterniond to_quaternion(to.rotation());
@@ -1335,14 +1314,13 @@ bool Robot::isConfigChange(const std::vector<double> jp1, const std::vector<doub
     double joint_change = std::abs(jp1[ii] - jp2[ii]);
     if (joint_change > MAX_JOINT_CHANGE)
     {
-      ROS_INFO_STREAM("Joint[" << ii << "] change of " << joint_change << " exceeds limit: "
-        << MAX_JOINT_CHANGE);
+      ROS_INFO_STREAM("Joint[" << ii << "] change of " << joint_change << " exceeds limit: " << MAX_JOINT_CHANGE);
       j_change_count++;
     }
     if (j_change_count > MAX_JOINT_CHANGE_COUNT)
     {
       ROS_WARN_STREAM("Possible config change detected, with " << j_change_count
-        << " joints exceeding max chage: " << MAX_JOINT_CHANGE);
+                                                               << " joints exceeding max chage: " << MAX_JOINT_CHANGE);
       return true;
     }
   }
@@ -1350,8 +1328,8 @@ bool Robot::isConfigChange(const std::vector<double> jp1, const std::vector<doub
   return false;
 }
 
-void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
-  const std::string &joint_seed, double timeout) const
+void Robot::updateRvizRobotState(const Eigen::Affine3d& pose, const std::string& in_frame,
+                                 const std::string& joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -1370,8 +1348,8 @@ void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, const std::string 
   this->updateRvizRobotState(pose, in_frame, joints, timeout);
 }
 
-void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
-  std::vector<double> joint_seed, double timeout) const
+void Robot::updateRvizRobotState(const Eigen::Affine3d& pose, const std::string& in_frame,
+                                 std::vector<double> joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -1380,16 +1358,16 @@ void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, const std::string 
     auto frame_rel_robot = this->lookupTransformToBase(in_frame);
     this->updateRvizRobotState(pose, frame_rel_robot, joint_seed, timeout);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
-    ROS_WARN_STREAM("Unable to find transform to: " << ik_base_frame_ 
-      << " for frame: " << in_frame << " exception: " << ex.what());
+    ROS_WARN_STREAM("Unable to find transform to: " << ik_base_frame_ << " for frame: " << in_frame
+                                                    << " exception: " << ex.what());
   }
 }
 
-void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, 
-  const geometry_msgs::TransformStamped &frame_to_robot_base,
-  const std::string &joint_seed, double timeout) const
+void Robot::updateRvizRobotState(const Eigen::Affine3d& pose,
+                                 const geometry_msgs::TransformStamped& frame_to_robot_base,
+                                 const std::string& joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -1408,9 +1386,9 @@ void Robot::updateRvizRobotState(const Eigen::Affine3d &pose,
   this->updateRvizRobotState(pose, frame_to_robot_base, joints, timeout);
 }
 
-void Robot::updateRvizRobotState(const Eigen::Affine3d &pose, 
-  const geometry_msgs::TransformStamped &frame_to_robot_base,
-  std::vector<double> joint_seed, double timeout) const
+void Robot::updateRvizRobotState(const Eigen::Affine3d& pose,
+                                 const geometry_msgs::TransformStamped& frame_to_robot_base,
+                                 std::vector<double> joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
   auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
@@ -1426,8 +1404,8 @@ geometry_msgs::TransformStamped Robot::lookupTransformMoveitToolAndCustomTool(co
   return this->lookupTransformBetweenFrames(tool_frame, moveit_tool);
 }
 
-geometry_msgs::TransformStamped Robot::lookupTransformBetweenFrames(const std::string &target_frame,
-                                                                    const std::string &source_frame) const
+geometry_msgs::TransformStamped Robot::lookupTransformBetweenFrames(const std::string& target_frame,
+                                                                    const std::string& source_frame) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
   try
@@ -1435,34 +1413,33 @@ geometry_msgs::TransformStamped Robot::lookupTransformBetweenFrames(const std::s
     auto transform = tf_buffer_.lookupTransform(target_frame, source_frame, ros::Time(0), ros::Duration(5.0));
     return transform;
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
-    ROS_ERROR_STREAM("TF transform lookup between target frame: " << target_frame
-                     << " and source frame: " << source_frame << " failed");
+    ROS_ERROR_STREAM("TF transform lookup between target frame: " << target_frame << " and source frame: "
+                                                                  << source_frame << " failed");
     throw ex;
   }
 }
 
-geometry_msgs::TransformStamped Robot::lookupTransformToBase(const std::string &in_frame) const
+geometry_msgs::TransformStamped Robot::lookupTransformToBase(const std::string& in_frame) const
 {
   geometry_msgs::TransformStamped frame_rel_robot_msg;
 
   try
   {
-    frame_rel_robot_msg = tf_buffer_.lookupTransform(in_frame, ik_base_frame_, 
-      ros::Time::now(), ros::Duration(5.0));
+    frame_rel_robot_msg = tf_buffer_.lookupTransform(in_frame, ik_base_frame_, ros::Time::now(), ros::Duration(5.0));
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_WARN_STREAM("Transform lookup from: " << in_frame << " into robot base: " << ik_base_frame_
-      << "::" << ex.what());
-    throw ex;    
+                                              << "::" << ex.what());
+    throw ex;
   }
 
   return frame_rel_robot_msg;
 }
 
-Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, const std::string &in_frame) const
+Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d& in, const std::string& in_frame) const
 {
   geometry_msgs::TransformStamped frame_rel_robot_msg;
 
@@ -1470,18 +1447,18 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, const std::str
   {
     frame_rel_robot_msg = this->lookupTransformToBase(in_frame);
   }
-  catch (tf2::TransformException &ex)
+  catch (tf2::TransformException& ex)
   {
     ROS_WARN_STREAM("Transform lookup from: " << in_frame << " into robot base: " << ik_base_frame_
-      << "::" << ex.what());
+                                              << "::" << ex.what());
     throw ex;
   }
 
   return this->transformToBase(in, frame_rel_robot_msg);
 }
 
-Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in, 
-  const geometry_msgs::TransformStamped &transform_msg) const
+Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d& in,
+                                       const geometry_msgs::TransformStamped& transform_msg) const
 {
   Eigen::Affine3d out;
 
@@ -1492,7 +1469,7 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d &in,
   return out;
 }
 
-bool Robot::getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const
+bool Robot::getFK(const std::vector<double>& joint_point, Eigen::Affine3d& pose) const
 {
   virtual_robot_state_->setJointGroupPositions(joint_group_, joint_point);
   Eigen::Affine3d ik_base_to_ik_tip = virtual_robot_state_->getFrameTransform(ik_tip_frame_);
@@ -1500,15 +1477,15 @@ bool Robot::getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose)
   return true;
 }
 
-bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double> &seed,
-  std::vector<double> &joint_point, double timeout, unsigned int attempts) const
+bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double>& seed, std::vector<double>& joint_point,
+                  double timeout, unsigned int attempts) const
 {
   virtual_robot_state_->setJointGroupPositions(joint_group_, seed);
   return getIK(pose, joint_point, timeout, attempts);
 }
 
-bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> &joint_point,
-  double timeout, unsigned int attempts) const
+bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double>& joint_point, double timeout,
+                  unsigned int attempts) const
 {
   Eigen::Affine3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
   if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, attempts, timeout))
@@ -1525,7 +1502,7 @@ bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double> &joint_point,
   return false;
 }
 
-bool Robot::isNearSingular(const std::vector<double> &joint_point) const
+bool Robot::isNearSingular(const std::vector<double>& joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -1544,8 +1521,8 @@ bool Robot::isNearSingular(const std::vector<double> &joint_point) const
   virtual_robot_state_->setJointGroupPositions(joint_group_, local_joint_point);
 
   Eigen::MatrixXd jacobian;
-  if (virtual_robot_state_->getJacobian(joint_group_, joint_group_->getLinkModels().back(), 
-    reference_point, jacobian, false))
+  if (virtual_robot_state_->getJacobian(joint_group_, joint_group_->getLinkModels().back(), reference_point, jacobian,
+                                        false))
   {
     ROS_INFO_STREAM("Jacobian" << jacobian.matrix());
     ROS_INFO_STREAM("Determinant" << fabs((jacobian * jacobian.transpose()).determinant()));
@@ -1558,27 +1535,24 @@ bool Robot::isNearSingular(const std::vector<double> &joint_point) const
     }
     else
     {
-      ROS_INFO_STREAM("Given configuration " << local_joint_point 
-        << " is away from any singularity");
+      ROS_INFO_STREAM("Given configuration " << local_joint_point << " is away from any singularity");
       return false;
     }
   }
   else
   {
-    ROS_ERROR_STREAM("Jacobian not found for " << local_joint_point << "joint group "
-      << joint_group_->getName() << " is not a chain");
+    ROS_ERROR_STREAM("Jacobian not found for " << local_joint_point << "joint group " << joint_group_->getName()
+                                               << " is not a chain");
     return false;
   }
 }
 
-trajectory_msgs::JointTrajectoryPoint Robot::toJointTrajPtMsg(
-  const JointTrajectoryPoint &joint_point) const
+trajectory_msgs::JointTrajectoryPoint Robot::toJointTrajPtMsg(const JointTrajectoryPoint& joint_point) const
 {
   return toJointTrajPtMsg(joint_point.jointPoint(), joint_point.time());
 }
 
-trajectory_msgs::JointTrajectoryPoint Robot::toJointTrajPtMsg(
-  const std::vector<double> &joint_point, double time)
+trajectory_msgs::JointTrajectoryPoint Robot::toJointTrajPtMsg(const std::vector<double>& joint_point, double time)
 {
   trajectory_msgs::JointTrajectoryPoint rtn;
   std::vector<double> empty(joint_point.size(), 0.0);
@@ -1605,4 +1579,4 @@ std::vector<double> Robot::getJointState(void) const
 
   return current_joint_positions;
 }
-} // namespace moveit_simple
+}  // namespace moveit_simple
