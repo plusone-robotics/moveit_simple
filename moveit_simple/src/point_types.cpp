@@ -82,4 +82,47 @@ std::unique_ptr<CartTrajectoryPoint> CartTrajectoryPoint::toCartTrajPoint(const 
   return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(*this));
 }
 
+std::unique_ptr<JointTrajectoryPoint> CombinedTrajectoryPoint::toJointTrajPoint(
+  const Robot &robot, double timeout, const std::vector<double> &seed, JointLockOptions options) const
+{
+  std::vector<double> joints;
+  std::copy(joint_point_.begin(), joint_point_.end(), std::back_inserter(joints));
+  return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(joints, time(), name(), options));
+}
+
+std::unique_ptr<CartTrajectoryPoint> CombinedTrajectoryPoint::toCartTrajPoint(const Robot &robot) const
+{
+  return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(pose(), time(), name(), jointLockOptions()));
+}
+
+bool CombinedTrajectoryPoint::compareJointAndCart(const Robot &robot, double timeout, double tolerance)
+{
+  std::vector<double> cart_point;
+  bool in_tol;
+
+  if(robot.getJointSolution(pose_, timeout, joint_point_, cart_point))
+  {
+    std::vector<double>::const_iterator joint_it = joint_point_.begin();
+    std::vector<double>::const_iterator cart_it = cart_point.begin();
+
+    while(in_tol && joint_it != joint_point_.end())
+    {
+      in_tol = std::abs(*joint_it - *cart_it) <= tolerance;
+      joint_it++;
+      cart_it++;
+    }
+    if(!in_tol)
+    {
+      ROS_WARN_STREAM("CombinedTrajectoryPoint: Cartesian and Joint representations are out of tolerance");
+    }
+  }
+  else
+  {
+    ROS_WARN_STREAM("Failed to find joint solution for point: " << name_);
+    in_tol = false;
+  }
+
+  return in_tol;
+}
+
 } // namespace moveit_simple
