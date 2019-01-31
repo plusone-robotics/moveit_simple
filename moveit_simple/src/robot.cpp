@@ -1492,9 +1492,9 @@ bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double>& joint_point, 
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();
-    virtual_visual_tools_->deleteAllMarkers();
+
     virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
-    virtual_visual_tools_->publishContactPoints(*virtual_robot_state_, &(*planning_scene_));
+    virtual_visual_tools_->publishContactPoints(*virtual_robot_state_, planning_scene_.get());
     virtual_visual_tools_->trigger();
     return true;
   }
