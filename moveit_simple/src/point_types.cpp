@@ -25,7 +25,6 @@
 
 namespace moveit_simple
 {
-
 void TrajectoryPoint::setJointLockOptions(const JointLockOptions &options)
 {
   joint_lock_options_ = options;
@@ -36,8 +35,9 @@ JointLockOptions TrajectoryPoint::getJointLockOptions()
   return joint_lock_options_;
 }
 
-std::unique_ptr<JointTrajectoryPoint> JointTrajectoryPoint::toJointTrajPoint(
-  const Robot &robot, double timeout, const std::vector<double> &seed, JointLockOptions options) const
+std::unique_ptr<JointTrajectoryPoint> JointTrajectoryPoint::toJointTrajPoint(const Robot &robot, double timeout,
+                                                                             const std::vector<double> &seed,
+                                                                             JointLockOptions options) const
 {
   ROS_DEBUG_STREAM("JointTrajectoryPoint: passing through joint trajectory point");
   return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(*this));
@@ -59,8 +59,9 @@ std::unique_ptr<CartTrajectoryPoint> JointTrajectoryPoint::toCartTrajPoint(const
   }
 }
 
-std::unique_ptr<JointTrajectoryPoint> CartTrajectoryPoint::toJointTrajPoint(
-  const Robot &robot, double timeout, const std::vector<double> &seed, JointLockOptions options) const
+std::unique_ptr<JointTrajectoryPoint> CartTrajectoryPoint::toJointTrajPoint(const Robot &robot, double timeout,
+                                                                            const std::vector<double> &seed,
+                                                                            JointLockOptions options) const
 {
   std::vector<double> joints;
 
@@ -82,36 +83,63 @@ std::unique_ptr<CartTrajectoryPoint> CartTrajectoryPoint::toCartTrajPoint(const 
   return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(*this));
 }
 
-std::unique_ptr<JointTrajectoryPoint> CombinedTrajectoryPoint::toJointTrajPoint(
-  const Robot &robot, double timeout, const std::vector<double> &seed, JointLockOptions options) const
+std::unique_ptr<JointTrajectoryPoint> CombinedTrajectoryPoint::toJointTrajPoint(const Robot &robot, double timeout,
+                                                                                const std::vector<double> &seed,
+                                                                                JointLockOptions options) const
 {
   std::vector<double> joints;
   std::copy(joint_point_.begin(), joint_point_.end(), std::back_inserter(joints));
-  return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(joints, time(), name(), options));
+  if (compareJointAndCart(robot, timeout))
+  {
+    return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(joints, time(), name(), options));
+  }
+  else if(this->type() == PointType::JOINT)
+  {
+    return std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(joints, time(), name(), options));
+  }
+  else
+  {
+    auto point = std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(pose(), time(), name(), jointLockOptions()));
+    return point->toJointTrajPoint(robot, timeout, joints, options);
+  }
 }
 
 std::unique_ptr<CartTrajectoryPoint> CombinedTrajectoryPoint::toCartTrajPoint(const Robot &robot) const
 {
-  return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(pose(), time(), name(), jointLockOptions()));
+  if(compareJointAndCart(robot, this->timeout()))
+  {
+    return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(pose(), time(), name(), jointLockOptions()));
+  }
+  else if(this->type() == PointType::JOINT)
+  {
+    std::vector<double> joints;
+    std::copy(joint_point_.begin(), joint_point_.end(), std::back_inserter(joints));
+    auto point = std::unique_ptr<JointTrajectoryPoint>(new JointTrajectoryPoint(joints, time(), name(), jointLockOptions()));
+    return point->toCartTrajPoint(robot);
+  }
+  else
+  {
+    return std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(pose(), time(), name(), jointLockOptions()));
+  }
 }
 
-bool CombinedTrajectoryPoint::compareJointAndCart(const Robot &robot, double timeout, double tolerance)
+bool CombinedTrajectoryPoint::compareJointAndCart(const Robot &robot, double timeout) const
 {
   std::vector<double> cart_point;
   bool in_tol;
 
-  if(robot.getJointSolution(pose_, timeout, joint_point_, cart_point))
+  if (robot.getJointSolution(pose_, timeout, joint_point_, cart_point))
   {
     std::vector<double>::const_iterator joint_it = joint_point_.begin();
     std::vector<double>::const_iterator cart_it = cart_point.begin();
 
-    while(in_tol && joint_it != joint_point_.end())
+    while (in_tol && joint_it != joint_point_.end())
     {
-      in_tol = std::abs(*joint_it - *cart_it) <= tolerance;
+      in_tol = std::abs(*joint_it - *cart_it) <= tol_;
       joint_it++;
       cart_it++;
     }
-    if(!in_tol)
+    if (!in_tol)
     {
       ROS_WARN_STREAM("CombinedTrajectoryPoint: Cartesian and Joint representations are out of tolerance");
     }
@@ -125,4 +153,4 @@ bool CombinedTrajectoryPoint::compareJointAndCart(const Robot &robot, double tim
   return in_tol;
 }
 
-} // namespace moveit_simple
+}  // namespace moveit_simple

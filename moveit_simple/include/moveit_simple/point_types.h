@@ -33,6 +33,7 @@ class Robot;
 class TrajectoryPoint;
 class JointTrajectoryPoint;
 class CartTrajectoryPoint;
+class CombinedTrajectoryPoint;
 
 namespace interpolation_type
 {
@@ -81,8 +82,7 @@ protected:
   {
     UNKNOWN = 0,
     JOINT = 1,
-    CARTESIAN = 2,
-    COMBINED = 3
+    CARTESIAN = 2
   };
 
   TrajectoryPoint(std::string name, double t, PointType type, JointLockOptions options = JointLockOptions::LOCK_NONE)
@@ -110,6 +110,7 @@ protected:
 class JointTrajectoryPoint : public TrajectoryPoint
 {
 public:
+  friend class CombinedTrajectoryPoint;
   JointTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::JOINT) { }
   
   virtual ~JointTrajectoryPoint() { }
@@ -136,6 +137,7 @@ private:
 class CartTrajectoryPoint : public TrajectoryPoint
 {
 public:
+  friend class CombinedTrajectoryPoint;
   CartTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::CARTESIAN) { }
 
   CartTrajectoryPoint(const Eigen::Affine3d pose, const double t, std::string name = std::string(),
@@ -162,11 +164,24 @@ private:
 class CombinedTrajectoryPoint : public TrajectoryPoint
 {
 public:
-  CombinedTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::COMBINED) { }
+  enum PointPreference
+  {
+    CARTESIAN = 0,
+    JOINT = 1
+  };
 
-  CombinedTrajectoryPoint(std::vector<double> &joint_point, const Eigen::Affine3d pose, double t,
-                          std::string name = std::string(), JointLockOptions options = JointLockOptions::LOCK_NONE)
-    : TrajectoryPoint(name, t, PointType::COMBINED, options), options_(options), joint_point_(joint_point), pose_(pose)
+  CombinedTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::JOINT)
+  {
+  }
+
+  CombinedTrajectoryPoint(std::vector<double> &joint_point, const Eigen::Affine3d pose, double t, double tol,
+                          std::string name = std::string(), JointLockOptions options = JointLockOptions::LOCK_NONE,
+                          PointPreference type = PointPreference::JOINT, double timeout = 5.0)
+    : TrajectoryPoint(name, t, (type == PointPreference::JOINT) ? PointType::JOINT : PointType::CARTESIAN, options)
+    , options_(options)
+    , joint_point_(joint_point)
+    , pose_(pose)
+    , tol_(tol)
   {
   }
 
@@ -187,19 +202,28 @@ public:
     return joint_point_;
   }
 
+  const double &timeout() const
+  {
+    return timeout_;
+  }
+
 protected:
+  
   virtual std::unique_ptr<JointTrajectoryPoint>
   toJointTrajPoint(const Robot &robot, double timeout, const std::vector<double> &seed,
                    JointLockOptions options = JointLockOptions::LOCK_NONE) const;
 
   virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(const Robot &robot) const;
 
-  bool compareJointAndCart(const Robot &robot, double timeout, double tolerance);
+  bool compareJointAndCart(const Robot &robot, double timeout) const;
 
 private:
+
   JointLockOptions options_;
   std::vector<double> joint_point_;
   Eigen::Affine3d pose_;
+  double tol_;
+  double timeout_;
 };
 } // namespace moveit_simple
 #endif // POINT_TYPES_H
