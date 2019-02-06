@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   moveit_core
   moveit_ros_planning
+  moveit_simple_msgs
   moveit_visual_tools
   roscpp
   rosparam_handler

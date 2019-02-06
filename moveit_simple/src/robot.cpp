@@ -24,6 +24,8 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <ros/ros.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "moveit_simple_msgs/CombinedJointPoint.h"
+#include "moveit_simple_msgs/TrajectoryTrainer.h"
 
 #include <moveit_simple/exceptions.h>
 #include <moveit_simple/joint_locker.h>
@@ -58,6 +60,8 @@ Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
     throw IKSolverTransformException("Failed to compute transforms between the base/tip"
       " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
+
+  trajectory_training_client_ = nh_.serviceClient<moveit_simple_msgs::TrajectoryTrainer>("trajectory_training");
 }
 
 Robot::Robot(const ros::NodeHandle &nh, const std::string &robot_description,
@@ -378,8 +382,30 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string 
   }
   else
   {
-    ROS_ERROR_STREAM("Failed to find point " << name << ", consider implementing more look ups");
-    throw std::invalid_argument("Failed to find point: " + name);
+    std::vector<std::string> waypoint_names;
+    waypoint_names.push_back(name);
+
+    moveit_simple_msgs::TrajectoryTrainer srv;
+
+    srv.request.op_type = moveit_simple_msgs::TrajectoryTrainer::Request::GET_WP;
+    srv.request.waypoint_names = waypoint_names;
+
+    if (trajectory_training_client_.call(srv) && srv.response.result && srv.response.waypoints.size() > 0)
+    {
+      moveit_simple_msgs::CombinedJointPoint cjp;
+      cjp = srv.response.waypoints.front();
+
+      Eigen::Affine3d pose;
+      tf::transformMsgToEigen(cjp.transform_stamped.transform, pose);
+
+      return std::unique_ptr<TrajectoryPoint>(
+          new CombinedTrajectoryPoint(cjp.joint_point, pose, time, joint_equality_tolerance_, name));
+    }
+    else
+    {
+      ROS_ERROR_STREAM("Failed to find point " << name << ", consider implementing more look ups");
+      throw std::invalid_argument("Failed to find point: " + name);
+    }
   }
 }
 
@@ -951,6 +977,7 @@ void Robot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config,
   {
     ROS_WARN_STREAM("Speed modifier should be a positive nunber but it is: " << params_.speed_modifier);
   }
+  joint_equality_tolerance_ = params_.joint_equality_tolerance;
 }
 
 void Robot::setSpeedModifier(const double speed_modifier)

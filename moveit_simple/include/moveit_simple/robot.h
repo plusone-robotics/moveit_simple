@@ -603,12 +603,15 @@ protected:
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
+  mutable ros::ServiceClient trajectory_training_client_;
+
   // ROS objects
   ros::NodeHandle nh_;
   mutable std::recursive_mutex m_;
 
   // Dynamic Reconfigure
   double speed_modifier_;
+  double joint_equality_tolerance_;
   moveit_simple_dynamic_reconfigure_Parameters params_;
   dynamic_reconfigure::Server<moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
 
