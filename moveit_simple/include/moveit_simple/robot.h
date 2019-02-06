@@ -613,7 +613,7 @@ protected:
   double speed_modifier_;
   double joint_equality_tolerance_;
   moveit_simple_dynamic_reconfigure_Parameters params_;
-  dynamic_reconfigure::Server<moveit_simple_dynamic_reconfigure_Config> dynamic_reconfig_server_;
+  std::shared_ptr<dynamic_reconfigure::Server<moveit_simple_dynamic_reconfigure_Config>> dynamic_reconfig_server_;
 
   // Kinematics
   std::string ik_base_frame_;
