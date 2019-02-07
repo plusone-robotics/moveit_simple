@@ -123,6 +123,15 @@ std::unique_ptr<CartTrajectoryPoint> CombinedTrajectoryPoint::toCartTrajPoint(co
   }
 }
 
+std::string CombinedTrajectoryPoint::pointVecToString(const std::vector<double> &vec) const
+{
+  std::stringstream ss;
+  ss << "[ ";
+  for_each(vec.begin(), vec.end(), [&ss](const double &point){ss << point << " ";});
+  ss << " ]";
+  return ss.str();
+}
+
 bool CombinedTrajectoryPoint::compareJointAndCart(const Robot &robot, double timeout) const
 {
   std::vector<double> cart_point;
@@ -141,7 +150,12 @@ bool CombinedTrajectoryPoint::compareJointAndCart(const Robot &robot, double tim
     }
     if (!in_tol)
     {
-      ROS_WARN_STREAM("CombinedTrajectoryPoint: Cartesian and Joint representations are out of tolerance");
+      std::stringstream ss;
+      ss << "CombinedTrajectoryPoint: Cartesian and Joint representations are out of tolerance. ";
+      ss << ("Using %s representation, per preference.", this->type() == PointType::JOINT ? "joint" : "cartesian") << std::endl;
+      ss << "Joint Representation Joints: " << pointVecToString(joint_point_) << std::endl;
+      ss << "Cartesian Representation Joints: " << pointVecToString(cart_point) << std::endl;
+      ROS_WARN_STREAM(ss.str());
     }
   }
   else

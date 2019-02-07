@@ -207,6 +207,8 @@ public:
     return timeout_;
   }
 
+  std::string pointVecToString(const std::vector<double> &vec) const;
+
 protected:
   
   virtual std::unique_ptr<JointTrajectoryPoint>

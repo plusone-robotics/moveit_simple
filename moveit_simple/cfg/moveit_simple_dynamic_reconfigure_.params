@@ -5,6 +5,6 @@ from rosparam_handler.parameter_generator_catkin import *
 gen = ParameterGenerator()
 
 gen.add("speed_modifier", paramtype="double", description="Speed Modifier for Execution", min=0.01, max=1.0, default=0.25, configurable=True)
-gen.add("joint_equality_tolerance", paramtype="double", description="Tolerance for equality between joint and cartesian representations of a point", min=0.0, max=1.0, default=0.005)
+gen.add("joint_equality_tolerance", paramtype="double", description="Tolerance for equality between joint and cartesian representations of a point", min=0.0, max=100.0, default=0.005, configurable=True)
 
 exit(gen.generate(PACKAGE, PACKAGE, "moveit_simple_dynamic_reconfigure_"))

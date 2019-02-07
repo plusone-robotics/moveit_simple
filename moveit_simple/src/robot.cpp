@@ -391,14 +391,13 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
 
     if (trajectory_training_client_.call(srv) && srv.response.result && srv.response.waypoints.size() > 0)
     {
-      moveit_simple_msgs::CombinedJointPoint cjp;
-      cjp = srv.response.waypoints.front();
+      auto waypoint = srv.response.waypoints.front();
 
       Eigen::Affine3d pose;
-      tf::transformMsgToEigen(cjp.transform_stamped.transform, pose);
+      tf::transformMsgToEigen(waypoint.transform_stamped.transform, pose);
 
       return std::unique_ptr<TrajectoryPoint>(
-          new CombinedTrajectoryPoint(cjp.joint_point, pose, time, joint_equality_tolerance_, name));
+          new CombinedTrajectoryPoint(waypoint.joint_point, pose, time, joint_equality_tolerance_, name));
     }
     else
     {
