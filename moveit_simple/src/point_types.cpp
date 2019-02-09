@@ -152,7 +152,7 @@ bool CombinedTrajectoryPoint::compareJointAndCart(const Robot &robot, double tim
     {
       std::stringstream ss;
       ss << "CombinedTrajectoryPoint: Cartesian and Joint representations are out of tolerance. ";
-      ss << ("Using %s representation, per preference.", this->type() == PointType::JOINT ? "joint" : "cartesian") << std::endl;
+      ss << "Using " << ((this->type() == PointType::JOINT) ? "joint" : "cartesian") << " representation, per preference." << std::endl;
       ss << "Joint Representation Joints: " << pointVecToString(joint_point_) << std::endl;
       ss << "Cartesian Representation Joints: " << pointVecToString(cart_point) << std::endl;
       ROS_WARN_STREAM(ss.str());

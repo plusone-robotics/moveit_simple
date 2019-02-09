@@ -7,6 +7,8 @@ uint8 REMOVE_WP_FROM_TRAJ=5 # Remove waypoint(s) from trajectory if it(they) exi
 uint8 NEW_TRAJ=10			# Create a new trajectory, optionally populate          [required: trajectory name, optional: waypoint name(s)]
 uint8 DEL_TRAJ=11			# Delete a trajectory from config						[required: trajectory name]
 uint8 GET_TRAJ=12			# Get all waypoints in a trajectory 					[required: trajectory name]
+uint8 CLEAR_TRAJ=13			# Clears the contents of a trajectory 					[required: trajectory name]
+uint8 RELOAD_YAML=255		# Update internal storage to match YAML                 [required: N/A]
 
 uint8 op_type
 string trajectory_name

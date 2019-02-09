@@ -381,6 +381,8 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
   }
   else
   {
+    ROS_INFO_STREAM("Requesting trajectory training service info for waypoint: " << name);
+
     std::vector<std::string> waypoint_names;
     waypoint_names.push_back(name);
 
