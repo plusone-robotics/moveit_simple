@@ -175,8 +175,8 @@ public:
   }
 
   CombinedTrajectoryPoint(std::vector<double> &joint_point, const Eigen::Affine3d pose, double t, double tol,
-                          std::string name = std::string(), JointLockOptions options = JointLockOptions::LOCK_NONE,
-                          PointPreference type = PointPreference::JOINT, double timeout = 5.0)
+                          std::string name = std::string(), PointPreference type = PointPreference::JOINT,
+                          JointLockOptions options = JointLockOptions::LOCK_NONE, double timeout = 5.0)
     : TrajectoryPoint(name, t, (type == PointPreference::JOINT) ? PointType::JOINT : PointType::CARTESIAN, options)
     , options_(options)
     , joint_point_(joint_point)

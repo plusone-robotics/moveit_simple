@@ -399,7 +399,8 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
       tf::transformMsgToEigen(waypoint.transform_stamped.transform, pose);
 
       return std::unique_ptr<TrajectoryPoint>(
-          new CombinedTrajectoryPoint(waypoint.joint_point, pose, time, joint_equality_tolerance_, name));
+          new CombinedTrajectoryPoint(waypoint.joint_point, pose, time, joint_equality_tolerance_, name,
+                                      CombinedTrajectoryPoint::PointPreference::CARTESIAN));
     }
     else
     {
