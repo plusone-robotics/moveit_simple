@@ -3,4 +3,5 @@
 
 string trajectory_name
 ---
+bool success
 CombinedJointPoint[] waypoints

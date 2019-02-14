@@ -4,7 +4,6 @@ project(moveit_simple_msgs)
 add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
-  actionlib_msgs
   message_generation
   roscpp
   sensor_msgs
@@ -12,13 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_geometry_msgs
   tf2_ros
-)
-
-add_action_files(
-  DIRECTORY action
-  FILES
-    LookupTrajectory.action
-    LookupWaypoint.action
 )
 
 add_message_files(
@@ -34,7 +26,6 @@ add_service_files(
 
 generate_messages(
   DEPENDENCIES
-    actionlib_msgs
     std_msgs
     geometry_msgs
 )
@@ -43,7 +34,6 @@ catkin_package(
   INCLUDE_DIRS
   LIBRARIES
   CATKIN_DEPENDS
-    actionlib_msgs
     message_runtime
     roscpp
     sensor_msgs

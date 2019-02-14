@@ -2,5 +2,5 @@
 
 string waypoint_name         # Name of waypoints to look up
 ---
-bool result                  # True if waypoint found, False otherwise
+bool success                 # True if waypoint found, False otherwise
 CombinedJointPoint waypoint  # Requested waypoint

@@ -44,7 +44,7 @@ Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, co
   , params_(ros::NodeHandle("~/moveit_simple"))
   , planning_group_(group_name)
   , robot_description_(robot_description)
-  , lookup_wp_ac_("lookup_wp", true)
+  , lookup_wp_client_(nh_.serviceClient<moveit_simple_msgs::LookupWaypoint>("lookup_waypoint"))
 {
   this->refreshRobot();
 
@@ -67,9 +67,6 @@ Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, co
     throw IKSolverTransformException("Failed to compute transforms between the base/tip"
                                      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
-
-  if(!lookup_wp_ac_.waitForServer(ros::Duration(action_client_timeout_)))
-    ROS_ERROR_STREAM("Timed out waiting for lookup waypoint action server. Continuing without.");
 }
 
 Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, const std::string& group_name,
@@ -386,23 +383,18 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
   {
     ROS_INFO_STREAM("Requesting trajectory training service info for waypoint: " << name);
 
-    moveit_simple_msgs::LookupWaypointGoal goal;
-    goal.waypoint_name = name;
-    lookup_wp_ac_.sendGoal(goal);
+    moveit_simple_msgs::LookupWaypoint srv;
+    srv.request.waypoint_name = name;
 
-    if (lookup_wp_ac_.waitForResult(ros::Duration(action_client_timeout_)))
+    if (lookup_wp_client_.exists() && lookup_wp_client_.call(srv) && srv.response.success)
     {
-      auto result = lookup_wp_ac_.getResult();
-      if(result->success)
-      {
-        auto waypoint = result->waypoint;
-        Eigen::Affine3d pose;
-        tf::transformMsgToEigen(waypoint.transform_stamped.transform, pose);
+      auto waypoint = srv.response.waypoint;
+      Eigen::Affine3d pose;
+      tf::transformMsgToEigen(waypoint.transform_stamped.transform, pose);
 
-        return std::unique_ptr<TrajectoryPoint>(
-            new CombinedTrajectoryPoint(waypoint.joint_point, pose, time, joint_equality_tolerance_, name,
-                                        CombinedTrajectoryPoint::PointPreference::CARTESIAN));
-      }
+      return std::unique_ptr<TrajectoryPoint>(
+          new CombinedTrajectoryPoint(waypoint.joint_point, pose, time, joint_equality_tolerance_, name,
+                                      CombinedTrajectoryPoint::PointPreference::CARTESIAN));
     }
     else
     {
@@ -964,7 +956,6 @@ void Robot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config& config,
     ROS_WARN_STREAM("Speed modifier should be a positive nunber but it is: " << params_.speed_modifier);
   }
   joint_equality_tolerance_ = params_.joint_equality_tolerance;
-  action_client_timeout_ = params_.action_client_timeout;
 }
 
 void Robot::setSpeedModifier(const double speed_modifier)
