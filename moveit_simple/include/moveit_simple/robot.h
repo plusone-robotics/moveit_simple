@@ -34,6 +34,8 @@
 
 #include <moveit_simple/moveit_simple_dynamic_reconfigure_Parameters.h>
 #include <moveit_simple/point_types.h>
+#include <actionlib/client/simple_action_client.h>
+#include "moveit_simple_msgs/LookupWaypointAction.h"
 
 namespace moveit_simple
 {
@@ -603,12 +605,17 @@ protected:
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
+  // Action Server to Lookup Waypoints
+  mutable actionlib::SimpleActionClient<moveit_simple_msgs::LookupWaypointAction> lookup_wp_ac_;
+
   // ROS objects
   ros::NodeHandle nh_;
   mutable std::recursive_mutex m_;
 
   // Dynamic Reconfigure
   double speed_modifier_;
+  double joint_equality_tolerance_;
+  double action_client_timeout_;
   moveit_simple_dynamic_reconfigure_Parameters params_;
   std::shared_ptr<dynamic_reconfigure::Server<moveit_simple_dynamic_reconfigure_Config>> dynamic_reconfig_server_;
 

@@ -4,7 +4,6 @@ project(moveit_simple)
 add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
-  actionlib
   cmake_modules
   control_msgs
   dynamic_reconfigure
@@ -12,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   moveit_core
   moveit_ros_planning
+  moveit_simple_msgs
   moveit_visual_tools
   roscpp
   rosparam_handler
@@ -33,11 +33,11 @@ catkin_package(
   LIBRARIES
     ${PROJECT_NAME}
   CATKIN_DEPENDS
-    actionlib
     control_msgs
     dynamic_reconfigure
     eigen_conversions
     geometry_msgs
+    moveit_simple_msgs
     roscpp
     rosparam_handler
     sensor_msgs
