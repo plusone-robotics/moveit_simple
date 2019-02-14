@@ -25,7 +25,8 @@
 #include <ros/ros.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "moveit_simple_msgs/CombinedJointPoint.h"
-#include "moveit_simple_msgs/TrajectoryTrainer.h"
+#include "moveit_simple_msgs/LookupTrajectoryAction.h"
+#include "moveit_simple_msgs/LookupWaypointAction.h"
 
 #include <moveit_simple/exceptions.h>
 #include <moveit_simple/joint_locker.h>
@@ -43,6 +44,7 @@ Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, co
   , params_(ros::NodeHandle("~/moveit_simple"))
   , planning_group_(group_name)
   , robot_description_(robot_description)
+  , lookup_wp_ac_("lookup_wp", true)
 {
   this->refreshRobot();
 
@@ -66,7 +68,8 @@ Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, co
                                      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
 
-  trajectory_training_client_ = nh_.serviceClient<moveit_simple_msgs::TrajectoryTrainer>("trajectory_training");
+  if(!lookup_wp_ac_.waitForServer(ros::Duration(action_client_timeout_)))
+    ROS_ERROR_STREAM("Timed out waiting for lookup waypoint action server. Continuing without.");
 }
 
 Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, const std::string& group_name,
@@ -383,24 +386,23 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
   {
     ROS_INFO_STREAM("Requesting trajectory training service info for waypoint: " << name);
 
-    std::vector<std::string> waypoint_names;
-    waypoint_names.push_back(name);
+    moveit_simple_msgs::LookupWaypointGoal goal;
+    goal.waypoint_name = name;
+    lookup_wp_ac_.sendGoal(goal);
 
-    moveit_simple_msgs::TrajectoryTrainer srv;
-
-    srv.request.op_type = moveit_simple_msgs::TrajectoryTrainer::Request::GET_WP;
-    srv.request.waypoint_names = waypoint_names;
-
-    if (trajectory_training_client_.call(srv) && srv.response.result && srv.response.waypoints.size() > 0)
+    if (lookup_wp_ac_.waitForResult(ros::Duration(action_client_timeout_)))
     {
-      auto waypoint = srv.response.waypoints.front();
+      auto result = lookup_wp_ac_.getResult();
+      if(result->success)
+      {
+        auto waypoint = result->waypoint;
+        Eigen::Affine3d pose;
+        tf::transformMsgToEigen(waypoint.transform_stamped.transform, pose);
 
-      Eigen::Affine3d pose;
-      tf::transformMsgToEigen(waypoint.transform_stamped.transform, pose);
-
-      return std::unique_ptr<TrajectoryPoint>(
-          new CombinedTrajectoryPoint(waypoint.joint_point, pose, time, joint_equality_tolerance_, name,
-                                      CombinedTrajectoryPoint::PointPreference::CARTESIAN));
+        return std::unique_ptr<TrajectoryPoint>(
+            new CombinedTrajectoryPoint(waypoint.joint_point, pose, time, joint_equality_tolerance_, name,
+                                        CombinedTrajectoryPoint::PointPreference::CARTESIAN));
+      }
     }
     else
     {
@@ -962,6 +964,7 @@ void Robot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config& config,
     ROS_WARN_STREAM("Speed modifier should be a positive nunber but it is: " << params_.speed_modifier);
   }
   joint_equality_tolerance_ = params_.joint_equality_tolerance;
+  action_client_timeout_ = params_.action_client_timeout;
 }
 
 void Robot::setSpeedModifier(const double speed_modifier)

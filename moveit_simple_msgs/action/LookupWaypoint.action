@@ -1,0 +1,7 @@
+# Get Waypoint Action
+string waypoint_name
+---
+bool success
+CombinedJointPoint waypoint
+---
+# no feedback

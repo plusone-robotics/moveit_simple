@@ -135,33 +135,35 @@ std::string CombinedTrajectoryPoint::pointVecToString(const std::vector<double> 
 bool CombinedTrajectoryPoint::compareJointAndCart(const Robot &robot, double timeout) const
 {
   std::vector<double> cart_point;
-  bool in_tol;
+  bool in_tol = false;
+  double tol = tol_;
 
   if (robot.getJointSolution(pose_, timeout, joint_point_, cart_point))
   {
-    std::vector<double>::const_iterator joint_it = joint_point_.begin();
-    std::vector<double>::const_iterator cart_it = cart_point.begin();
+    if (joint_point_.size() == cart_point.size())
+    {
+      in_tol = std::equal(joint_point_.begin(), joint_point_.end(), cart_point.begin(),
+                          [&tol](const double &joint, const double &cart) { return std::abs(joint - cart) <= tol; });
 
-    while (in_tol && joint_it != joint_point_.end())
-    {
-      in_tol = std::abs(*joint_it - *cart_it) <= tol_;
-      joint_it++;
-      cart_it++;
+      if (!in_tol)
+      {
+        std::stringstream ss;
+        ss << "CombinedTrajectoryPoint: Cartesian and Joint representations are out of tolerance. " << std::endl;
+        ss << "Using " << ((this->type() == PointType::JOINT) ? "joint" : "cartesian")
+           << " representation, per preference." << std::endl;
+        ss << "Joint Representation Joints: " << pointVecToString(joint_point_) << std::endl;
+        ss << "Cartesian Representation Joints: " << pointVecToString(cart_point) << std::endl;
+        ROS_WARN_STREAM(ss.str());
+      }
     }
-    if (!in_tol)
+    else
     {
-      std::stringstream ss;
-      ss << "CombinedTrajectoryPoint: Cartesian and Joint representations are out of tolerance. " << std::endl;
-      ss << "Using " << ((this->type() == PointType::JOINT) ? "joint" : "cartesian") << " representation, per preference." << std::endl;
-      ss << "Joint Representation Joints: " << pointVecToString(joint_point_) << std::endl;
-      ss << "Cartesian Representation Joints: " << pointVecToString(cart_point) << std::endl;
-      ROS_WARN_STREAM(ss.str());
+      ROS_WARN_STREAM("Joint and Cartesian representations are not the same size. Cannot compare.");
     }
   }
   else
   {
     ROS_WARN_STREAM("Failed to find joint solution for point: " << name_);
-    in_tol = false;
   }
 
   return in_tol;

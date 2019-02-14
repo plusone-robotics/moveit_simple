@@ -12,7 +12,6 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>actionlib</build_depend>
   <build_depend>cmake_modules</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
   <build_depend>control_msgs</build_depend>
@@ -31,7 +30,6 @@
   <build_depend>trajectory_msgs</build_depend>
   <build_depend>moveit_simple_msgs</build_depend>
 
-  <run_depend>actionlib</run_depend>
   <run_depend>control_msgs</run_depend>
   <run_depend>dynamic_reconfigure</run_depend>
   <run_depend>eigen</run_depend>
