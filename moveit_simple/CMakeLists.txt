@@ -37,6 +37,7 @@ catkin_package(
     dynamic_reconfigure
     eigen_conversions
     geometry_msgs
+    moveit_simple_msgs
     roscpp
     rosparam_handler
     sensor_msgs
