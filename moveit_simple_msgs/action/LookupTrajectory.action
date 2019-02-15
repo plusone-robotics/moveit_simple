@@ -1,8 +1,0 @@
-# Get Trajectory Action
-string trajectory_name
----
-bool success
-CombinedJointPoint[] waypoints
----
-bool trajectory_exists
-bool waypoints_exist
