@@ -34,7 +34,6 @@
 
 #include <moveit_simple/moveit_simple_dynamic_reconfigure_Parameters.h>
 #include <moveit_simple/point_types.h>
-#include "moveit_simple_msgs/LookupWaypoint.h"
 
 namespace moveit_simple
 {

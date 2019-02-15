@@ -25,8 +25,8 @@
 #include <ros/ros.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "moveit_simple_msgs/CombinedJointPoint.h"
-#include "moveit_simple_msgs/LookupTrajectoryAction.h"
-#include "moveit_simple_msgs/LookupWaypointAction.h"
+#include "moveit_simple_msgs/LookupTrajectory.h"
+#include "moveit_simple_msgs/LookupWaypoint.h"
 
 #include <moveit_simple/exceptions.h>
 #include <moveit_simple/joint_locker.h>
@@ -44,7 +44,6 @@ Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, co
   , params_(ros::NodeHandle("~/moveit_simple"))
   , planning_group_(group_name)
   , robot_description_(robot_description)
-  , lookup_wp_client_(nh_.serviceClient<moveit_simple_msgs::LookupWaypoint>("lookup_waypoint"))
 {
   this->refreshRobot();
 
@@ -67,6 +66,8 @@ Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, co
     throw IKSolverTransformException("Failed to compute transforms between the base/tip"
                                      " frame defined in the SRDF and the base/tip frames defined for the IK solver");
   }
+
+  lookup_wp_client_ = nh_.serviceClient<moveit_simple_msgs::LookupWaypoint>("lookup_waypoint");
 }
 
 Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, const std::string& group_name,
