@@ -256,6 +256,26 @@ TEST_F(UserRobotTest, add_trajectory)
   EXPECT_THROW(user_robot->execute("bad_traj"), std::invalid_argument);
 }
 
+TEST_F(UserRobotTest, validate_trajectory)
+{
+  ROS_INFO_STREAM("Testing trajectory validation");
+  const std::string TRAJECTORY_NAME("val_traj");
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  // try valid trajectory
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", 1.0, joint, 5));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
+
+  // go back to home in no time, should fail
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.0));
+  EXPECT_THROW(user_robot->execute(TRAJECTORY_NAME), moveit_simple::InvalidTrajectoryException);
+
+  // fixing the trajectory should work
+  ROS_INFO_STREAM("Attempting to fix the trajectory");
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME, false, true));
+}
+
 TEST_F(DeveloperRobotTest, planning)
 {
   const double ALLOWED_ERROR = 1e-2;
