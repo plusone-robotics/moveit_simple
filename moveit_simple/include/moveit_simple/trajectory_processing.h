@@ -98,7 +98,7 @@ bool fixTrajectory(robot_model::RobotModelConstPtr robot_model, const trajectory
   return true;
 }
 
-bool validateTrajectory(robot_model::RobotModelConstPtr robot_model,
+void validateTrajectory(robot_model::RobotModelConstPtr robot_model,
                         const trajectory_msgs::JointTrajectory& trajectory,
                         bool fix_trajectory)
 {
