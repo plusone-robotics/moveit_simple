@@ -25,6 +25,7 @@
 #include <moveit_simple/exceptions.h>
 #include <moveit_simple/online_robot.h>
 #include <moveit_simple/point_types.h>
+#include <moveit_simple/trajectory_processing.h>
 
 namespace moveit_simple
 {
@@ -76,7 +77,7 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_des
   }
 }
 
-void OnlineRobot::execute(const std::string traj_name, bool collision_check)
+void OnlineRobot::execute(const std::string traj_name, bool collision_check, bool fix_trajectory)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -85,7 +86,7 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
     std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
     goal = plan(traj_name, collision_check);
-    execute(goal);
+    execute(goal, false, fix_trajectory);
   }
   catch (IKFailException &ik)
   {
@@ -97,6 +98,11 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
     ROS_ERROR_STREAM("Collision detected in trajectory");
     throw cd;
   }
+  catch (InvalidTrajectoryException &ite)
+  {
+    ROS_ERROR_STREAM("Invalid trajectory [" << traj_name << "]: " << ite.what());
+    throw ite;
+  }
   catch (std::invalid_argument &ia)
   {
     ROS_ERROR_STREAM("Invalid trajectory name: [" << traj_name << "]");
@@ -104,19 +110,23 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check)
   }
   catch (ExecutionFailureException &ef)
   {
-    ROS_ERROR_STREAM("Trajectory [" << traj_name << "] failed to execute");
+    ROS_ERROR_STREAM("Trajectory [" << traj_name << "] failed to execute: " << ef.what());
     throw ef;
   }
 }
 
 void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> &joint_trajectory_points,
-  bool collision_check)
+                          bool collision_check, bool fix_trajectory)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   const double TIMEOUT_SCALE = 1.25;  // scales time to wait for action timeout.
 
   control_msgs::FollowJointTrajectoryGoal goal = toFollowJointTrajectoryGoal(joint_trajectory_points);
+
+  // validate trajectory waypoint bounds and timestamps
+  // if invalid, attempt to fix it or throw InvalidTrajectoryException
+  trajectory_processing::validateTrajectory(robot_model_ptr_, goal.trajectory, fix_trajectory);
 
   int collision_points = trajCollisionCheck(goal, collision_check);
 

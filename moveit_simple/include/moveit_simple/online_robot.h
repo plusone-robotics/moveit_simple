@@ -59,23 +59,26 @@ public:
    * @param traj_name - name of trajectory to be executed (must be filled with
    * prior calls to "addTrajPoint".
    * @param collision_check - bool to turn check for collision on\off
+   * @param fix_trajectory - bool to fix trajectory timesteps if necessary on\off
    * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
    * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
    * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void execute(const std::string traj_name, bool collision_check = false);
+  void execute(const std::string traj_name, bool collision_check = false, bool fix_trajectory = false);
 
   /**
    * @brief execute a given planned joint trajectory
    * @param goal - Joint Trajectory goal which is a known 'Plan'
    * @param collision_check - bool to turn check for collision on\off
+   * @param fix_trajectory - bool to fix trajectory timesteps if necessary on\off
    * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void execute(std::vector<moveit_simple::JointTrajectoryPoint> &goal, bool collision_check = false);
+  void execute(std::vector<moveit_simple::JointTrajectoryPoint> &goal, bool collision_check = false,
+               bool fix_trajectory = false);
 
   /**
    * @brief Starts execution for a given trajectory, non blocking
