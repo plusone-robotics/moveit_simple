@@ -698,13 +698,17 @@ TEST_F(DeveloperRobotTest, collision)
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
+  // joint1, joint2 are collision free but interpolated joint3 is in collision
   std::vector<trajectory_msgs::JointTrajectoryPoint> points;
-
   std::vector<double>joint1(6,0);
+  joint1[1] = 0.77;
+  joint1[2] = 1.13;
   std::vector<double>joint2(6,0);
+  joint2[1] = 1.45;
+  joint2[2] = 0.89;
   std::vector<double>joint3(6,0);
-  joint2[2] = M_PI;
-  joint3[2] = M_PI/2;
+  joint3[1] = (joint1[1] + joint2[1]) / 2;
+  joint3[2] = (joint1[2] + joint2[2]) / 2;
   std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
      std::unique_ptr<moveit_simple::TrajectoryPoint>
      (new moveit_simple::JointTrajectoryPoint(joint1, 1.0, "joint_point1"));
