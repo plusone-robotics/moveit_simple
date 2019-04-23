@@ -124,8 +124,6 @@ void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pos
                          double time, const InterpolationType& type, const unsigned int num_steps,
                          const std::string& point_name)
 {
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << "relative to" << frame << " at time "
                                        << time);
 
@@ -147,13 +145,10 @@ void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pos
                          const std::string& tool_name, double time, const InterpolationType& type,
                          const unsigned int num_steps, const std::string& point_name)
 {
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
-  auto moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
-
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " relative to " << pose_frame
                                        << " at time " << time << " and custom_tool_frame [" << tool_name << "]");
 
+  auto moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
   try
   {
     ROS_INFO_STREAM("Transforming Pose to custom_tool_frame frame [" << tool_name << "] from moveit_end_link ["
@@ -180,8 +175,6 @@ void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pos
 void Robot::addTrajPoint(const std::string& traj_name, const std::string& point_name, double time,
                          const InterpolationType& type, const unsigned int num_steps)
 {
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " at time " << time);
 
   try
@@ -204,8 +197,6 @@ void Robot::addTrajPoint(const std::string& traj_name, const std::string& point_
 void Robot::addTrajPoint(const std::string& traj_name, const std::string& point_name, const std::string& tool_name,
                          double time, const InterpolationType& type, const unsigned int num_steps)
 {
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " at time " << time
                                        << " and custom_tool_frame [" << tool_name << "]");
 
@@ -271,14 +262,13 @@ void Robot::addTrajPoint(const std::string& traj_name, const std::string& point_
 void Robot::addTrajPoint(const std::string& traj_name, std::unique_ptr<TrajectoryPoint>& point,
                          const InterpolationType& type, const unsigned int num_steps)
 {
+  std::lock_guard<std::recursive_mutex> guard(m_);
   traj_info_map_[traj_name].push_back({ std::move(point), type, num_steps });
 }
 
 void Robot::addTrajPointJointLock(const std::string& traj_name, const std::string& point_name, double time,
                                   const InterpolationType& type, const unsigned int num_steps, JointLockOptions options)
 {
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " at time " << time);
 
   try
@@ -304,12 +294,10 @@ void Robot::addTrajPointJointLock(const std::string& traj_name, const Eigen::Aff
                                   const InterpolationType& type, const unsigned int num_steps,
                                   const std::string& point_name, JointLockOptions options)
 {
-  std::lock_guard<std::recursive_mutex> guard(m_);
-
-  auto moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
-
   ROS_INFO_STREAM("Attempting to add " << point_name << " to " << traj_name << " relative to " << pose_frame
                                        << " at time " << time << " and custom_tool_frame [" << tool_name << "]");
+
+  auto moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   try
   {
