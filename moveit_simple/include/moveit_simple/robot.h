@@ -50,7 +50,7 @@ class Robot
 public:
   /**
   * @brief Constructor
-  */  
+  */
   Robot(const ros::NodeHandle &nh, const std::string &robot_description,
     const std::string &group_name);
 
@@ -92,7 +92,7 @@ public:
    * @param timeout - (optional) timeout for IK
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d &pose, 
+  bool isInCollision(const Eigen::Affine3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     const std::string &joint_seed, double timeout = 10.0) const;
 
@@ -141,7 +141,7 @@ public:
    * @param joint_seed (optional) - seed to use
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d &pose, 
+  bool isInCollision(const Eigen::Affine3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
@@ -174,7 +174,7 @@ public:
   * @param joint_seed - seed to use
   * @return
   */
-  bool isReachable(const Eigen::Affine3d &pose, 
+  bool isReachable(const Eigen::Affine3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     const std::string &joint_seed, double timeout = 10.0) const;
 
@@ -212,7 +212,7 @@ public:
    * @param joint_seed (optional) - named seed to use defined in srdf
    * @return
    */
-  bool isReachable(const Eigen::Affine3d &pose, 
+  bool isReachable(const Eigen::Affine3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
@@ -439,11 +439,11 @@ public:
   void updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
     std::vector<double> joint_seed = std::vector<double>(), double timeout = 10.0) const;
 
-  void updateRvizRobotState(const Eigen::Affine3d &pose, 
+  void updateRvizRobotState(const Eigen::Affine3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     const std::string &joint_seed, double timeout = 10.0) const;
 
-  void updateRvizRobotState(const Eigen::Affine3d &pose, 
+  void updateRvizRobotState(const Eigen::Affine3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     std::vector<double> joint_seed = std::vector<double>(),
     double timeout = 10.0) const;
@@ -460,7 +460,7 @@ protected:
 
   Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, const std::string &in_frame) const;
 
-  Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, 
+  Eigen::Affine3d transformToBase(const Eigen::Affine3d &in,
     const geometry_msgs::TransformStamped &transform_msg) const;
 
   /**
@@ -522,7 +522,7 @@ protected:
    * @param t: parameteric time
    * @param point: interpolated Cartesian point
    */
-  void interpolate(const std::unique_ptr<CartTrajectoryPoint> &from, 
+  void interpolate(const std::unique_ptr<CartTrajectoryPoint> &from,
     const std::unique_ptr<CartTrajectoryPoint> &to, double t,
     std::unique_ptr<CartTrajectoryPoint> &point) const;
 

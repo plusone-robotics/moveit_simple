@@ -57,7 +57,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} 
+add_library(${PROJECT_NAME}
   src/joint_lock_options.cpp
   src/joint_locker.cpp
   src/online_robot.cpp

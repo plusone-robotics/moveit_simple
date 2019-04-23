@@ -89,7 +89,7 @@ namespace pretty_print
     struct delimiters
     {
         using type = delimiters_values<TChar>;
-        static const type values; 
+        static const type values;
     };
 
 

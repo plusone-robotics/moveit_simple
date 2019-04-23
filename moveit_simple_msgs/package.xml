@@ -6,7 +6,7 @@
 
   <maintainer email="aaronwood@plusonerobotics.com">Aaron Wood</maintainer>
 
-  <license>Apache 2.0</license> <!-- moveit_simple_msgs --> 
+  <license>Apache 2.0</license> <!-- moveit_simple_msgs -->
   <license>Boost Software License</license> <!-- prettyprint -->
 
   <author email="aaronwood@plusonerobotics.com">Aaron Wood</author>

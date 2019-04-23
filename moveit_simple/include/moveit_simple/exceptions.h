@@ -50,12 +50,12 @@ public:
 class IKFailException : public std::runtime_error
 {
 public:
-  IKFailException(const std::string errorDescription) 
+  IKFailException(const std::string errorDescription)
     : std::runtime_error(errorDescription) { }
 };
 
 /**
- * @brief IKSolverTransformException: 
+ * @brief IKSolverTransformException:
  *
  * This inherits from std::runtime_error.
  * This is an exception class to be thrown when a custom iksolver is
@@ -78,12 +78,12 @@ public:
 class CollisionDetected : public std::runtime_error
 {
 public:
-  CollisionDetected(const std::string errorDescription) 
+  CollisionDetected(const std::string errorDescription)
     : std::runtime_error(errorDescription) { }
 };
 
 /**
- * @brief JointSeedException: 
+ * @brief JointSeedException:
  *
  * This inherits from std::runtime_error.
  * This is an exception class to be thrown when a pre-defined joint
@@ -93,7 +93,7 @@ public:
 class JointSeedException : public std::runtime_error
 {
 public:
-  JointSeedException(const std::string error_description) 
+  JointSeedException(const std::string error_description)
     : std::runtime_error(error_description) { }
 };
 } // namespace moveit_simple

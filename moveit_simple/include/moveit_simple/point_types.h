@@ -58,7 +58,7 @@ typedef std::vector<TrajectoryPointInfo> TrajectoryInfo;
 
 class TrajectoryPoint
 {
-public: 
+public:
   friend class Robot;
 
   virtual ~TrajectoryPoint() { }
@@ -112,7 +112,7 @@ class JointTrajectoryPoint : public TrajectoryPoint
 public:
   friend class CombinedTrajectoryPoint;
   JointTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::JOINT) { }
-  
+
   virtual ~JointTrajectoryPoint() { }
 
   JointTrajectoryPoint(std::vector<double> &joint_point, double t, std::string name = std::string(),
@@ -196,7 +196,7 @@ public:
   {
     return pose_;
   }
-  
+
   const std::vector<double> &jointPoint() const
   {
     return joint_point_;
@@ -210,7 +210,7 @@ public:
   std::string pointVecToString(const std::vector<double> &vec) const;
 
 protected:
-  
+
   virtual std::unique_ptr<JointTrajectoryPoint>
   toJointTrajPoint(const Robot &robot, double timeout, const std::vector<double> &seed,
                    JointLockOptions options = JointLockOptions::LOCK_NONE) const;

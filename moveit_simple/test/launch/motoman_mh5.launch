@@ -17,7 +17,7 @@
 
   <!-- The semantic description that corresponds to the URDF -->
   <param name="$(arg robot_description)_semantic" textfile="$(find moveit_simple)/test/resources/motoman_mh5/config/motoman_mh5_robot.srdf" />
-  
+
   <!-- Load updated joint limits (override information from URDF) -->
   <group ns="$(arg robot_description)_planning">
     <rosparam command="load" file="$(find moveit_simple)/test/resources/motoman_mh5/config/joint_limits.yaml"/>

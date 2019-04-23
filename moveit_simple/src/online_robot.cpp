@@ -29,7 +29,7 @@
 namespace moveit_simple
 {
 OnlineRobot::OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_description,
-  const std::string &group_name) : Robot(nh, robot_description, group_name), 
+  const std::string &group_name) : Robot(nh, robot_description, group_name),
   action_("joint_trajectory_action", true)
 {
   current_robot_state_.reset(new moveit::core::RobotState(robot_model_ptr_));
@@ -139,7 +139,7 @@ void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> &join
   }
   else
   {
-    ROS_ERROR_STREAM("Collision detected at " << collision_points 
+    ROS_ERROR_STREAM("Collision detected at " << collision_points
       << " points for Joint Trajectory");
     throw CollisionDetected("Collision detected while interpolating ");
   }

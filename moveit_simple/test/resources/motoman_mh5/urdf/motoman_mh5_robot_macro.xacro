@@ -50,7 +50,7 @@
       <parent link="${prefix}ee_link"/>
       <child link="${prefix}tool_custom"/>
       <origin rpy="0 0 0" xyz="0 0 0.15"/>
-    </joint>    
+    </joint>
     <!-- End Joints -->
 
     <!-- Waypoints for testing -->

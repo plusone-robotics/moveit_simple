@@ -35,12 +35,12 @@ class UserRobotTest : public ::testing::Test
 {
 protected:
   std::unique_ptr<moveit_simple::OnlineRobot> user_robot;
-  
+
   virtual void SetUp()
-  {      
+  {
     user_robot = std::unique_ptr<moveit_simple::OnlineRobot> (new moveit_simple::OnlineRobot
       (ros::NodeHandle(), "robot_description", "manipulator", "base_link", "link_t"));
-    
+
     ros::Duration(2.0).sleep();  //wait for tf tree to populate
   }
 
@@ -62,9 +62,9 @@ public:
   using moveit_simple::OnlineRobot::cartesianInterpolation;
   using moveit_simple::OnlineRobot::isInCollision;
   using moveit_simple::OnlineRobot::getFK;
-  using moveit_simple::OnlineRobot::getIK;  
+  using moveit_simple::OnlineRobot::getIK;
 };
-  
+
 /**
  * @brief DeveloperRobotTest is a fixture for testing protected methods.
  * Objects that can be directly used inside the test
@@ -75,7 +75,7 @@ class DeveloperRobotTest : public ::testing::Test
 protected:
   std::unique_ptr<DeveloperRobot> developer_robot;
   virtual void SetUp()
-  {      
+  {
     developer_robot = std::unique_ptr<DeveloperRobot> (new DeveloperRobot
       (ros::NodeHandle(), "robot_description", "manipulator", "base_link", "link_t"));
 
@@ -95,7 +95,7 @@ struct KinematicsTestData
 
   // Forward kinematics from base -> tool_custom
   std::vector<double> translation_tool_custom; // [x, y, z]
-  std::vector<double> rotation_tool_custom; // Quaternion [x, y, z, w]  
+  std::vector<double> rotation_tool_custom; // Quaternion [x, y, z, w]
 };
 
 TEST_F(DeveloperRobotTest, kinematics)
@@ -155,7 +155,7 @@ TEST_F(DeveloperRobotTest, kinematics)
     EXPECT_NEAR(tool_custom_translation.x(), pose.translation_tool_custom[0], ABS_ERROR);
     EXPECT_NEAR(tool_custom_translation.y(), pose.translation_tool_custom[1], ABS_ERROR);
     EXPECT_NEAR(tool_custom_translation.z(), pose.translation_tool_custom[2], ABS_ERROR);
-    
+
     Eigen::Quaterniond tool_custom_rotation = Eigen::Quaterniond(tool_custom_calculated_pose.linear());
     EXPECT_NEAR(tool_custom_rotation.x(), pose.rotation_tool_custom[0], ABS_ERROR);
     EXPECT_NEAR(tool_custom_rotation.y(), pose.rotation_tool_custom[1], ABS_ERROR);
@@ -174,12 +174,12 @@ TEST_F(DeveloperRobotTest, kinematics)
     EXPECT_NEAR(check_joint_translation.x(), pose.translation_tool_custom[0], ABS_ERROR);
     EXPECT_NEAR(check_joint_translation.y(), pose.translation_tool_custom[1], ABS_ERROR);
     EXPECT_NEAR(check_joint_translation.z(), pose.translation_tool_custom[2], ABS_ERROR);
-    
+
     Eigen::Quaterniond check_joint_rotation = Eigen::Quaterniond(check_joint_solution.linear());
     EXPECT_NEAR(check_joint_rotation.x(), pose.rotation_tool_custom[0], ABS_ERROR);
     EXPECT_NEAR(check_joint_rotation.y(), pose.rotation_tool_custom[1], ABS_ERROR);
     EXPECT_NEAR(check_joint_rotation.z(), pose.rotation_tool_custom[2], ABS_ERROR);
-    EXPECT_NEAR(check_joint_rotation.w(), pose.rotation_tool_custom[3], ABS_ERROR);    
+    EXPECT_NEAR(check_joint_rotation.w(), pose.rotation_tool_custom[3], ABS_ERROR);
   };
 
   testKinematics(pose_home);
@@ -192,7 +192,7 @@ TEST_F(DeveloperRobotTest, kinematics)
 
 TEST(MoveitSimpleTest, construction_robot)
 {
-  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");  
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
 }
 
 TEST(MoveitSimpleTest, construction_online_robot)
@@ -202,19 +202,19 @@ TEST(MoveitSimpleTest, construction_online_robot)
 
 TEST(MoveitSimpleTest, construction_robot_ikfast)
 {
-  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator", 
-    "base_link", "link_t"); 
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator",
+    "base_link", "link_t");
 }
 
 TEST(MoveitSimpleTest, construction_online_robot_ikfast)
 {
-  moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator", 
+  moveit_simple::OnlineRobot online_robot(ros::NodeHandle(), "robot_description", "manipulator",
     "base_link", "link_t");
 }
 
 TEST_F(UserRobotTest, reachability)
 {
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
 
   ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
   EXPECT_FALSE(user_robot->isReachable("unknown_name"));
@@ -233,14 +233,14 @@ TEST_F(UserRobotTest, reachability)
 TEST_F(UserRobotTest, add_trajectory)
 {
   const std::string TRAJECTORY_NAME("traj1");
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
   ROS_INFO_STREAM("Testing loading of unknown point, should fail");
   EXPECT_THROW(user_robot->addTrajPoint("bad_traj", "unknown_name", 1.0), std::invalid_argument);
   EXPECT_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, pose, "random_link", 5.0), tf2::TransformException);
-  
+
   ROS_INFO_STREAM("Testing trajectory adding of points");
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home", 0.5));
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", 1.0, joint, 5));
@@ -335,7 +335,7 @@ TEST_F(DeveloperRobotTest, planning)
   EXPECT_EQ(points.size(),14);
 
   ROS_INFO_STREAM("Converting the joint positions to poses to compare against expected poses");
-  
+
   std::vector<Eigen::Affine3d> pose_out;
   pose_out.resize(points.size());
   for (std::size_t i = 0; i < points.size(); ++i)
@@ -537,7 +537,7 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2", 3.0));
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", 4.0));
-  
+
   // Test 1 -- Max_Execution_Speed: Plan & then Execute that Plan separately
   user_robot->setSpeedModifier(1.0);
   EXPECT_TRUE(user_robot->getSpeedModifier() == 1.0);
@@ -545,11 +545,11 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
   EXPECT_NO_THROW(goal = user_robot->plan(TRAJECTORY_NAME));
-  EXPECT_NO_THROW(user_robot->execute(goal));  
-  
+  EXPECT_NO_THROW(user_robot->execute(goal));
+
   execution_time_check_1 = goal[goal.size()-1].time();
   EXPECT_TRUE(execution_time_check_1 >= 0.0);
-  ROS_INFO_STREAM("Time for single traj. execution at MAX speed: " 
+  ROS_INFO_STREAM("Time for single traj. execution at MAX speed: "
     << execution_time_check_1 << " seconds");
 
   // Test 2 -- Half_Execution_Speed: Plan & Execute
@@ -587,12 +587,12 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   delta_time_for_speed_limits = delta_max_half_speeds - delta_half_min_speeds;
   EXPECT_NEAR(delta_time_for_speed_limits, 0.0, execution_time_tolerance);
 
-  if(abs(delta_time_for_speed_limits) > execution_time_tolerance) 
+  if(abs(delta_time_for_speed_limits) > execution_time_tolerance)
   {
-    ROS_ERROR_STREAM("Time diff between [MAX_SPEED/REGULAR_SPEED] --> [" << 
-                     execution_time_check_1 << ", " << execution_time_check_2 << 
+    ROS_ERROR_STREAM("Time diff between [MAX_SPEED/REGULAR_SPEED] --> [" <<
+                     execution_time_check_1 << ", " << execution_time_check_2 <<
                      "] & [REGULAR_SPEED/MIN_SPEED] --> [" << execution_time_check_2 <<
-                     ", " << execution_time_check_3 << "] is " << delta_time_for_speed_limits << 
+                     ", " << execution_time_check_3 << "] is " << delta_time_for_speed_limits <<
                      "; but tolerance limit is [" << execution_time_tolerance << "]");
   }
 }
@@ -726,7 +726,7 @@ TEST_F(UserRobotTest, custom_tool_link)
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp3", "tool_custom", 4.0));
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", tool_name, 5.0, joint, 5));
   EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "tool0", 6.0));
-  
+
   EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
 }
 

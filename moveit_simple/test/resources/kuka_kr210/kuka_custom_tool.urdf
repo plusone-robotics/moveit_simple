@@ -4,7 +4,7 @@
   <link name="tool0"/>
 
   <link name="tool_custom"/>
-  
+
   <joint name="tool0-tool_custom" type="fixed">
     <parent link="tool0"/>
     <child link="tool_custom"/>
