@@ -158,7 +158,7 @@ TEST_F(UserRobotTest, validate_trajectory)
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 
   // go back to home in no time, should fail
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2",      0.0));
   EXPECT_THROW(robot->execute(TRAJECTORY_NAME), moveit_simple::InvalidTrajectoryException);
 
   // fixing the trajectory should work

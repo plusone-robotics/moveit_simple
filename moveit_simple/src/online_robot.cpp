@@ -126,7 +126,7 @@ void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> &join
 
   // validate trajectory waypoint bounds and timestamps
   // if invalid, attempt to fix it or throw InvalidTrajectoryException
-  trajectory_processing::validateTrajectory(robot_model_ptr_, goal.trajectory, fix_trajectory);
+  trajectory_processing::validateTrajectory(robot_model_ptr_, joint_group_->getName(), goal.trajectory, fix_trajectory);
 
   int collision_points = trajCollisionCheck(goal, collision_check);
 

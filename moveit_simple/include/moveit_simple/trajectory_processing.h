@@ -17,6 +17,9 @@
  */
 
 #include <moveit_simple/exceptions.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
+#include <moveit/robot_state/robot_state.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
 
 #ifndef TRAJECTORY_PROCESSING_H
 #define TRAJECTORY_PROCESSING_H
@@ -92,14 +95,24 @@ TrajectoryValidationResult validateTrajectory(robot_model::RobotModelConstPtr ro
   return result;
 }
 
-bool fixTrajectory(robot_model::RobotModelConstPtr robot_model, const trajectory_msgs::JointTrajectory& trajectory)
+void fixTrajectory(robot_model::RobotModelConstPtr robot_model, const std::string& group_name,
+                   trajectory_msgs::JointTrajectory& joint_trajectory)
 {
-  // TODO(henningkayser): compute timestamps
-  return true;
+  // convert trajectory message to robot trajectory
+  robot_trajectory::RobotTrajectory trajectory(robot_model, group_name);
+  moveit::core::RobotState robot_state(robot_model);
+  trajectory.setRobotTrajectoryMsg(robot_state, joint_trajectory);
+  ::trajectory_processing::TimeOptimalTrajectoryGeneration totg;
+  if (!totg.computeTimeStamps(trajectory))
+    throw InvalidTrajectoryException("Failed to recompute trajectory time stamps");
+  moveit_msgs::RobotTrajectory trajectory_msg;
+  trajectory.getRobotTrajectoryMsg(trajectory_msg);
+  joint_trajectory = trajectory_msg.joint_trajectory;
 }
 
 void validateTrajectory(robot_model::RobotModelConstPtr robot_model,
-                        const trajectory_msgs::JointTrajectory& trajectory,
+                        const std::string& group_name,
+                        trajectory_msgs::JointTrajectory& trajectory,
                         bool fix_trajectory)
 {
   TrajectoryValidationResult result = validateTrajectory(robot_model, trajectory);
@@ -107,7 +120,7 @@ void validateTrajectory(robot_model::RobotModelConstPtr robot_model,
   {
     // we can't fix invalid positions by trajectory parameterization
     if (fix_trajectory && result.value != TrajectoryValidationResult::InvalidPosition)
-      fixTrajectory(robot_model, trajectory);
+      fixTrajectory(robot_model, group_name, trajectory);
     else
       throw InvalidTrajectoryException(result.error_message);
   }
