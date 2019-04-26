@@ -63,6 +63,7 @@ add_library(${PROJECT_NAME}
   src/online_robot.cpp
   src/point_types.cpp
   src/robot.cpp
+  src/trajectory_planner.cpp
   src/conversions.cpp
 )
 

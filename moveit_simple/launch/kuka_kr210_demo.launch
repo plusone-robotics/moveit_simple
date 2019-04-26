@@ -23,6 +23,8 @@
     <arg name="run_test_node" value="$(arg run_test_node)"/>
   </include>
 
+  <node pkg="tf" type="static_transform_publisher" name="tfdummy" args="0 0 0 0 0 0 /world /base_link 10" />
+
   <!-- Test Node -->
   <node name="kuka_kr210_demo" pkg="moveit_simple" type="moveit_simple_trajectory_planner_demo"
   launch-prefix="$(arg launch_prefix)" />

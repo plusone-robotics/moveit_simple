@@ -34,6 +34,7 @@
 
 #include <moveit_simple/moveit_simple_dynamic_reconfigure_Parameters.h>
 #include <moveit_simple/point_types.h>
+#include <moveit_simple/trajectory_planner.h>
 
 namespace moveit_simple
 {
@@ -48,6 +49,8 @@ namespace moveit_simple
 class Robot
 {
 public:
+  friend class TrajectoryPlanner;
+
   /**
   * @brief Constructor
   */
@@ -374,7 +377,8 @@ public:
    * @brief clearTrajectory - clears stored trajectory
    * @param traj_name - trajectory to clear
    */
-  void clearTrajectory(const ::std::string traj_name);
+  // TODO(mlautman): deprecate this
+  void clearTrajectory(const ::std::string& traj_name);
 
   /**
    * @brief plan out a given trajectory
@@ -476,6 +480,7 @@ protected:
   control_msgs::FollowJointTrajectoryGoal toFollowJointTrajectoryGoal(
     const std::vector<moveit_simple::JointTrajectoryPoint> &joint_trajectory_points) const;
 
+  // TODO(mlautman): Deprecate this
   bool toJointTrajectory(const std::string traj_name, std::vector<trajectory_msgs::JointTrajectoryPoint> &points,
     bool collision_check = false);
 
@@ -535,6 +540,7 @@ protected:
     const std::unique_ptr<JointTrajectoryPoint> &to, double t,
     std::unique_ptr<JointTrajectoryPoint> &point) const;
 
+  // TODO(mlautman): deprecate this
   void addTrajPoint(const std::string &traj_name, std::unique_ptr<TrajectoryPoint> &point,
     const InterpolationType &type = interpolation_type::JOINT,
     const unsigned int num_steps = 0);
@@ -570,7 +576,7 @@ protected:
   void reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level);
 
   // Robot internal objects
-  std::map<std::string, TrajectoryInfo> traj_info_map_;
+  TrajectoryPlanner trajectory_planner_;
 
   // MoveIt objects
   mutable moveit::core::RobotStatePtr virtual_robot_state_;  // for IK calls

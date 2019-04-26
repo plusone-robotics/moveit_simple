@@ -30,6 +30,7 @@
 namespace moveit_simple
 {
 class Robot;
+class TrajectoryPlanner;
 class TrajectoryPoint;
 class JointTrajectoryPoint;
 class CartTrajectoryPoint;
@@ -60,6 +61,8 @@ class TrajectoryPoint
 {
 public:
   friend class Robot;
+  friend class TrajectoryPlanner;
+
 
   virtual ~TrajectoryPoint() { }
 
