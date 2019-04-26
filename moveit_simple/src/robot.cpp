@@ -1502,17 +1502,16 @@ bool Robot::getFK(const std::vector<double>& joint_point, Eigen::Isometry3d& pos
 }
 
 bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed, std::vector<double>& joint_point,
-                  double timeout, unsigned int attempts) const
+                  double timeout) const
 {
   virtual_robot_state_->setJointGroupPositions(joint_group_, seed);
-  return getIK(pose, joint_point, timeout, attempts);
+  return getIK(pose, joint_point, timeout);
 }
 
-bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout,
-                  unsigned int attempts) const
+bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout) const
 {
   Eigen::Isometry3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
-  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, attempts, timeout))
+  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, timeout))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();

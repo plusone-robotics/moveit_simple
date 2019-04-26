@@ -329,7 +329,6 @@ public:
    * @brief getJointSolution returns joint solution for cartesian pose.
    * @param pose - desired pose
    * @param timeout - ik solver timeout
-   * @param attempts - number of IK solve attem
    * @param seed - ik seed
    * @param joint_point - joint solution for pose
    * @return true if joint solution found
@@ -343,7 +342,6 @@ public:
    * @param pose - desired pose
    * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @param timeout - ik solver timeout
-   * @param attempts - number of IK solve attem
    * @param seed - ik seed
    * @param joint_point - joint solution for pose
    * @return true if joint solution found
@@ -557,10 +555,10 @@ protected:
   virtual std::vector<double> getJointState(void) const;
 
   bool getIK(const Eigen::Isometry3d pose, const std::vector<double> &seed,
-    std::vector<double> &joint_point, double timeout = 1, unsigned int attempts = 1) const;
+    std::vector<double> &joint_point, double timeout = 1) const;
 
   bool getIK(const Eigen::Isometry3d pose, std::vector<double> &joint_point,
-    double timeout = 1, unsigned int attempts = 1) const;
+    double timeout = 1) const;
 
   bool getFK(const std::vector<double> &joint_point, Eigen::Isometry3d &pose) const;
 
