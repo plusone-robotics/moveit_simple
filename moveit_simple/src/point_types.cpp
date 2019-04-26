@@ -45,7 +45,7 @@ std::unique_ptr<JointTrajectoryPoint> JointTrajectoryPoint::toJointTrajPoint(con
 
 std::unique_ptr<CartTrajectoryPoint> JointTrajectoryPoint::toCartTrajPoint(const Robot &robot) const
 {
-  Eigen::Affine3d pose;
+  Eigen::Isometry3d pose;
 
   ROS_DEBUG_STREAM("JointTrajectoryPoint: Calculating FK for Cartesian trajectory point");
   if (robot.getPose(joint_point_, pose))
