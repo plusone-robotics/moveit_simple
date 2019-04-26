@@ -1252,7 +1252,7 @@ bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point
 {
   Eigen::Isometry3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
   std::vector<double> consistency_limit(6, 2 * M_PI);
-  // we add a 'soft' consistency limit that so that IK solutions can only converge slowly towards the joint limit
+  // we add a 'soft' consistency limit so that IK solutions can only converge slowly towards the joint limit
   if (limit_joint_windup && !ik_seed_state_fractions_.empty())
   {
     for (const std::pair<size_t, double>& seed_state_fraction : ik_seed_state_fractions_)
