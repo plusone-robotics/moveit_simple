@@ -32,6 +32,7 @@
 #include <moveit_simple/joint_locker.h>
 #include <moveit_simple/point_types.h>
 #include <moveit_simple/prettyprint.hpp>
+#include <moveit_simple/conversions.h>
 #include <moveit_simple/robot.h>
 
 namespace moveit_simple
@@ -886,22 +887,6 @@ std::vector<moveit_simple::JointTrajectoryPoint> Robot::plan(const std::string t
   }
 }
 
-std::vector<moveit_simple::JointTrajectoryPoint>
-Robot::toJointTrajectoryPoint(std::vector<trajectory_msgs::JointTrajectoryPoint>& ros_joint_trajectory_points) const
-{
-  std::vector<moveit_simple::JointTrajectoryPoint> goal;
-  goal.reserve(ros_joint_trajectory_points.size());
-
-  for (std::size_t i = 0; i < ros_joint_trajectory_points.size(); i++)
-  {
-    JointTrajectoryPoint point(ros_joint_trajectory_points[i].positions,
-                               ros_joint_trajectory_points[i].time_from_start.toSec(), "");
-    goal.push_back(point);
-  }
-
-  return goal;
-}
-
 control_msgs::FollowJointTrajectoryGoal Robot::toFollowJointTrajectoryGoal(
     const std::vector<moveit_simple::JointTrajectoryPoint>& joint_trajectory_points) const
 {
@@ -1569,26 +1554,6 @@ bool Robot::isNearSingular(const std::vector<double>& joint_point) const
                                                << " is not a chain");
     return false;
   }
-}
-
-trajectory_msgs::JointTrajectoryPoint Robot::toJointTrajPtMsg(const JointTrajectoryPoint& joint_point) const
-{
-  return toJointTrajPtMsg(joint_point.jointPoint(), joint_point.time());
-}
-
-trajectory_msgs::JointTrajectoryPoint Robot::toJointTrajPtMsg(const std::vector<double>& joint_point, double time)
-{
-  trajectory_msgs::JointTrajectoryPoint rtn;
-  std::vector<double> empty(joint_point.size(), 0.0);
-
-  rtn.positions = joint_point;
-  rtn.velocities = empty;
-
-  rtn.accelerations = empty;
-  rtn.effort = empty;
-  rtn.time_from_start = ros::Duration(time);
-
-  return rtn;
 }
 
 std::vector<double> Robot::getJointState(void) const
