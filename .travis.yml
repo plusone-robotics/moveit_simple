@@ -9,6 +9,8 @@ notifications:
     recipients:
       - shaun.edwards@gmail.com
 env:
+  global:
+    BUILD_PKGS_WHITELIST="industrial_experimental industrial_robot_pkg_gen industrial_utils motoman motoman_bmda3_support motoman_csda10f_moveit_config motoman_csda10f_support motoman_epx_support motoman_experimental motoman_gp12_support motoman_gp7_support motoman_gp8_support motoman_mh12_support motoman_mh50_support motoman_mh5_support motoman_mh_support motoman_motomini_support motoman_mpl80_moveit_config motoman_mpl_support motoman_msgs motoman_robot_pkg_gen motoman_sda10f_moveit_config motoman_sda10f_support motoman_sia10d_support motoman_sia10f_support motoman_sia20d_moveit_config motoman_sia20d_support motoman_sia5d_moveit_config motoman_sia5d_support moveit_core motoman_mh5_ikfast_manipulator_plugin simple_message industrial_robot_client industrial_robot_simulator motoman_driver"
   matrix:
     - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
 install:

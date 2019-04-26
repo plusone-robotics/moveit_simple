@@ -1,3 +1,16 @@
-- git: {local-name: industrial_experimental, uri: 'https://github.com/ros-industrial/industrial_experimental.git', version: indigo-devel}
-- git: {local-name: motoman, uri: 'https://github.com/ros-industrial/motoman.git', version: kinetic-devel}
-- git: {local-name: motoman-experimental, uri: 'https://github.com/ros-industrial/motoman_experimental', version: kinetic-devel}
+- git:
+    local-name: industrial_experimental
+    uri: https://github.com/ros-industrial/industrial_experimental.git
+    version: indigo-devel
+- git:
+    local-name: motoman
+    uri: https://github.com/ros-industrial/motoman.git
+    version: kinetic-devel
+- git:
+    local-name: motoman-experimental
+    uri: https://github.com/ros-industrial/motoman_experimental.git
+    version: kinetic-devel
+- git:
+    local-name: moveit
+    uri: https://github.com/ros-planning/moveit.git
+    version: master
