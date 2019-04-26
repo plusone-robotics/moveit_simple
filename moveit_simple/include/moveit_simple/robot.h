@@ -435,6 +435,12 @@ public:
    */
   double getSpeedModifier(void) const;
 
+  void limitJointWindup(bool enabled);
+
+  bool setIKSeedStateFractions(const std::map<size_t, double>& ik_seed_state_fractions);
+
+  std::map<size_t, double> getIKSeedStateFractions() const;
+
   void updateRvizRobotState(const Eigen::Isometry3d &pose, const std::string &in_frame,
     const std::string &joint_seed, double timeout = 10.0) const;
 
@@ -557,10 +563,10 @@ protected:
   virtual std::vector<double> getJointState(void) const;
 
   bool getIK(const Eigen::Isometry3d pose, const std::vector<double> &seed,
-    std::vector<double> &joint_point, double timeout = 1) const;
+    std::vector<double> &joint_point, double timeout = 1, bool limit_joint_windup = false) const;
 
   bool getIK(const Eigen::Isometry3d pose, std::vector<double> &joint_point,
-    double timeout = 1) const;
+    double timeout = 1, bool limit_joint_windup = false) const;
 
   bool getFK(const std::vector<double> &joint_point, Eigen::Isometry3d &pose) const;
 
@@ -613,6 +619,10 @@ protected:
 
   std::string planning_group_;
   std::string robot_description_;
+
+  // Limit IK joint windup
+  bool limit_joint_windup_;
+  std::map<size_t, double> ik_seed_state_fractions_;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H

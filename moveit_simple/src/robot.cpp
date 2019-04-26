@@ -419,7 +419,7 @@ bool Robot::getJointSolution(const Eigen::Isometry3d& pose, double timeout, cons
     local_seed = getJointState();
   }
 
-  return getIK(pose, local_seed, joint_point, timeout);
+  return getIK(pose, local_seed, joint_point, timeout, limit_joint_windup_);
 }
 
 bool Robot::getJointSolution(const Eigen::Isometry3d& pose, const std::string& tool_name, double timeout,
@@ -427,34 +427,25 @@ bool Robot::getJointSolution(const Eigen::Isometry3d& pose, const std::string& t
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
-  bool get_joints = false;
+  Eigen::Isometry3d custom_frame_goal_pose(pose);
   std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
-
-  try
+  if (tool_name != moveit_tool_link)
   {
-    ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" << tool_name << "] to moveit_end_link ["
-                                                                       << moveit_tool_link << "] before performing IK");
-
-    // Transform Target/Goal Point from custom tool frame to moveit_end_link
-    const Eigen::Isometry3d custom_frame_goal_pose = transformPoseBetweenFrames(pose, tool_name, moveit_tool_link);
-
-    std::vector<double> local_seed = seed;
-    if (seed.empty())
+    try
     {
-      ROS_INFO_STREAM("Empty seed passed to getJointSolution, using current state");
-      local_seed = getJointState();
+      ROS_INFO_STREAM("Transforming Pose from custom_tool_frame frame [" << tool_name << "] to moveit_end_link ["
+          << moveit_tool_link << "] before performing IK");
+
+      // Transform Target/Goal Point from custom tool frame to moveit_end_link
+      custom_frame_goal_pose = transformPoseBetweenFrames(pose, tool_name, moveit_tool_link);
     }
-
-    get_joints = getIK(custom_frame_goal_pose, local_seed, joint_point, timeout);
+    catch (tf2::TransformException& ex)
+    {
+      ROS_WARN_STREAM("getJointSolution failed for arbitrary pose in Frame[" << tool_name << "]: " << ex.what());
+      return false;
+    }
   }
-  catch (tf2::TransformException& ex)
-  {
-    ROS_WARN_STREAM("getJointSolution failed for arbitrary pose in Frame[" << tool_name << "]: " << ex.what());
-
-    get_joints = false;
-  }
-
-  return get_joints;
+  return getJointSolution(custom_frame_goal_pose, timeout, seed, joint_point);
 }
 
 Eigen::Isometry3d Robot::transformPoseBetweenFrames(const Eigen::Isometry3d& target_pose, const std::string& frame_in,
@@ -1240,16 +1231,34 @@ bool Robot::getFK(const std::vector<double>& joint_point, Eigen::Isometry3d& pos
 }
 
 bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed, std::vector<double>& joint_point,
-                  double timeout) const
+                  double timeout, bool limit_joint_windup) const
 {
-  virtual_robot_state_->setJointGroupPositions(joint_group_, seed);
-  return getIK(pose, joint_point, timeout);
+  std::vector<double> local_seed(seed);
+  // If joint windup should be limited, the seed state is 'pulled' towards 0 for the specified joints
+  if (limit_joint_windup)
+  {
+    for (const std::pair<size_t, double> seed_state_fraction : ik_seed_state_fractions_)
+    {
+      size_t joint = seed_state_fraction.first;
+      local_seed[joint] = local_seed[joint] * seed_state_fraction.second;
+    }
+  }
+  virtual_robot_state_->setJointGroupPositions(joint_group_, local_seed);
+  return getIK(pose, joint_point, timeout, limit_joint_windup);
 }
 
-bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout) const
+bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout,
+                  bool limit_joint_windup) const
 {
   Eigen::Isometry3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
-  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, timeout))
+  std::vector<double> consistency_limit(6, 2 * M_PI);
+  // we add a 'soft' consistency limit that so that IK solutions can only converge slowly towards the joint limit
+  if (limit_joint_windup && !ik_seed_state_fractions_.empty())
+  {
+    for (const std::pair<size_t, double>& seed_state_fraction : ik_seed_state_fractions_)
+      consistency_limit[seed_state_fraction.first] = M_PI;
+  }
+  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, ik_tip_frame_, {consistency_limit}, timeout))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();
@@ -1261,6 +1270,36 @@ bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point
   }
 
   return false;
+}
+
+void Robot::limitJointWindup(bool enabled)
+{
+  limit_joint_windup_ = enabled;
+}
+
+bool Robot::setIKSeedStateFractions(const std::map<size_t, double>& ik_seed_state_fractions)
+{
+  size_t joint_num = joint_group_->getActiveJointModels().size();
+  for (const auto& fraction : ik_seed_state_fractions)
+  {
+    if (fraction.first >= joint_num)
+    {
+      ROS_ERROR("Invalid joint id found in invalid seed state fraction");
+      return false;
+    }
+    if ((fraction.second < 0) || (fraction.second > 1))
+    {
+      ROS_ERROR("Invalid fraction value found when setting ik_seed_state_fractions_ - Should be in range (0, 1)");
+      return false;
+    }
+  }
+  ik_seed_state_fractions_ = ik_seed_state_fractions;
+  return true;
+}
+
+std::map<size_t, double> Robot::getIKSeedStateFractions() const
+{
+  return ik_seed_state_fractions_;
 }
 
 bool Robot::isNearSingular(const std::vector<double>& joint_point) const
