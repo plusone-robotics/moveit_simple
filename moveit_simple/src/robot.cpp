@@ -36,6 +36,8 @@
 #include <moveit_simple/conversions.h>
 #include <moveit_simple/robot.h>
 
+#include <random_numbers/random_numbers.h>
+
 namespace moveit_simple
 {
 Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, const std::string& group_name)
@@ -409,7 +411,7 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
 }
 
 bool Robot::getJointSolution(const Eigen::Isometry3d& pose, double timeout, const std::vector<double>& seed,
-                             std::vector<double>& joint_point) const
+                             std::vector<double>& joint_point, bool symmetric_solution) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -419,12 +421,15 @@ bool Robot::getJointSolution(const Eigen::Isometry3d& pose, double timeout, cons
     ROS_INFO_STREAM("Empty seed passed to getJointSolution, using current state");
     local_seed = getJointState();
   }
-
-  return getIK(pose, local_seed, joint_point, timeout);
+  if (symmetric_solution)
+    return getSymmetricIK(pose, local_seed, joint_point, timeout);
+  else
+    return getIK(pose, local_seed, joint_point, timeout);
 }
 
 bool Robot::getJointSolution(const Eigen::Isometry3d& pose, const std::string& tool_name, double timeout,
-                             const std::vector<double>& seed, std::vector<double>& joint_point) const
+                             const std::vector<double>& seed, std::vector<double>& joint_point,
+                             bool symmetric_solution) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -446,7 +451,7 @@ bool Robot::getJointSolution(const Eigen::Isometry3d& pose, const std::string& t
       return false;
     }
   }
-  return getJointSolution(custom_frame_goal_pose, timeout, seed, joint_point);
+  return getJointSolution(custom_frame_goal_pose, timeout, seed, joint_point, symmetric_solution);
 }
 
 Eigen::Isometry3d Robot::transformPoseBetweenFrames(const Eigen::Isometry3d& target_pose, const std::string& frame_in,
@@ -898,6 +903,16 @@ void Robot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config& config,
   joint_equality_tolerance_ = params_.joint_equality_tolerance;
 }
 
+void Robot::setEndEffectorSymmetry(EndEffectorSymmetry end_effector_symmetry)
+{
+  end_effector_symmetry_ = end_effector_symmetry;
+}
+
+EndEffectorSymmetry Robot::getEndEffectorSymmetry(void) const
+{
+  return end_effector_symmetry_;
+}
+
 void Robot::setSpeedModifier(const double speed_modifier)
 {
   if (speed_modifier <= 1.0 && speed_modifier > 0.0)
@@ -1306,6 +1321,94 @@ bool Robot::setIKSeedStateFractions(const std::map<size_t, double>& ik_seed_stat
 std::map<size_t, double> Robot::getIKSeedStateFractions() const
 {
   return ik_seed_state_fractions_;
+}
+
+bool Robot::getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<double>& seed,
+    std::vector<double>& joint_values, double timeout) const
+{
+  Eigen::Isometry3d result_diff_pose;
+  double result_score;
+  return getSymmetricIK(pose, seed, joint_values, result_diff_pose, result_score, timeout);
+}
+
+bool Robot::getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<double>& seed,
+    std::vector<double>& joint_values, Eigen::Isometry3d& result_diff_pose, double& result_score, double timeout) const
+{
+  // Without symmetries, we use normal IK with joint windup limitation
+  if (end_effector_symmetry_ == EndEffectorSymmetry::None)
+  {
+    ROS_WARN_STREAM("Attempted to solve for symmetric IK but end effector symmetry is set to None"
+                    " - Falling back to default IK instead");
+    return getIK(pose, seed, joint_values, timeout);
+  }
+
+  // init local seed and consistency limit for windup reduction
+  std::vector<double> local_seed(seed);
+  std::vector<double> consistency_limit(6, 4 * M_PI);
+  if (limit_joint_windup_)
+  {
+    for (const std::pair<size_t, double> seed_state_fraction : ik_seed_state_fractions_)
+    {
+      size_t joint = seed_state_fraction.first;
+      local_seed[joint] = local_seed[joint] * seed_state_fraction.second;
+      consistency_limit[seed_state_fraction.first] = M_PI;
+    }
+  }
+
+  // feed seed to robot and sample state
+  virtual_robot_state_->setJointGroupPositions(joint_group_, local_seed);
+  robot_state::RobotState sample_state(*virtual_robot_state_);
+  Eigen::Isometry3d sample_pose(pose);
+  result_score = 0;
+
+  // Iterate over symmetric angle steps and compare distances of the solution states
+  // end_effector_symmetry_ evaluates to -1 (Circular), 1 (Rectangular), 2 (Quadratic)
+  // Circular: steps is negative so that the loop is only limited by time,
+  //           angle_step is sampled randomly inside the loop
+  // Rectangular: steps is positive and there are 2 symmetric solutions (step-wise rotation around 180°)
+  // Quadratic: steps is positive and there are 4 symmetric solutions (step-wise rotation around 90°)
+  size_t steps = 2 * end_effector_symmetry_;
+  double angle_step = 2 * M_PI / steps;
+  random_numbers::RandomNumberGenerator rand;
+  bool found_solution = false;
+  const auto start_time = ros::Time::now();
+  while ((ros::Time::now() - start_time).toSec() < timeout && --steps != -1)
+  {
+    // solve IK
+    if (sample_state.setFromIK(joint_group_, sample_pose * ik_tip_to_srdf_tip_, ik_tip_frame_, {consistency_limit}, timeout))
+    {
+      // maximize score and save solutions
+      double sample_score =  1 / virtual_robot_state_->distance(sample_state);
+      if (sample_score > result_score)
+      {
+        result_score = sample_score;
+        result_diff_pose = pose.inverse() * sample_pose;
+        sample_state.copyJointGroupPositions(joint_group_->getName(), joint_values);
+        found_solution = true;
+      }
+    }
+
+    // randomize angle step if we have infinite freedom around z
+    if (end_effector_symmetry_ == EndEffectorSymmetry::Circular)
+      angle_step = rand.uniformReal(-M_PI, M_PI);
+
+    // sample next orientation and reset seed state
+    sample_pose.rotate(Eigen::AngleAxisd(angle_step, Eigen::Vector3d::UnitX()));
+    sample_state.setJointGroupPositions(joint_group_, local_seed);
+  }
+
+  // update virtual robot state and visualization
+  if (found_solution)
+  {
+    virtual_robot_state_->setJointGroupPositions(joint_group_->getName(), joint_values);
+    virtual_robot_state_->update();
+
+    virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
+    virtual_visual_tools_->publishContactPoints(*virtual_robot_state_, planning_scene_.get());
+    virtual_visual_tools_->trigger();
+  }
+
+  return found_solution;
 }
 
 bool Robot::isNearSingular(const std::vector<double>& joint_point) const

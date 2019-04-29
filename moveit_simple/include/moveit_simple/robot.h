@@ -38,6 +38,7 @@
 
 namespace moveit_simple
 {
+enum EndEffectorSymmetry {Circular=-1, None=0, Rectangular=1, Quadratic=2};
 /**
  * @brief Robot is a wrapper around standard MoveIt objects.  It makes multiple
  assumptions about the type and complexity of the robot.  Assumptions are:
@@ -334,10 +335,11 @@ public:
    * @param timeout - ik solver timeout
    * @param seed - ik seed
    * @param joint_point - joint solution for pose
+   * @param symmetric_solution - set IK solutions for symmetric end effectors on/off
    * @return true if joint solution found
    */
   bool getJointSolution(const Eigen::Isometry3d &pose, double timeout, const std::vector<double> &seed,
-    std::vector<double> &joint_point) const;
+    std::vector<double> &joint_point, bool symmetric_solution = false) const;
 
   /**
    * @brief getJointSolution returns joint solution for cartesian pose.
@@ -347,10 +349,11 @@ public:
    * @param timeout - ik solver timeout
    * @param seed - ik seed
    * @param joint_point - joint solution for pose
+   * @param symmetric_solution - set IK solutions for symmetric end effectors on/off
    * @return true if joint solution found
    */
-  bool getJointSolution(const Eigen::Isometry3d &pose, const std::string &tool_name,
-    double timeout, const std::vector<double> &seed, std::vector<double> &joint_point) const;
+  bool getJointSolution(const Eigen::Isometry3d &pose, const std::string &tool_name, double timeout,
+    const std::vector<double> &seed, std::vector<double> &joint_point, bool symmetric_solution = false) const;
 
   /**
    * @brief getPose finds cartesian pose for the given joint positions.
@@ -419,6 +422,20 @@ public:
    * @throws <std::invalid_argument> (joint_group is not a chain)
    */
   bool isNearSingular(const std::vector<double> &joint_point = std::vector<double>()) const;
+
+  /**
+   * @brief setEndEffectorSymmetry: Setter method for the end effector symmetry mode.
+   * The symmetry mode (None, Circular, Rectangular, Quadratic) is applied when calling
+   * getSymmeticIK() and leads to limiting joint windup through minimizing joint displacement.
+   * @param end_effector_symmetry
+   */
+  void setEndEffectorSymmetry(EndEffectorSymmetry end_effector_symmetry);
+
+  /**
+   * @brief getEndEffectorSymmetry: returns the currently defined symmetry mode of the end effector
+   * @return end_effector_symmetry_
+   */
+  EndEffectorSymmetry getEndEffectorSymmetry(void) const;
 
   /**
    * @brief setSpeedModifier - Setter method for the execution speed modifier of the
@@ -593,6 +610,12 @@ protected:
   bool getIK(const Eigen::Isometry3d pose, std::vector<double> &joint_point,
     double timeout = 1) const;
 
+  bool getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<double>& seed, std::vector<double>& joint_values,
+      Eigen::Isometry3d& result_diff_pose, double& result_score, double timeout) const;
+
+  bool getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<double>& seed, std::vector<double>& joint_values,
+      double timeout) const;
+
   bool getFK(const std::vector<double> &joint_point, Eigen::Isometry3d &pose) const;
 
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string &name,
@@ -648,6 +671,7 @@ protected:
   // Limit IK joint windup
   bool limit_joint_windup_;
   std::map<size_t, double> ik_seed_state_fractions_;
+  EndEffectorSymmetry end_effector_symmetry_ = EndEffectorSymmetry::None;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H
