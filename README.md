@@ -100,3 +100,16 @@ rostest moveit_simple motoman_mh5_utest.launch -r
 ```
 
 **NOTE:** Refresh the RobotModel by un-checking and re-checking the checkbox.
+
+
+## Quick Demo
+
+1. Launch the RViz visualizer
+```
+roslaunch moveit_simple test_display.launch
+```
+
+1. Launch the demo
+```
+roslaunch moveit_simple kuka_kr210_demo.launch
+```

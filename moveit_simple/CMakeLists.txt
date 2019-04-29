@@ -72,6 +72,17 @@ add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_genparam)
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
+add_executable(
+  ${PROJECT_NAME}_trajectory_planner_demo
+  scripts/trajectory_planner_demo.cpp
+)
+
+target_link_libraries(
+  ${PROJECT_NAME}_trajectory_planner_demo
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+)
+
 if(CATKIN_ENABLE_TESTING)
 
   find_package(rostest REQUIRED)
@@ -90,7 +101,7 @@ if(CATKIN_ENABLE_TESTING)
 
 endif()
 
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_trajectory_planner_demo
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
