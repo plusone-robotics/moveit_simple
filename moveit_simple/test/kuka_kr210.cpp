@@ -446,11 +446,11 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   double execution_time_check_2 = INT_MAX;
   double execution_time_check_3 = INT_MAX;
 
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      1.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 2.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 4.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 5.0));
 
   // Test 1 -- Max_Execution_Speed: Plan & then Execute that Plan separately
   robot->setSpeedModifier(1.0);
