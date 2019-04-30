@@ -47,61 +47,6 @@ using testing::Types;
 namespace moveit_simple_test
 {
 
-/**
- * @brief UserRobotTest is a fixture for testing public methods.
- * Objects that can be directly used inside the test
- - robot pointer for moveit_simple::OnlineRobot
-*/
-class UserRobotTest : public ::testing::Test
-{
-protected:
-  std::unique_ptr<moveit_simple::OnlineRobot> robot;
-  virtual void SetUp()
-  {
-  robot = std::unique_ptr<moveit_simple::OnlineRobot> (new moveit_simple::OnlineRobot
-                  (ros::NodeHandle(), "robot_description", "manipulator"));
-  ros::Duration(2.0).sleep();  //wait for tf tree to populate
-  }
-  virtual void TearDown()
-  {}
-};
-
-/**
- * @brief DeveloperRobot is a class inheriting from moveit_simple::OnlineRobot to test protected methods
- * Add the protected methods(that are required to be tested) in the following list
-*/
-class DeveloperRobot: public moveit_simple::OnlineRobot
-{
-public:
-  using moveit_simple::OnlineRobot::OnlineRobot;
-  using moveit_simple::OnlineRobot::addTrajPoint;
-  using moveit_simple::OnlineRobot::toJointTrajectory;
-  using moveit_simple::OnlineRobot::interpolate;
-  using moveit_simple::OnlineRobot::jointInterpolation;
-  using moveit_simple::OnlineRobot::cartesianInterpolation;
-  using moveit_simple::OnlineRobot::isInCollision;
-};
-
-/**
- * @brief DeveloperRobotTest is a fixture for testing protected methods.
- * Objects that can be directly used inside the test
- - robot pointer for DeveloperRobot
-*/
-
-class DeveloperRobotTest : public ::testing::Test
-{
-protected:
-  std::unique_ptr<DeveloperRobot> robot2;
-  virtual void SetUp()
-  {
-  robot2 = std::unique_ptr<DeveloperRobot> (new DeveloperRobot
-                  (ros::NodeHandle(), "robot_description", "manipulator"));
-  ros::Duration(2.0).sleep();  //wait for tf tree to populate
-  }
-  virtual void TearDown()
-  {}
-};
-
 TEST(MoveitSimpleTest, construction_robot)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
