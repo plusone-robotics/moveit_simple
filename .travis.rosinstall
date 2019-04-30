@@ -14,3 +14,11 @@
     local-name: moveit
     uri: https://github.com/ros-planning/moveit.git
     version: master
+- git:
+    local-name: geometry
+    uri: https://github.com/ros/geometry.git
+    version: melodic-devel
+- git:
+    local-name: geometry2
+    uri: https://github.com/ros/geometry2.git
+    version: melodic-devel
