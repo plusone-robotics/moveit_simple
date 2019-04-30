@@ -46,4 +46,8 @@
   <!-- Static tranform publisher for testing tf lookup -->
   <node name="tf_pub1" type="static_transform_publisher" pkg="tf" args="1.9 0 2.2 0 -0.5 0 base_link tf_pub1 100"/>
 
+
+  <!-- Static tranform publisher between base_link and world -->
+  <node name="tf_pub2" type="static_transform_publisher" pkg="tf" args="0 0 0 0 0 0 base_link world 100"/>
+
 </launch>
