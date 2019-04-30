@@ -3,24 +3,25 @@
 ## Installation
 1. Clone repository into workspace [It doesn't have to be called moveit_simple_ws]
 ```
-mkdir -p moveit_simple_ws/src && cd moveit_simple_ws/src
+export CATKIN_WS=$HOME/moveit_simple_ws/
+mkdir -p $CATKIN_WS/src && cd $CATKIN_WS/src
 git clone -b kinetic-devel https://github.com/plusone-robotics/moveit_simple.git
 ```
 
 2. Get Source Dependencies
 ```
-cd moveit_simple_ws/src
+cd $CATKIN_WS/src
 wstool init . moveit_simple/.travis.rosinstall
 ```
 
 3. Install Package Dependencies
 ```
-cd moveit_simple_ws
+cd $CATKIN_WS
 rosdep install --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 ```
 4. Configure and Build
 ```
-cd moveit_simple_ws
+cd $CATKIN_WS
 catkin config --extend /opt/ros/$ROS_DISTRO --cmake-args -DCMAKE_BUILD_TYPE=Release
 catkin build
 ```
@@ -28,34 +29,39 @@ catkin build
 
 5. Source the Workspace
 ```
-cd moveit_simple_ws
-source devel/setup.bash
+source $CATKIN_WS/devel/setup.bash
 ```
 
-**NOTE:** You will need to re-run step #5 in any new terminal
+**NOTE:** Whenever you open a new terminal session, you should re-run the following commands:
 
+```
+export CATKIN_WS=$HOME/moveit_simple_ws/
+source $CATKIN_WS/devel/setup.bash
+```
 
 ## Building and Running Tests
 
+Run the following steps from anywhere within `$CATKIN_WS`. (eg. `cd $CATKIN_WS`)
+
 1.  Run the MoveIt Simple Tests
 ```
-roscd moveit_simple
-catkin run_tests --no-deps --this -i
+catkin build moveit_simple --no-deps -i --catkin-make-args run_tests
 ```
 
 1. Get test results:
 ```
-cd moveit_simple_ws
-catkin_test_results build/moveit_simple
+catkin_test_results $CATKIN_WS/build/moveit_simple
 ```
 
 ### Run the Tests Using RViz as a Visualizer
-1. Launch the RViz visualizer
+Open two terminals and set your environment variables appropriately.
+
+1. Launch the RViz visualizer in the first terminal
 ```
 roslaunch moveit_simple test_display.launch
 ```
 
-2. Launch a Test. (Be sure to substitute `<Test Name>` with either `motoman_mh5` or `kuka_kr210`)
+2. Launch a test in the second terminal. (Be sure to substitute `<Test Name>` with either `motoman_mh5` or `kuka_kr210`)
 ```
 rostest moveit_simple <Test Name>_utest.launch -r
 ```
