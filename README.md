@@ -22,7 +22,35 @@ rosdep install --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 4. Configure and Build
 ```
 cd $CATKIN_WS
-catkin config --extend /opt/ros/$ROS_DISTRO --cmake-args -DCMAKE_BUILD_TYPE=Release
+catkin init -w .
+catkin config --extend /opt/ros/$ROS_DISTRO \
+              --blacklist \
+                    motoman_bmda3_support \
+                    motoman_csda10f_moveit_config \
+                    motoman_csda10f_support \
+                    motoman_epx_support \
+                    motoman_experimental \
+                    motoman_gp12_support \
+                    motoman_gp7_support \
+                    motoman_gp8_support \
+                    motoman_mh12_support \
+                    motoman_mh50_support \
+                    motoman_motomini_support \
+                    motoman_mpl80_moveit_config \
+                    motoman_mpl_support \
+                    moveit_ros_planning_interface \
+                    moveit_experimental \
+                    moveit_planners_chomp \
+                    moveit_setup_assistant \
+                    moveit_ros_planning_interface \
+                    moveit_ros_manipulation \
+                    moveit_ros_visualization \
+                    motoman_driver \
+                    moveit_chomp_optimizer_adapter \
+                    moveit_ros_warehouse \
+                    moveit_planners_ompl \
+                    moveit_ros_perception \
+              --cmake-args -DCMAKE_BUILD_TYPE=Release
 catkin build
 ```
 **NOTE:** To use gdb with this project set `-DCMAKE_BUILD_TYPE=Debug` instead.
