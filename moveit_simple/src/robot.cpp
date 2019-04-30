@@ -1251,14 +1251,15 @@ bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point
                   bool limit_joint_windup) const
 {
   Eigen::Isometry3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
-  std::vector<double> consistency_limit(6, 2 * M_PI);
+  std::vector<double> consistency_limit(6, 4 * M_PI);
   // we add a 'soft' consistency limit so that IK solutions can only converge slowly towards the joint limit
   if (limit_joint_windup && !ik_seed_state_fractions_.empty())
   {
     for (const std::pair<size_t, double>& seed_state_fraction : ik_seed_state_fractions_)
       consistency_limit[seed_state_fraction.first] = M_PI;
   }
-  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, ik_tip_frame_, {consistency_limit}, timeout))
+  std::string ik_tip_frame = joint_group_->getSolverInstance()->getTipFrame();
+  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, ik_tip_frame, {consistency_limit}, timeout))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();

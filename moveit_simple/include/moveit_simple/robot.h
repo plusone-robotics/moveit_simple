@@ -641,7 +641,7 @@ protected:
   std::string robot_description_;
 
   // Limit IK joint windup
-  bool limit_joint_windup_;
+  bool limit_joint_windup_ = false;
   std::map<size_t, double> ik_seed_state_fractions_;
 };
 } // namespace moveit_simple
