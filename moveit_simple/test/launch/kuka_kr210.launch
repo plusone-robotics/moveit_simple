@@ -20,7 +20,7 @@
 
   <!-- The semantic description that corresponds to the URDF -->
   <param name="$(arg robot_description)_semantic" textfile="$(find moveit_simple)/test/resources/kuka_kr210/kuka_kr210.srdf" />
-  
+
   <!-- Load updated joint limits (override information from URDF) -->
   <group ns="$(arg robot_description)_planning">
     <rosparam command="load" file="$(find moveit_simple)/test/resources/kuka_kr210/joint_limits.yaml"/>

@@ -1,6 +1,6 @@
-sudo: required 
-dist: trusty 
-language: generic 
+sudo: required
+dist: trusty
+language: generic
 compiler:
   - gcc
 notifications:
@@ -13,5 +13,5 @@ env:
     - ROS_DISTRO="kinetic" UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=.travis.rosinstall
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
-script: 
+script:
   - source .ci_config/travis.sh

@@ -40,7 +40,7 @@ class OnlineRobot : public Robot
 public:
   /**
   * @brief Constructor
-  */  
+  */
   OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_description,
     const std::string &group_name);
 
@@ -51,7 +51,7 @@ public:
   * some tcp frame.
   */
   OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_description,
-    const std::string &group_name, const std::string &ik_base_frame, 
+    const std::string &group_name, const std::string &ik_base_frame,
     const std::string &ik_tip_frame);
 
   /**

@@ -37,7 +37,7 @@ class UserRobotTest : public ::testing::Test
 protected:
   std::unique_ptr<moveit_simple::OnlineRobot> robot;
   virtual void SetUp()
-  {      
+  {
   robot = std::unique_ptr<moveit_simple::OnlineRobot> (new moveit_simple::OnlineRobot
                   (ros::NodeHandle(), "robot_description", "manipulator"));
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
@@ -62,7 +62,7 @@ public:
   using moveit_simple::OnlineRobot::cartesianInterpolation;
   using moveit_simple::OnlineRobot::isInCollision;
 };
-  
+
 /**
  * @brief DeveloperRobotTest is a fixture for testing protected methods.
  * Objects that can be directly used inside the test
@@ -74,7 +74,7 @@ class DeveloperRobotTest : public ::testing::Test
 protected:
   std::unique_ptr<DeveloperRobot> robot2;
   virtual void SetUp()
-  {      
+  {
   robot2 = std::unique_ptr<DeveloperRobot> (new DeveloperRobot
                   (ros::NodeHandle(), "robot_description", "manipulator"));
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
@@ -87,7 +87,7 @@ protected:
 
 TEST(MoveitSimpleTest, construction_robot)
 {
-  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");  
+  moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
 }
 
 
@@ -100,7 +100,7 @@ TEST(MoveitSimpleTest, construction_online_robot)
 TEST(MoveitSimpleTest, reachability)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
   ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
@@ -122,7 +122,7 @@ TEST(MoveitSimpleTest, reachability)
 TEST_F(UserRobotTest, add_trajectory)
 {
   const std::string TRAJECTORY_NAME("traj1");
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity(); 
+  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
@@ -131,13 +131,13 @@ TEST_F(UserRobotTest, add_trajectory)
   EXPECT_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "random_link", 5.0), tf2::TransformException);
   ROS_INFO_STREAM("Testing trajectory adding of points");
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
-  
+
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1", 2.0, cart, 8));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0, joint));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose, "tool0", 5.0));
-  
+
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 
   EXPECT_NO_THROW(robot->addTrajPoint("traj2", "waypoint4", 4.5));
@@ -176,7 +176,7 @@ TEST_F(DeveloperRobotTest, planning)
 
   EXPECT_TRUE(robot2->getJointSolution(cart_interpolated_expected_pose, 3.0, seed, cart_interpolated_expected_joint));
 
-  // joint_point1,joint_point4, cart_point1 and cart_point3 
+  // joint_point1,joint_point4, cart_point1 and cart_point3
   // represent the same pose
   // joint_point2, cart_point2 and joint_point3 represent the same pose
   std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
@@ -432,7 +432,7 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
-  
+
   // Test 1 -- Max_Execution_Speed: Plan & then Execute that Plan separately
   robot->setSpeedModifier(1.0);
   EXPECT_TRUE(robot->getSpeedModifier() == 1.0);
@@ -440,11 +440,11 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
   EXPECT_NO_THROW(goal = robot->plan(TRAJECTORY_NAME));
-  EXPECT_NO_THROW(robot->execute(goal));  
-  
+  EXPECT_NO_THROW(robot->execute(goal));
+
   execution_time_check_1 = goal[goal.size()-1].time();
   EXPECT_TRUE(execution_time_check_1 >= 0.0);
-  ROS_INFO_STREAM("Time for single traj. execution at MAX speed: " 
+  ROS_INFO_STREAM("Time for single traj. execution at MAX speed: "
     << execution_time_check_1 << " seconds");
 
   // Test 2 -- Half_Execution_Speed: Plan & Execute
@@ -482,12 +482,12 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   delta_time_for_speed_limits = delta_max_half_speeds - delta_half_min_speeds;
   EXPECT_NEAR(delta_time_for_speed_limits, 0.0, execution_time_tolerance);
 
-  if(abs(delta_time_for_speed_limits) > execution_time_tolerance) 
+  if(abs(delta_time_for_speed_limits) > execution_time_tolerance)
   {
-    ROS_ERROR_STREAM("Time diff between [MAX_SPEED/REGULAR_SPEED] --> [" << 
-                     execution_time_check_1 << ", " << execution_time_check_2 << 
+    ROS_ERROR_STREAM("Time diff between [MAX_SPEED/REGULAR_SPEED] --> [" <<
+                     execution_time_check_1 << ", " << execution_time_check_2 <<
                      "] & [REGULAR_SPEED/MIN_SPEED] --> [" << execution_time_check_2 <<
-                     ", " << execution_time_check_3 << "] is " << delta_time_for_speed_limits << 
+                     ", " << execution_time_check_3 << "] is " << delta_time_for_speed_limits <<
                      "; but tolerance limit is [" << execution_time_tolerance << "]");
   }
 }
@@ -623,7 +623,7 @@ TEST_F(UserRobotTest, custom_tool_link)
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", "tool_custom", 4.0));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", tool_name, 5.0, joint, 5));
   EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, pose_eigen, "tool0", 6.0));
-  
+
   EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
 }
 
