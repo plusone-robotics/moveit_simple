@@ -54,37 +54,44 @@ TrajectoryValidationResult validateTrajectory(robot_model::RobotModelConstPtr ro
       if (bounds.position_bounded_ && !joint_model->satisfiesPositionBounds(&point.positions[j]))
       {
         result.value = TrajectoryValidationResult::InvalidPosition;
-        result.error_message = "Trajectory contains waypoints that don't satisfy position bounds";
+        result.error_message = "Trajectory invalidates position bounds in waypoint " + std::to_string(i) + " and joint "
+          + std::to_string(j);
         return result;
       }
       // validate velocity/acceleration bounds and pair-wise time difference
       double dt = (point.time_from_start - previous_point.time_from_start).toSec();
       if (bounds.velocity_bounded_)
       {
-        result.value = TrajectoryValidationResult::InvalidVelocity;
         if (bounds.max_velocity_ < std::abs(point.velocities[j]))
         {
-          result.error_message = "Trajectory waypoint does not satisfy velocity bounds";
+          result.value = TrajectoryValidationResult::InvalidVelocity;
+          result.error_message = "Trajectory invalidates velocity bounds in waypoint " + std::to_string(i)
+            + " and joint " + std::to_string(j);
           return result;
         }
         if (i > 0 && bounds.max_velocity_ * dt < std::abs(point.positions[j] - previous_point.positions[j]))
         {
-          result.error_message = "Trajectory waypoint position not reachable within target time and velocity limits";
+          result.value = TrajectoryValidationResult::InvalidVelocity;
+          result.error_message = "Position of trajectory waypoint " + std::to_string(i)
+            + " is not reachable given target time and velocity limits";
           return result;
         }
       }
       // validate acceleration bounds and pair-wise velocty difference
       if (bounds.acceleration_bounded_)
       {
-        result.value = TrajectoryValidationResult::InvalidAcceleration;
         if (bounds.max_acceleration_ < std::abs(point.accelerations[j]))
         {
-          result.error_message = "Trajectory waypoint does not satisfy acceleration bounds";
+          result.value = TrajectoryValidationResult::InvalidAcceleration;
+          result.error_message = "Trajectory invalidates acceleration bounds in waypoint " + std::to_string(i)
+            + " and joint " + std::to_string(j);
           return result;
         }
         if (i > 0 && bounds.max_acceleration_ * dt < std::abs(point.velocities[j] - previous_point.velocities[j]))
         {
-          result.error_message = "Trajectory waypoint velocity not reachable within target time and acceleration limits";
+          result.value = TrajectoryValidationResult::InvalidAcceleration;
+          result.error_message = "Velocity of trajectory waypoint " + std::to_string(i) + " and joint "
+            + std::to_string(j) + " is not reachable given target time and acceleration limit";
           return result;
         }
       }
