@@ -497,6 +497,69 @@ Eigen::Isometry3d Robot::transformPoseBetweenFrames(const Eigen::Isometry3d& tar
   }
 }
 
+bool Robot::getPickPlaceJointSolutions(const Eigen::Isometry3d& pick_pose, const Eigen::Isometry3d& place_pose,
+                                       const std::string& reference_frame, double timeout,
+                                       const std::vector<double>& seed, std::vector<double>& pick_joint_state,
+                                       std::vector<double>& place_joint_state) const
+{
+  Eigen::Isometry3d custom_frame_pick_pose(pick_pose);
+  Eigen::Isometry3d custom_frame_place_pose(place_pose);
+  std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
+  if (reference_frame != moveit_tool_link)
+  {
+    try
+    {
+      ROS_INFO_STREAM("Transforming Pose from reference frame [" << reference_frame << "] to moveit_end_link ["
+          << moveit_tool_link << "] before performing IK");
+
+      // Transform Target/Goal Point from custom frame to moveit_end_link
+      custom_frame_pick_pose = transformPoseBetweenFrames(pick_pose, reference_frame, moveit_tool_link);
+      custom_frame_place_pose = transformPoseBetweenFrames(place_pose, reference_frame, moveit_tool_link);
+    }
+    catch (tf2::TransformException& ex)
+    {
+      ROS_WARN_STREAM("getJointSolution failed for arbitrary pose in Frame[" << reference_frame << "]: " << ex.what());
+      return false;
+    }
+  }
+  return getPickPlaceJointSolutions(custom_frame_pick_pose, custom_frame_place_pose, timeout, seed, pick_joint_state,
+      place_joint_state);
+}
+
+bool Robot::getPickPlaceJointSolutions(const Eigen::Isometry3d& pick_pose, const Eigen::Isometry3d& place_pose,
+                                       double timeout, const std::vector<double>& seed,
+                                       std::vector<double>& pick_joint_state,
+                                       std::vector<double>& place_joint_state) const
+{
+  std::vector<double> local_seed = seed;
+  if (seed.empty())  // fix seed
+  {
+    ROS_INFO_STREAM("Empty seed passed to getJointSolution, using current state");
+    local_seed = getJointState();
+  }
+  double score;
+  Eigen::Isometry3d pick_pose_diff;
+  ros::Time start_time = ros::Time::now();
+  // we allocate 90% of the time for symmetric IK since placing only requires a single IK call
+  if (!getSymmetricIK(pick_pose, local_seed, pick_joint_state, pick_pose_diff, score, 0.9 * timeout))
+  {
+    ROS_ERROR_STREAM("Unable to find IK solution for pick pose");
+    return false;
+  }
+  timeout = timeout - (ros::Time::now() - start_time).toSec();
+  if (timeout <= 0)
+  {
+    ROS_ERROR("Ran out of time computing pick and place joint solutions");
+    return false;
+  }
+  if (!getIK(place_pose * pick_pose_diff, pick_joint_state, place_joint_state, timeout, limit_joint_windup_))
+  {
+    ROS_ERROR_STREAM("Unable to find IK solution for place pose");
+    return false;
+  }
+  return true;
+}
+
 bool Robot::getPose(const std::vector<double>& joint_point, Eigen::Isometry3d& pose) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
