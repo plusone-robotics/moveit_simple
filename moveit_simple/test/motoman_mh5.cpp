@@ -164,7 +164,8 @@ TEST_F(DeveloperRobotTest, kinematics)
 
     // Testing inverse kinematics
     std::vector<double> joint_solution;
-    ASSERT_TRUE(developer_robot->getIK(tool_custom_calculated_pose, JOINT_SEED, joint_solution, 10, 15));
+    double timeout = 15;
+    ASSERT_TRUE(developer_robot->getIK(tool_custom_calculated_pose, JOINT_SEED, joint_solution, timeout));
 
     // Checking IK solution with forward kinematics
     Eigen::Isometry3d check_joint_solution;
