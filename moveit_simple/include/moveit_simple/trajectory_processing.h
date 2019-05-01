@@ -102,8 +102,8 @@ TrajectoryValidationResult validateTrajectory(robot_model::RobotModelConstPtr ro
   return result;
 }
 
-void fixTrajectory(robot_model::RobotModelConstPtr robot_model, const std::string& group_name,
-                   trajectory_msgs::JointTrajectory& joint_trajectory)
+void retimeTrajectory(robot_model::RobotModelConstPtr robot_model, const std::string& group_name,
+                      trajectory_msgs::JointTrajectory& joint_trajectory)
 {
   // convert trajectory message to robot trajectory
   robot_trajectory::RobotTrajectory trajectory(robot_model, group_name);
@@ -120,14 +120,14 @@ void fixTrajectory(robot_model::RobotModelConstPtr robot_model, const std::strin
 void validateTrajectory(robot_model::RobotModelConstPtr robot_model,
                         const std::string& group_name,
                         trajectory_msgs::JointTrajectory& trajectory,
-                        bool fix_trajectory)
+                        bool retime_trajectory)
 {
   TrajectoryValidationResult result = validateTrajectory(robot_model, trajectory);
   if (result.value != TrajectoryValidationResult::Success)
   {
     // we can't fix invalid positions by trajectory parameterization
-    if (fix_trajectory && result.value != TrajectoryValidationResult::InvalidPosition)
-      fixTrajectory(robot_model, group_name, trajectory);
+    if (retime_trajectory && result.value != TrajectoryValidationResult::InvalidPosition)
+      retimeTrajectory(robot_model, group_name, trajectory);
     else
       throw InvalidTrajectoryException(result.error_message);
   }

@@ -77,7 +77,7 @@ OnlineRobot::OnlineRobot(const ros::NodeHandle &nh, const std::string &robot_des
   }
 }
 
-void OnlineRobot::execute(const std::string traj_name, bool collision_check, bool fix_trajectory)
+void OnlineRobot::execute(const std::string traj_name, bool collision_check, bool retime_trajectory)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -86,7 +86,7 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check, boo
     std::vector<moveit_simple::JointTrajectoryPoint> goal;
 
     goal = plan(traj_name, collision_check);
-    execute(goal, false, fix_trajectory);
+    execute(goal, false, retime_trajectory);
   }
   catch (IKFailException &ik)
   {
@@ -116,7 +116,7 @@ void OnlineRobot::execute(const std::string traj_name, bool collision_check, boo
 }
 
 void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> &joint_trajectory_points,
-                          bool collision_check, bool fix_trajectory)
+                          bool collision_check, bool retime_trajectory)
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
@@ -126,7 +126,7 @@ void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> &join
 
   // validate trajectory waypoint bounds and timestamps
   // if invalid, attempt to fix it or throw InvalidTrajectoryException
-  trajectory_processing::validateTrajectory(robot_model_ptr_, joint_group_->getName(), goal.trajectory, fix_trajectory);
+  trajectory_processing::validateTrajectory(robot_model_ptr_, joint_group_->getName(), goal.trajectory, retime_trajectory);
 
   int collision_points = trajCollisionCheck(goal, collision_check);
 
