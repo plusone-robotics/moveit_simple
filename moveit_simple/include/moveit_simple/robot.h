@@ -473,9 +473,6 @@ protected:
   Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose,
     const std::string &frame_in, const std::string &frame_out) const;
 
-  std::vector<moveit_simple::JointTrajectoryPoint> toJointTrajectoryPoint(
-    std::vector<trajectory_msgs::JointTrajectoryPoint> &ROS_joint_trajectory_points) const;
-
   control_msgs::FollowJointTrajectoryGoal toFollowJointTrajectoryGoal(
     const std::vector<moveit_simple::JointTrajectoryPoint> &joint_trajectory_points) const;
 
@@ -568,18 +565,6 @@ protected:
     double time) const;
 
   bool isConfigChange(const std::vector<double> jp1, const std::vector<double> jp2) const;
-
-  /**
-   * @brief toJointTrajPtMsg - Converts native joint point (vector + time) to ROS joint
-   * trajectory point message type.
-   * @param joint_point
-   * @param time
-   * @return
-   */
-  static trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(const std::vector<double> &joint_point,
-    double time);
-
-  trajectory_msgs::JointTrajectoryPoint toJointTrajPtMsg(const JointTrajectoryPoint &joint_point) const;
 
   // Dynamic Reconfigure callback
   void reconfigureRequest(moveit_simple_dynamic_reconfigure_Config &config, uint32_t level);
