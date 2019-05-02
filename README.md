@@ -10,19 +10,19 @@ git clone -b kinetic-devel https://github.com/plusone-robotics/moveit_simple.git
 
 2. Get Source Dependencies
 ```
-cd $CATKIN_WS/src
+cd $CATKIN_WS/src && \
 wstool init . moveit_simple/.travis.rosinstall
 ```
 
 3. Install Package Dependencies
 ```
-cd $CATKIN_WS
+cd $CATKIN_WS && \
 rosdep install --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 ```
 4. Configure and Build
 ```
-cd $CATKIN_WS
-catkin init -w .
+cd $CATKIN_WS && \
+catkin init -w . && \
 catkin config --extend /opt/ros/$ROS_DISTRO \
               --blacklist \
                     motoman_bmda3_support \
@@ -50,7 +50,7 @@ catkin config --extend /opt/ros/$ROS_DISTRO \
                     moveit_ros_warehouse \
                     moveit_planners_ompl \
                     moveit_ros_perception \
-              --cmake-args -DCMAKE_BUILD_TYPE=Release
+              --cmake-args -DCMAKE_BUILD_TYPE=Release && \
 catkin build
 ```
 **NOTE:** To use gdb with this project set `-DCMAKE_BUILD_TYPE=Debug` instead.
