@@ -540,7 +540,6 @@ protected:
     const std::unique_ptr<JointTrajectoryPoint> &to, double t,
     std::unique_ptr<JointTrajectoryPoint> &point) const;
 
-  // TODO(mlautman): deprecate this
   void addTrajPoint(const std::string &traj_name, std::unique_ptr<TrajectoryPoint> &point,
     const InterpolationType &type = interpolation_type::JOINT,
     const unsigned int num_steps = 0);

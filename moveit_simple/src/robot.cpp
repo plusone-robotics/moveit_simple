@@ -996,67 +996,6 @@ bool Robot::cartesianInterpolation(const std::unique_ptr<TrajectoryPoint>& traj_
                                    bool collision_check)
 {
   return trajectory_planner_.cartesianInterpolation(*this, traj_point, points, num_steps, collision_check);
-  // // Create a local vector for storing interpolated points and append
-  // // it with last element of global points to be used for interpolation
-  // std::vector<trajectory_msgs::JointTrajectoryPoint> points_local;
-  // points_local.clear();
-  // points_local.push_back(points.back());
-
-  // trajectory_msgs::JointTrajectoryPoint prev_point_info = points.back();
-
-  // // Convert the previous point stored in points to Cartesian Trajectory Point
-  // std::unique_ptr<TrajectoryPoint> prev_point = std::unique_ptr<TrajectoryPoint>(
-  //     new JointTrajectoryPoint(prev_point_info.positions, prev_point_info.time_from_start.toSec(), ""));
-  // std::unique_ptr<CartTrajectoryPoint> prev_traj_point = prev_point->toCartTrajPoint(*this);
-  // std::unique_ptr<CartTrajectoryPoint> target_point;
-
-  // if (prev_traj_point)
-  // {
-  //   target_point = traj_point->toCartTrajPoint(*this);
-  //   if (!target_point)
-  //   {
-  //     ROS_ERROR_STREAM("Failed to find FK for " << traj_point->name());
-  //     return false;
-  //   }
-  // }
-  // else
-  // {
-  //   ROS_ERROR_STREAM("Failed to find FK for already added point. This is unexpected.");
-  //   return false;
-  // }
-
-  // unsigned int points_added = 0;
-  // for (std::size_t i = 1; i <= num_steps + 1; ++i)
-  // {
-  //   double t = (double)i / (double)(num_steps + 1);
-  //   std::unique_ptr<CartTrajectoryPoint> new_point_cart;
-  //   interpolate(prev_traj_point, target_point, t, new_point_cart);
-
-  //   std::unique_ptr<TrajectoryPoint> new_point =
-  //       std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(new_point_cart->pose(), new_point_cart->time(), ""));
-
-  //   // Add new point at the end of Joint Trajectory (named points_local)
-  //   if (jointInterpolation(new_point, points_local, (unsigned int)0, collision_check))
-  //   {
-  //     points_added++;
-  //     ROS_INFO_STREAM(points_added << " points among " << (num_steps + 1) << " added successfullyfor "
-  //                                  << traj_point->name());
-  //   }
-  //   else
-  //   {
-  //     ROS_WARN_STREAM("Conversion to joint trajectory failed at " << points_added << " among " << (num_steps + 1)
-  //                                                                 << "points for " << traj_point->name()
-  //                                                                 << ". Exiting without interpolation");
-  //     points_local.clear();
-  //     return false;
-  //   }
-  // }
-
-  // // Append the global points with local_points
-  // points.insert(points.end(), points_local.begin() + 1, points_local.end());
-  // ROS_INFO_STREAM("Appending trajectory point, size: " << points.size());
-  // points_local.clear();
-  // return true;
 }
 
 void Robot::interpolate(const std::unique_ptr<JointTrajectoryPoint>& from,
