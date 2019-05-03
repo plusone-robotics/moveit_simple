@@ -43,6 +43,9 @@ int main(int argc, char **argv)
   robot->addTrajPoint(trajectory_name, "tf_pub1",   2.0, cart, 8);
   robot->addTrajPoint(trajectory_name, "waypoint2", 3.0);
   robot->addTrajPoint(trajectory_name, "waypoint3", 4.0, joint);
+  robot->addTrajPoint(trajectory_name, "waypoint1", 4.0, joint);
+  robot->addTrajPoint(trajectory_name, "waypoint3", 4.0, cart);
+  robot->addTrajPoint(trajectory_name, "waypoint1", 4.0, cart);
   robot->addTrajPoint(trajectory_name, pose, "tool0", 5.0);
 
   robot->execute(trajectory_name);
