@@ -34,7 +34,7 @@ int main(int argc, char **argv)
                     (ros::NodeHandle(), "robot_description", "manipulator"));
 
   const std::string trajectory_name("traj1");
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
