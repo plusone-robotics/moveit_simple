@@ -122,7 +122,7 @@ void Robot::refreshRobot()
   virtual_visual_tools_->trigger();
 }
 
-void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pose, const std::string& frame,
+void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Isometry3d pose, const std::string& frame,
                          double time, const InterpolationType& type, const unsigned int num_steps,
                          const std::string& point_name)
 {
@@ -133,7 +133,7 @@ void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pos
 
   try
   {
-    Eigen::Affine3d pose_rel_robot = transformToBase(pose, frame);
+    Eigen::Isometry3d pose_rel_robot = transformToBase(pose, frame);
     std::unique_ptr<TrajectoryPoint> point =
         std::unique_ptr<TrajectoryPoint>(new CartTrajectoryPoint(pose_rel_robot, time, point_name));
     addTrajPoint(traj_name, point, type, num_steps);
@@ -145,7 +145,7 @@ void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pos
   }
 }
 
-void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pose, const std::string& pose_frame,
+void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Isometry3d pose, const std::string& pose_frame,
                          const std::string& tool_name, double time, const InterpolationType& type,
                          const unsigned int num_steps, const std::string& point_name)
 {
@@ -163,7 +163,7 @@ void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Affine3d pos
 
     auto pose_rel_robot = this->transformToBase(pose, pose_frame);
     auto custom_tool_to_moveit_tool = this->lookupTransformMoveitToolAndCustomTool(tool_name);
-    Eigen::Affine3d custom_tool_to_moveit_tool_eigen;
+    Eigen::Isometry3d custom_tool_to_moveit_tool_eigen;
     tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
     pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
 
@@ -240,7 +240,7 @@ void Robot::addTrajPoint(const std::string& traj_name, const std::string& point_
 
       // We take the Origin of our reference frame in consideration as the "known pose"
       // In this case our reference frame resolves to the variable "point_name"
-      Eigen::Affine3d pose_eigen_buffer;
+      Eigen::Isometry3d pose_eigen_buffer;
       geometry_msgs::Pose pose_buffer;
 
       pose_buffer.position.x = 0.000;
@@ -253,7 +253,7 @@ void Robot::addTrajPoint(const std::string& traj_name, const std::string& point_
       pose_buffer.orientation.z = 0.000;
 
       tf::poseMsgToEigen(pose_buffer, pose_eigen_buffer);
-      const Eigen::Affine3d pose_eigen = pose_eigen_buffer;
+      const Eigen::Isometry3d pose_eigen = pose_eigen_buffer;
 
       addTrajPoint(traj_name, pose_eigen, point_name, tool_name, time, type, num_steps, point_name);
     }
@@ -301,7 +301,7 @@ void Robot::addTrajPointJointLock(const std::string& traj_name, const std::strin
   }
 }
 
-void Robot::addTrajPointJointLock(const std::string& traj_name, const Eigen::Affine3d pose,
+void Robot::addTrajPointJointLock(const std::string& traj_name, const Eigen::Isometry3d pose,
                                   const std::string& pose_frame, const std::string& tool_name, double time,
                                   const InterpolationType& type, const unsigned int num_steps,
                                   const std::string& point_name, JointLockOptions options)
@@ -320,7 +320,7 @@ void Robot::addTrajPointJointLock(const std::string& traj_name, const Eigen::Aff
 
     auto pose_rel_robot = this->transformToBase(pose, pose_frame);
     auto custom_tool_to_moveit_tool = this->lookupTransformMoveitToolAndCustomTool(tool_name);
-    Eigen::Affine3d custom_tool_to_moveit_tool_eigen;
+    Eigen::Isometry3d custom_tool_to_moveit_tool_eigen;
     tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
     pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
 
@@ -354,8 +354,8 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
     ROS_INFO_STREAM("Looked up named cart target from robot model: " << name);
 
     virtual_robot_state_->update();  // Updating state for frame tansform below
-    Eigen::Affine3d ik_base_to_ik_tip = virtual_robot_state_->getFrameTransform(name);
-    Eigen::Affine3d pose = srdf_base_to_ik_base_ * ik_base_to_ik_tip;
+    Eigen::Isometry3d ik_base_to_ik_tip = virtual_robot_state_->getFrameTransform(name);
+    Eigen::Isometry3d pose = srdf_base_to_ik_base_ * ik_base_to_ik_tip;
 
     ROS_INFO_STREAM("Getting urdf/robot_state target: " << name << " frame: " << std::endl << pose.matrix());
 
@@ -368,7 +368,7 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
       ROS_INFO_STREAM("Looked up tf named frame: " << name);
 
       geometry_msgs::TransformStamped trans_msg;
-      Eigen::Affine3d pose;
+      Eigen::Isometry3d pose;
       trans_msg = tf_buffer_.lookupTransform(ik_base_frame_, name, ros::Time::now(), ros::Duration(5.0));
       tf::transformMsgToEigen(trans_msg.transform, pose);
 
@@ -392,7 +392,7 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
     if (lookup_wp_client_.exists() && lookup_wp_client_.call(srv) && srv.response.success)
     {
       auto waypoint = srv.response.waypoint;
-      Eigen::Affine3d pose;
+      Eigen::Isometry3d pose;
       tf::transformMsgToEigen(waypoint.transform_stamped.transform, pose);
 
       return std::unique_ptr<TrajectoryPoint>(
@@ -407,7 +407,7 @@ std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string&
   }
 }
 
-bool Robot::getJointSolution(const Eigen::Affine3d& pose, double timeout, const std::vector<double>& seed,
+bool Robot::getJointSolution(const Eigen::Isometry3d& pose, double timeout, const std::vector<double>& seed,
                              std::vector<double>& joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -422,7 +422,7 @@ bool Robot::getJointSolution(const Eigen::Affine3d& pose, double timeout, const 
   return getIK(pose, local_seed, joint_point, timeout);
 }
 
-bool Robot::getJointSolution(const Eigen::Affine3d& pose, const std::string& tool_name, double timeout,
+bool Robot::getJointSolution(const Eigen::Isometry3d& pose, const std::string& tool_name, double timeout,
                              const std::vector<double>& seed, std::vector<double>& joint_point) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -436,7 +436,7 @@ bool Robot::getJointSolution(const Eigen::Affine3d& pose, const std::string& too
                                                                        << moveit_tool_link << "] before performing IK");
 
     // Transform Target/Goal Point from custom tool frame to moveit_end_link
-    const Eigen::Affine3d custom_frame_goal_pose = transformPoseBetweenFrames(pose, tool_name, moveit_tool_link);
+    const Eigen::Isometry3d custom_frame_goal_pose = transformPoseBetweenFrames(pose, tool_name, moveit_tool_link);
 
     std::vector<double> local_seed = seed;
     if (seed.empty())
@@ -457,7 +457,7 @@ bool Robot::getJointSolution(const Eigen::Affine3d& pose, const std::string& too
   return get_joints;
 }
 
-Eigen::Affine3d Robot::transformPoseBetweenFrames(const Eigen::Affine3d& target_pose, const std::string& frame_in,
+Eigen::Isometry3d Robot::transformPoseBetweenFrames(const Eigen::Isometry3d& target_pose, const std::string& frame_in,
                                                   const std::string& frame_out) const
 {
   if (frame_in.compare(frame_out) == 0 && robot_model_ptr_->hasLinkModel(frame_in) &&
@@ -478,7 +478,7 @@ Eigen::Affine3d Robot::transformPoseBetweenFrames(const Eigen::Affine3d& target_
     geometry_msgs::PoseStamped transformed_pose;
     geometry_msgs::TransformStamped trans_msg;
 
-    Eigen::Affine3d target_pose_buffer = target_pose;
+    Eigen::Isometry3d target_pose_buffer = target_pose;
     trans_msg = tf_buffer_.lookupTransform(frame_out, frame_in, ros::Time(0), ros::Duration(5.0));
 
     pose_stamped_buffer.header = trans_msg.header;
@@ -500,18 +500,18 @@ Eigen::Affine3d Robot::transformPoseBetweenFrames(const Eigen::Affine3d& target_
   }
 }
 
-bool Robot::getPose(const std::vector<double>& joint_point, Eigen::Affine3d& pose) const
+bool Robot::getPose(const std::vector<double>& joint_point, Eigen::Isometry3d& pose) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
   return getFK(joint_point, pose);
 }
 
-bool Robot::getPose(const std::vector<double>& joint_point, const std::string& tool_name, Eigen::Affine3d& pose) const
+bool Robot::getPose(const std::vector<double>& joint_point, const std::string& tool_name, Eigen::Isometry3d& pose) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
 
   bool get_pose = false;
-  Eigen::Affine3d pose_buffer;
+  Eigen::Isometry3d pose_buffer;
   std::string moveit_tool_link = joint_group_->getSolverInstance()->getTipFrame();
 
   if (getFK(joint_point, pose_buffer))
@@ -542,7 +542,7 @@ bool Robot::getPose(const std::vector<double>& joint_point, const std::string& t
   return get_pose;
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d& pose, const std::string& frame, const std::string& joint_seed,
+bool Robot::isInCollision(const Eigen::Isometry3d& pose, const std::string& frame, const std::string& joint_seed,
                           double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -562,7 +562,7 @@ bool Robot::isInCollision(const Eigen::Affine3d& pose, const std::string& frame,
   return this->isInCollision(pose, frame, timeout, joints);
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+bool Robot::isInCollision(const Eigen::Isometry3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
                           const std::string& joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -582,7 +582,7 @@ bool Robot::isInCollision(const Eigen::Affine3d& pose, const geometry_msgs::Tran
   return this->isInCollision(pose, frame_to_robot_base, timeout, joints);
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+bool Robot::isInCollision(const Eigen::Isometry3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
                           const geometry_msgs::TransformStamped& custom_tool_to_moveit_tool,
                           const std::string& joint_seed, double timeout) const
 {
@@ -602,7 +602,7 @@ bool Robot::isInCollision(const Eigen::Affine3d& pose, const geometry_msgs::Tran
   }
 
   auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
-  Eigen::Affine3d custom_tool_to_moveit_tool_eigen;
+  Eigen::Isometry3d custom_tool_to_moveit_tool_eigen;
   tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
   pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
 
@@ -644,7 +644,7 @@ bool Robot::isInCollision(const std::vector<double>& joint_point) const
   return inCollision;
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d& pose, const std::string& frame, double timeout,
+bool Robot::isInCollision(const Eigen::Isometry3d& pose, const std::string& frame, double timeout,
                           std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -664,7 +664,7 @@ bool Robot::isInCollision(const Eigen::Affine3d& pose, const std::string& frame,
   return inCollision;
 }
 
-bool Robot::isInCollision(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+bool Robot::isInCollision(const Eigen::Isometry3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
                           double timeout, std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -707,7 +707,7 @@ bool Robot::isReachable(const std::string& name, double timeout, std::vector<dou
   }
 }
 
-bool Robot::isReachable(const Eigen::Affine3d& pose, const std::string& frame, const std::string& joint_seed,
+bool Robot::isReachable(const Eigen::Isometry3d& pose, const std::string& frame, const std::string& joint_seed,
                         double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -727,7 +727,7 @@ bool Robot::isReachable(const Eigen::Affine3d& pose, const std::string& frame, c
   return this->isReachable(pose, frame, timeout, joints);
 }
 
-bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+bool Robot::isReachable(const Eigen::Isometry3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
                         const std::string& joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -747,7 +747,7 @@ bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::Transf
   return this->isReachable(pose, frame_to_robot_base, timeout, joints);
 }
 
-bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+bool Robot::isReachable(const Eigen::Isometry3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
                         const geometry_msgs::TransformStamped& custom_tool_to_moveit_tool,
                         const std::string& joint_seed, double timeout) const
 {
@@ -767,7 +767,7 @@ bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::Transf
   }
 
   auto pose_rel_robot = this->transformToBase(pose, frame_to_robot_base);
-  Eigen::Affine3d custom_tool_to_moveit_tool_eigen;
+  Eigen::Isometry3d custom_tool_to_moveit_tool_eigen;
   tf::transformMsgToEigen(custom_tool_to_moveit_tool.transform, custom_tool_to_moveit_tool_eigen);
   pose_rel_robot = pose_rel_robot * custom_tool_to_moveit_tool_eigen;
 
@@ -777,7 +777,7 @@ bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::Transf
   return this->isReachable(point, timeout, joints);
 }
 
-bool Robot::isReachable(const Eigen::Affine3d& pose, const std::string& frame, double timeout,
+bool Robot::isReachable(const Eigen::Isometry3d& pose, const std::string& frame, double timeout,
                         std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -797,7 +797,7 @@ bool Robot::isReachable(const Eigen::Affine3d& pose, const std::string& frame, d
   return reachable;
 }
 
-bool Robot::isReachable(const Eigen::Affine3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
+bool Robot::isReachable(const Eigen::Isometry3d& pose, const geometry_msgs::TransformStamped& frame_to_robot_base,
                         double timeout, std::vector<double> joint_seed) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -1039,23 +1039,23 @@ void Robot::interpolate(const std::unique_ptr<CartTrajectoryPoint>& from,
                         const std::unique_ptr<CartTrajectoryPoint>& to, double t,
                         std::unique_ptr<CartTrajectoryPoint>& point) const
 {
-  Eigen::Affine3d start_pose = from->pose();
+  Eigen::Isometry3d start_pose = from->pose();
   double start_time = from->time();
 
-  Eigen::Affine3d target_pose = to->pose();
+  Eigen::Isometry3d target_pose = to->pose();
   double target_time = to->time();
 
-  Eigen::Affine3d pose = interpolate(start_pose, target_pose, t);
+  Eigen::Isometry3d pose = interpolate(start_pose, target_pose, t);
   double time = t * target_time + (1 - t) * start_time;
 
   point = std::unique_ptr<CartTrajectoryPoint>(new CartTrajectoryPoint(pose, time, ""));
 }
 
-Eigen::Affine3d Robot::interpolate(const Eigen::Affine3d& from, const Eigen::Affine3d& to, double t) const
+Eigen::Isometry3d Robot::interpolate(const Eigen::Isometry3d& from, const Eigen::Isometry3d& to, double t) const
 {
   Eigen::Quaterniond from_quaternion(from.rotation());
   Eigen::Quaterniond to_quaternion(to.rotation());
-  Eigen::Affine3d pose(from_quaternion.slerp(t, to_quaternion));
+  Eigen::Isometry3d pose(from_quaternion.slerp(t, to_quaternion));
   pose.translation() = t * to.translation() + (1 - t) * from.translation();
   return pose;
 }
@@ -1090,7 +1090,7 @@ bool Robot::isConfigChange(const std::vector<double> jp1, const std::vector<doub
   return false;
 }
 
-void Robot::updateRvizRobotState(const Eigen::Affine3d& pose, const std::string& in_frame,
+void Robot::updateRvizRobotState(const Eigen::Isometry3d& pose, const std::string& in_frame,
                                  const std::string& joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -1110,7 +1110,7 @@ void Robot::updateRvizRobotState(const Eigen::Affine3d& pose, const std::string&
   this->updateRvizRobotState(pose, in_frame, joints, timeout);
 }
 
-void Robot::updateRvizRobotState(const Eigen::Affine3d& pose, const std::string& in_frame,
+void Robot::updateRvizRobotState(const Eigen::Isometry3d& pose, const std::string& in_frame,
                                  std::vector<double> joint_seed, double timeout) const
 {
   std::lock_guard<std::recursive_mutex> guard(m_);
@@ -1127,7 +1127,7 @@ void Robot::updateRvizRobotState(const Eigen::Affine3d& pose, const std::string&
   }
 }
 
-void Robot::updateRvizRobotState(const Eigen::Affine3d& pose,
+void Robot::updateRvizRobotState(const Eigen::Isometry3d& pose,
                                  const geometry_msgs::TransformStamped& frame_to_robot_base,
                                  const std::string& joint_seed, double timeout) const
 {
@@ -1148,7 +1148,7 @@ void Robot::updateRvizRobotState(const Eigen::Affine3d& pose,
   this->updateRvizRobotState(pose, frame_to_robot_base, joints, timeout);
 }
 
-void Robot::updateRvizRobotState(const Eigen::Affine3d& pose,
+void Robot::updateRvizRobotState(const Eigen::Isometry3d& pose,
                                  const geometry_msgs::TransformStamped& frame_to_robot_base,
                                  std::vector<double> joint_seed, double timeout) const
 {
@@ -1201,7 +1201,7 @@ geometry_msgs::TransformStamped Robot::lookupTransformToBase(const std::string& 
   return frame_rel_robot_msg;
 }
 
-Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d& in, const std::string& in_frame) const
+Eigen::Isometry3d Robot::transformToBase(const Eigen::Isometry3d& in, const std::string& in_frame) const
 {
   geometry_msgs::TransformStamped frame_rel_robot_msg;
 
@@ -1219,38 +1219,37 @@ Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d& in, const std::str
   return this->transformToBase(in, frame_rel_robot_msg);
 }
 
-Eigen::Affine3d Robot::transformToBase(const Eigen::Affine3d& in,
+Eigen::Isometry3d Robot::transformToBase(const Eigen::Isometry3d& in,
                                        const geometry_msgs::TransformStamped& transform_msg) const
 {
-  Eigen::Affine3d out;
+  Eigen::Isometry3d out;
 
-  Eigen::Affine3d frame_rel_robot;
+  Eigen::Isometry3d frame_rel_robot;
   tf::transformMsgToEigen(transform_msg.transform, frame_rel_robot);
   out = frame_rel_robot.inverse() * in;
 
   return out;
 }
 
-bool Robot::getFK(const std::vector<double>& joint_point, Eigen::Affine3d& pose) const
+bool Robot::getFK(const std::vector<double>& joint_point, Eigen::Isometry3d& pose) const
 {
   virtual_robot_state_->setJointGroupPositions(joint_group_, joint_point);
-  Eigen::Affine3d ik_base_to_ik_tip = virtual_robot_state_->getFrameTransform(ik_tip_frame_);
+  Eigen::Isometry3d ik_base_to_ik_tip = virtual_robot_state_->getFrameTransform(ik_tip_frame_);
   pose = srdf_base_to_ik_base_ * ik_base_to_ik_tip * ik_tip_to_srdf_tip_.inverse();
   return true;
 }
 
-bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double>& seed, std::vector<double>& joint_point,
-                  double timeout, unsigned int attempts) const
+bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed, std::vector<double>& joint_point,
+                  double timeout) const
 {
   virtual_robot_state_->setJointGroupPositions(joint_group_, seed);
-  return getIK(pose, joint_point, timeout, attempts);
+  return getIK(pose, joint_point, timeout);
 }
 
-bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double>& joint_point, double timeout,
-                  unsigned int attempts) const
+bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout) const
 {
-  Eigen::Affine3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
-  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, attempts, timeout))
+  Eigen::Isometry3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
+  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, timeout))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();

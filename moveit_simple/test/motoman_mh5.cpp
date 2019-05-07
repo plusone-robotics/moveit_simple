@@ -148,7 +148,7 @@ TEST_F(DeveloperRobotTest, kinematics)
     const std::vector<double> JOINT_SEED(pose.joints.size(), 0.0);
 
     // Testing forward kinematics to tool_custom
-    Eigen::Affine3d tool_custom_calculated_pose;
+    Eigen::Isometry3d tool_custom_calculated_pose;
     ASSERT_TRUE(developer_robot->getFK(pose.joints, tool_custom_calculated_pose));
 
     Eigen::Vector3d tool_custom_translation = tool_custom_calculated_pose.translation();
@@ -164,10 +164,11 @@ TEST_F(DeveloperRobotTest, kinematics)
 
     // Testing inverse kinematics
     std::vector<double> joint_solution;
-    ASSERT_TRUE(developer_robot->getIK(tool_custom_calculated_pose, JOINT_SEED, joint_solution, 10, 15));
+    double timeout = 15;
+    ASSERT_TRUE(developer_robot->getIK(tool_custom_calculated_pose, JOINT_SEED, joint_solution, timeout));
 
     // Checking IK solution with forward kinematics
-    Eigen::Affine3d check_joint_solution;
+    Eigen::Isometry3d check_joint_solution;
     ASSERT_TRUE(developer_robot->getFK(joint_solution, check_joint_solution));
 
     Eigen::Vector3d check_joint_translation = check_joint_solution.translation();
@@ -214,7 +215,7 @@ TEST(MoveitSimpleTest, construction_online_robot_ikfast)
 
 TEST_F(UserRobotTest, reachability)
 {
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
 
   ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
   EXPECT_FALSE(user_robot->isReachable("unknown_name"));
@@ -233,7 +234,7 @@ TEST_F(UserRobotTest, reachability)
 TEST_F(UserRobotTest, add_trajectory)
 {
   const std::string TRAJECTORY_NAME("traj1");
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
@@ -270,9 +271,9 @@ TEST_F(DeveloperRobotTest, planning)
   std::vector<double> seed;
   std::vector<double> cart_interpolated_expected_joint;
 
-  Eigen::Affine3d pose1;
-  Eigen::Affine3d pose2;
-  Eigen::Affine3d joint_interpolated_expected_pose;
+  Eigen::Isometry3d pose1;
+  Eigen::Isometry3d pose2;
+  Eigen::Isometry3d joint_interpolated_expected_pose;
 
   EXPECT_TRUE(developer_robot->getPose(joint1, pose1));
   EXPECT_TRUE(developer_robot->getPose(joint2, pose2));
@@ -280,7 +281,7 @@ TEST_F(DeveloperRobotTest, planning)
 
   Eigen::Quaterniond point1_quaternion(pose1.rotation());
   Eigen::Quaterniond point2_quaternion(pose2.rotation());
-  Eigen::Affine3d cart_interpolated_expected_pose(point1_quaternion.slerp(0.5, point2_quaternion));
+  Eigen::Isometry3d cart_interpolated_expected_pose(point1_quaternion.slerp(0.5, point2_quaternion));
   cart_interpolated_expected_pose.translation() =  0.5*(pose2.translation() + pose1.translation());
 
   EXPECT_TRUE(developer_robot->getJointSolution(cart_interpolated_expected_pose, 3.0, seed, cart_interpolated_expected_joint));
@@ -336,7 +337,7 @@ TEST_F(DeveloperRobotTest, planning)
 
   ROS_INFO_STREAM("Converting the joint positions to poses to compare against expected poses");
 
-  std::vector<Eigen::Affine3d> pose_out;
+  std::vector<Eigen::Isometry3d> pose_out;
   pose_out.resize(points.size());
   for (std::size_t i = 0; i < points.size(); ++i)
   {
@@ -441,24 +442,24 @@ TEST_F(DeveloperRobotTest, interpolation)
   ROS_INFO_STREAM("joint_expected" << joint_out);
 
   // Cartesian Interpolation Test
-  Eigen::Affine3d pose1 = Eigen::Affine3d::Identity();
+  Eigen::Isometry3d pose1 = Eigen::Isometry3d::Identity();
   pose1.translation() = Eigen::Vector3d(0.8, 0.1, 0.3);
   Eigen::Quaterniond rot1(0.66, 0.0, 0.7513, 0.0);
   pose1.linear() = rot1.toRotationMatrix();
 
-  Eigen::Affine3d pose2 = Eigen::Affine3d::Identity();
+  Eigen::Isometry3d pose2 = Eigen::Isometry3d::Identity();
   pose2.translation() = Eigen::Vector3d(0.8, 0.1, 0.5);
   Eigen::Quaterniond rot2(0.4085, 0, 0.9127, 0);
   pose2.linear() = rot2.toRotationMatrix();
 
-  Eigen::Affine3d pose3 = Eigen::Affine3d::Identity();
+  Eigen::Isometry3d pose3 = Eigen::Isometry3d::Identity();
   pose3.translation() = Eigen::Vector3d(-0.3, -0.5, 0.2);
   Eigen::Quaterniond rot3(0.8253, 0.0, 0.5646, 0.0);
   pose3.linear() = rot3.toRotationMatrix();
 
   Eigen::Quaterniond point1_quaternion(pose1.rotation());
   Eigen::Quaterniond point2_quaternion(pose2.rotation());
-  Eigen::Affine3d pose_expected(point1_quaternion.slerp(0.5, point2_quaternion));
+  Eigen::Isometry3d pose_expected(point1_quaternion.slerp(0.5, point2_quaternion));
   pose_expected.translation() = Eigen::Vector3d(0.8, 0.1, 0.4);
 
   const std::unique_ptr<moveit_simple::CartTrajectoryPoint> cart_point1 =
@@ -599,10 +600,10 @@ TEST_F(UserRobotTest, speed_reconfiguration)
 
 TEST_F(UserRobotTest, kinematics)
 {
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
-  Eigen::Affine3d pose1;
-  Eigen::Affine3d pose2;
-  Eigen::Affine3d pose3;
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+  Eigen::Isometry3d pose1;
+  Eigen::Isometry3d pose2;
+  Eigen::Isometry3d pose3;
   std::vector<double> joint_point1(6,M_PI/6);
   std::vector<double> joint_point2;
   std::vector<double> joint_point3;
@@ -651,10 +652,10 @@ TEST_F(UserRobotTest, custom_tool_link)
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
-  Eigen::Affine3d pose1;
-  Eigen::Affine3d pose2;
-  Eigen::Affine3d pose3;
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+  Eigen::Isometry3d pose1;
+  Eigen::Isometry3d pose2;
+  Eigen::Isometry3d pose3;
   std::vector<double> joint_point1(6,M_PI/6);
   std::vector<double> joint_point2;
   std::vector<double> joint_point3;
@@ -698,7 +699,7 @@ TEST_F(UserRobotTest, custom_tool_link)
   EXPECT_TRUE(pose1.isApprox(pose3,1e-3));
 
   // Testing addTrajPoint() with custom_tool_frame as eef
-  Eigen::Affine3d pose_msg_to_eigen;
+  Eigen::Isometry3d pose_msg_to_eigen;
   geometry_msgs::Pose pose_buffer;
 
   // We take the Origin of our reference frame in consideration as the "known pose"
@@ -714,7 +715,7 @@ TEST_F(UserRobotTest, custom_tool_link)
 
   tf::poseMsgToEigen(pose_buffer, pose_msg_to_eigen);
 
-  const Eigen::Affine3d pose_eigen = pose_msg_to_eigen;
+  const Eigen::Isometry3d pose_eigen = pose_msg_to_eigen;
 
   const std::string TRAJECTORY_NAME("traj1");
 

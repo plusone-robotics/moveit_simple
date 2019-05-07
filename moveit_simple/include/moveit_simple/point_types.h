@@ -143,13 +143,13 @@ public:
   friend class CombinedTrajectoryPoint;
   CartTrajectoryPoint() : TrajectoryPoint("", 0.0, PointType::CARTESIAN) { }
 
-  CartTrajectoryPoint(const Eigen::Affine3d pose, const double t, std::string name = std::string(),
+  CartTrajectoryPoint(const Eigen::Isometry3d pose, const double t, std::string name = std::string(),
                       JointLockOptions options = JointLockOptions::LOCK_NONE)
     : TrajectoryPoint(name, t, PointType::CARTESIAN, options), pose_(pose) { }
 
   virtual ~CartTrajectoryPoint() { }
 
-  const Eigen::Affine3d &pose() const
+  const Eigen::Isometry3d &pose() const
   {
     return pose_;
   }
@@ -161,7 +161,7 @@ protected:
   virtual std::unique_ptr<CartTrajectoryPoint> toCartTrajPoint(const Robot &robot) const;
 
 private:
-  Eigen::Affine3d pose_;
+  Eigen::Isometry3d pose_;
 };
 
 class CombinedTrajectoryPoint : public TrajectoryPoint
@@ -177,7 +177,7 @@ public:
   {
   }
 
-  CombinedTrajectoryPoint(std::vector<double> &joint_point, const Eigen::Affine3d pose, double t, double tol,
+  CombinedTrajectoryPoint(std::vector<double> &joint_point, const Eigen::Isometry3d pose, double t, double tol,
                           std::string name = std::string(), PointPreference type = PointPreference::JOINT,
                           JointLockOptions options = JointLockOptions::LOCK_NONE, double timeout = 5.0)
     : TrajectoryPoint(name, t, (type == PointPreference::JOINT) ? PointType::JOINT : PointType::CARTESIAN, options)
@@ -195,7 +195,7 @@ public:
     return options_;
   }
 
-  const Eigen::Affine3d &pose() const
+  const Eigen::Isometry3d &pose() const
   {
     return pose_;
   }
@@ -226,7 +226,7 @@ private:
 
   JointLockOptions options_;
   std::vector<double> joint_point_;
-  Eigen::Affine3d pose_;
+  Eigen::Isometry3d pose_;
   double tol_;
   double timeout_;
 };

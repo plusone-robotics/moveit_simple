@@ -83,7 +83,7 @@ public:
    * @param timeout - (optional) timeout for IK
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
+  bool isInCollision(const Eigen::Isometry3d &pose, const std::string &frame,
     const std::string &joint_seed, double timeout = 10.0) const;
 
   /**
@@ -95,7 +95,7 @@ public:
    * @param timeout - (optional) timeout for IK
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d &pose,
+  bool isInCollision(const Eigen::Isometry3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     const std::string &joint_seed, double timeout = 10.0) const;
 
@@ -109,7 +109,7 @@ public:
    * @param timeout - (optional) timeout for IK
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d &pose,
+  bool isInCollision(const Eigen::Isometry3d &pose,
                      const geometry_msgs::TransformStamped &frame_to_robot_base,
                      const geometry_msgs::TransformStamped &custom_tool_to_moveit_tool,
                      const std::string &joint_seed, double timeout = 10.0) const;
@@ -132,7 +132,7 @@ public:
    * @param joint_seed (optional) - seed to use
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d &pose, const std::string &frame,
+  bool isInCollision(const Eigen::Isometry3d &pose, const std::string &frame,
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
@@ -144,7 +144,7 @@ public:
    * @param joint_seed (optional) - seed to use
    * @return
    */
-  bool isInCollision(const Eigen::Affine3d &pose,
+  bool isInCollision(const Eigen::Isometry3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
@@ -166,7 +166,7 @@ public:
    * @param joint_seed - seed to use
    * @return
    */
-  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame,
+  bool isReachable(const Eigen::Isometry3d &pose, const std::string &frame,
     const std::string &joint_seed, double timeout = 10.0) const;
 
   /**
@@ -177,7 +177,7 @@ public:
   * @param joint_seed - seed to use
   * @return
   */
-  bool isReachable(const Eigen::Affine3d &pose,
+  bool isReachable(const Eigen::Isometry3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     const std::string &joint_seed, double timeout = 10.0) const;
 
@@ -190,7 +190,7 @@ public:
   * @param joint_seed - seed to use
   * @return
   */
-  bool isReachable(const Eigen::Affine3d &pose,
+  bool isReachable(const Eigen::Isometry3d &pose,
                    const geometry_msgs::TransformStamped &frame_to_robot_base,
                    const geometry_msgs::TransformStamped &custom_tool_to_moveit_tool,
                    const std::string &joint_seed,
@@ -204,7 +204,7 @@ public:
    * @param joint_seed (optional) - named seed to use defined in srdf
    * @return
    */
-  bool isReachable(const Eigen::Affine3d &pose, const std::string &frame,
+  bool isReachable(const Eigen::Isometry3d &pose, const std::string &frame,
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
   /**
@@ -215,7 +215,7 @@ public:
    * @param joint_seed (optional) - named seed to use defined in srdf
    * @return
    */
-  bool isReachable(const Eigen::Affine3d &pose,
+  bool isReachable(const Eigen::Isometry3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     double timeout = 10.0, std::vector<double> joint_seed = std::vector<double>()) const;
 
@@ -248,7 +248,7 @@ public:
    * @param point_name - (optional) name of point (used in log messages)
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
-  void addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pose,
+  void addTrajPoint(const std::string &traj_name, const Eigen::Isometry3d pose,
     const std::string &frame, double time, const InterpolationType &type = interpolation_type::JOINT,
     const unsigned int num_steps = 0, const std::string &point_name = std::string());
 
@@ -285,7 +285,7 @@ public:
    * @param point_name - (optional) name of point (used in log messages)
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
-  void addTrajPoint(const std::string &traj_name, const Eigen::Affine3d pose,
+  void addTrajPoint(const std::string &traj_name, const Eigen::Isometry3d pose,
     const std::string &pose_frame, const std::string &tool_name, double time,
     const InterpolationType &type = interpolation_type::JOINT, const unsigned int num_steps = 0,
     const std::string &point_name = std::string());
@@ -323,7 +323,7 @@ public:
    * @param options - (optional) - Locks the joints when moving from the previous point
    * @throws <tf2::TransformException> (Transform from frame to robot base failed)
   */
-  void addTrajPointJointLock(const std::string &traj_name, const Eigen::Affine3d pose,
+  void addTrajPointJointLock(const std::string &traj_name, const Eigen::Isometry3d pose,
     const std::string &pose_frame, const std::string &tool_name, double time,
     const InterpolationType &type = interpolation_type::JOINT, const unsigned int num_steps = 0,
     const std::string &point_name = std::string(), JointLockOptions options = JointLockOptions::LOCK_NONE);
@@ -332,12 +332,11 @@ public:
    * @brief getJointSolution returns joint solution for cartesian pose.
    * @param pose - desired pose
    * @param timeout - ik solver timeout
-   * @param attempts - number of IK solve attem
    * @param seed - ik seed
    * @param joint_point - joint solution for pose
    * @return true if joint solution found
    */
-  bool getJointSolution(const Eigen::Affine3d &pose, double timeout, const std::vector<double> &seed,
+  bool getJointSolution(const Eigen::Isometry3d &pose, double timeout, const std::vector<double> &seed,
     std::vector<double> &joint_point) const;
 
   /**
@@ -346,12 +345,11 @@ public:
    * @param pose - desired pose
    * @param tool_name - frame (must be a TF accessible frame) in which pose is defined
    * @param timeout - ik solver timeout
-   * @param attempts - number of IK solve attem
    * @param seed - ik seed
    * @param joint_point - joint solution for pose
    * @return true if joint solution found
    */
-  bool getJointSolution(const Eigen::Affine3d &pose, const std::string &tool_name,
+  bool getJointSolution(const Eigen::Isometry3d &pose, const std::string &tool_name,
     double timeout, const std::vector<double> &seed, std::vector<double> &joint_point) const;
 
   /**
@@ -360,7 +358,7 @@ public:
    * @param pose - pose corresponding to joint_pose
    * @return true if pose is found
    */
-  bool getPose(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const;
+  bool getPose(const std::vector<double> &joint_point, Eigen::Isometry3d &pose) const;
 
   /**
    * @brief getPose finds cartesian pose for the given joint positions.
@@ -371,7 +369,7 @@ public:
    * @return true if pose is found
    */
   bool getPose(const std::vector<double> &joint_point, const std::string &tool_name,
-    Eigen::Affine3d &pose) const;
+    Eigen::Isometry3d &pose) const;
 
   /**
    * @brief clearTrajectory - clears stored trajectory
@@ -400,7 +398,7 @@ public:
    * @param to: final pose
    * @param t: parameteric time
    */
-  Eigen::Affine3d interpolate(const Eigen::Affine3d &from, const Eigen::Affine3d &to,
+  Eigen::Isometry3d interpolate(const Eigen::Isometry3d &from, const Eigen::Isometry3d &to,
     double t) const;
 
   /**
@@ -437,17 +435,17 @@ public:
    */
   double getSpeedModifier(void) const;
 
-  void updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
+  void updateRvizRobotState(const Eigen::Isometry3d &pose, const std::string &in_frame,
     const std::string &joint_seed, double timeout = 10.0) const;
 
-  void updateRvizRobotState(const Eigen::Affine3d &pose, const std::string &in_frame,
+  void updateRvizRobotState(const Eigen::Isometry3d &pose, const std::string &in_frame,
     std::vector<double> joint_seed = std::vector<double>(), double timeout = 10.0) const;
 
-  void updateRvizRobotState(const Eigen::Affine3d &pose,
+  void updateRvizRobotState(const Eigen::Isometry3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     const std::string &joint_seed, double timeout = 10.0) const;
 
-  void updateRvizRobotState(const Eigen::Affine3d &pose,
+  void updateRvizRobotState(const Eigen::Isometry3d &pose,
     const geometry_msgs::TransformStamped &frame_to_robot_base,
     std::vector<double> joint_seed = std::vector<double>(),
     double timeout = 10.0) const;
@@ -462,9 +460,9 @@ public:
 protected:
   Robot();
 
-  Eigen::Affine3d transformToBase(const Eigen::Affine3d &in, const std::string &in_frame) const;
+  Eigen::Isometry3d transformToBase(const Eigen::Isometry3d &in, const std::string &in_frame) const;
 
-  Eigen::Affine3d transformToBase(const Eigen::Affine3d &in,
+  Eigen::Isometry3d transformToBase(const Eigen::Isometry3d &in,
     const geometry_msgs::TransformStamped &transform_msg) const;
 
   /**
@@ -474,7 +472,7 @@ protected:
    * @param frame_out - Target Frame of Reference for Transform
    * @param
    */
-  Eigen::Affine3d transformPoseBetweenFrames(const Eigen::Affine3d &target_pose,
+  Eigen::Isometry3d transformPoseBetweenFrames(const Eigen::Isometry3d &target_pose,
     const std::string &frame_in, const std::string &frame_out) const;
 
   control_msgs::FollowJointTrajectoryGoal toFollowJointTrajectoryGoal(
@@ -558,13 +556,13 @@ protected:
   */
   virtual std::vector<double> getJointState(void) const;
 
-  bool getIK(const Eigen::Affine3d pose, const std::vector<double> &seed,
-    std::vector<double> &joint_point, double timeout = 1, unsigned int attempts = 1) const;
+  bool getIK(const Eigen::Isometry3d pose, const std::vector<double> &seed,
+    std::vector<double> &joint_point, double timeout = 1) const;
 
-  bool getIK(const Eigen::Affine3d pose, std::vector<double> &joint_point,
-    double timeout = 1, unsigned int attempts = 1) const;
+  bool getIK(const Eigen::Isometry3d pose, std::vector<double> &joint_point,
+    double timeout = 1) const;
 
-  bool getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const;
+  bool getFK(const std::vector<double> &joint_point, Eigen::Isometry3d &pose) const;
 
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string &name,
     double time) const;
@@ -610,8 +608,8 @@ protected:
   // Kinematics
   std::string ik_base_frame_;
   std::string ik_tip_frame_;
-  Eigen::Affine3d ik_tip_to_srdf_tip_;
-  Eigen::Affine3d srdf_base_to_ik_base_;
+  Eigen::Isometry3d ik_tip_to_srdf_tip_;
+  Eigen::Isometry3d srdf_base_to_ik_base_;
 
   std::string planning_group_;
   std::string robot_description_;

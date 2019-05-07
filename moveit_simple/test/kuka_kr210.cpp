@@ -100,7 +100,7 @@ TEST(MoveitSimpleTest, construction_online_robot)
 TEST(MoveitSimpleTest, reachability)
 {
   moveit_simple::Robot robot(ros::NodeHandle(), "robot_description", "manipulator");
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
   ros::Duration(2.0).sleep();  //wait for tf tree to populate
 
   ROS_INFO_STREAM("Testing reachability of unknown point, should fail");
@@ -122,7 +122,7 @@ TEST(MoveitSimpleTest, reachability)
 TEST_F(UserRobotTest, add_trajectory)
 {
   const std::string TRAJECTORY_NAME("traj1");
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
@@ -161,9 +161,9 @@ TEST_F(DeveloperRobotTest, planning)
   std::vector<double>seed;
   std::vector<double>cart_interpolated_expected_joint;
 
-  Eigen::Affine3d pose1;
-  Eigen::Affine3d pose2;
-  Eigen::Affine3d joint_interpolated_expected_pose;
+  Eigen::Isometry3d pose1;
+  Eigen::Isometry3d pose2;
+  Eigen::Isometry3d joint_interpolated_expected_pose;
 
   EXPECT_TRUE(robot2->getPose(joint1, pose1));
   EXPECT_TRUE(robot2->getPose(joint2, pose2));
@@ -171,7 +171,7 @@ TEST_F(DeveloperRobotTest, planning)
 
   Eigen::Quaterniond point1_quaternion(pose1.rotation());
   Eigen::Quaterniond point2_quaternion(pose2.rotation());
-  Eigen::Affine3d cart_interpolated_expected_pose(point1_quaternion.slerp(0.5, point2_quaternion));
+  Eigen::Isometry3d cart_interpolated_expected_pose(point1_quaternion.slerp(0.5, point2_quaternion));
   cart_interpolated_expected_pose.translation() =  0.5*(pose2.translation() + pose1.translation());
 
   EXPECT_TRUE(robot2->getJointSolution(cart_interpolated_expected_pose, 3.0, seed, cart_interpolated_expected_joint));
@@ -232,7 +232,7 @@ TEST_F(DeveloperRobotTest, planning)
 
   ROS_INFO_STREAM("Converting the joint positions to poses to compare " <<
                                                 "against expected poses");
-  std::vector<Eigen::Affine3d> pose_out;
+  std::vector<Eigen::Isometry3d> pose_out;
   pose_out.resize(points.size());
   for (std::size_t i = 0; i < points.size(); ++i)
   {
@@ -338,16 +338,16 @@ TEST_F(DeveloperRobotTest, interpolation)
   ROS_INFO_STREAM("joint_expected" << joint_out);
 
   // Cartesian Interpolation Test
-  Eigen::Affine3d pose1 = Eigen::Affine3d::Identity();
+  Eigen::Isometry3d pose1 = Eigen::Isometry3d::Identity();
   pose1.translation() = Eigen::Vector3d(1.9,0.0,2.2);
   Eigen::Quaterniond rot1;
   rot1.setFromTwoVectors(Eigen::Vector3d(0,-0.5,0), Eigen::Vector3d(1.9,0.0,2.2));
   pose1.linear() = rot1.toRotationMatrix();
 
-  Eigen::Affine3d pose2 = Eigen::Affine3d::Identity();
+  Eigen::Isometry3d pose2 = Eigen::Isometry3d::Identity();
   pose2.translation() = Eigen::Vector3d(1.9,0.0,2.7);
 
-  Eigen::Affine3d pose3 = Eigen::Affine3d::Identity();
+  Eigen::Isometry3d pose3 = Eigen::Isometry3d::Identity();
   pose3.translation() = Eigen::Vector3d(-0.592,-0.000,3.452);
   Eigen::Quaterniond rot3;
   rot3.setFromTwoVectors(Eigen::Vector3d(3.142,-0.964,3.142), Eigen::Vector3d(-0.592,-0.000,3.452));
@@ -355,7 +355,7 @@ TEST_F(DeveloperRobotTest, interpolation)
 
   Eigen::Quaterniond point1_quaternion(pose1.rotation());
   Eigen::Quaterniond point2_quaternion(pose2.rotation());
-  Eigen::Affine3d pose_expected(point1_quaternion.slerp(0.5, point2_quaternion));
+  Eigen::Isometry3d pose_expected(point1_quaternion.slerp(0.5, point2_quaternion));
   pose_expected.translation() = Eigen::Vector3d(1.9,0.0,2.45);
 
   const std::unique_ptr<moveit_simple::CartTrajectoryPoint> cart_point1 =
@@ -495,10 +495,10 @@ TEST_F(UserRobotTest, speed_reconfiguration)
 
 TEST_F(UserRobotTest, kinematics)
 {
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
-  Eigen::Affine3d pose1;
-  Eigen::Affine3d pose2;
-  Eigen::Affine3d pose3;
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+  Eigen::Isometry3d pose1;
+  Eigen::Isometry3d pose2;
+  Eigen::Isometry3d pose3;
   std::vector<double> joint_point1(6,M_PI/6);
   std::vector<double> joint_point2;
   std::vector<double> joint_point3;
@@ -547,10 +547,10 @@ TEST_F(UserRobotTest, custom_tool_link)
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
-  const Eigen::Affine3d pose = Eigen::Affine3d::Identity();
-  Eigen::Affine3d pose1;
-  Eigen::Affine3d pose2;
-  Eigen::Affine3d pose3;
+  const Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+  Eigen::Isometry3d pose1;
+  Eigen::Isometry3d pose2;
+  Eigen::Isometry3d pose3;
   std::vector<double> joint_point1(6,M_PI/6);
   std::vector<double> joint_point2;
   std::vector<double> joint_point3;
@@ -594,7 +594,7 @@ TEST_F(UserRobotTest, custom_tool_link)
   EXPECT_TRUE(pose1.isApprox(pose3,1e-3));
 
   // Testing addTrajPoint() with custom_tool_frame as eef
-  Eigen::Affine3d pose_msg_to_eigen;
+  Eigen::Isometry3d pose_msg_to_eigen;
   geometry_msgs::Pose pose_buffer;
 
   // We take the Origin of our reference frame in consideration as the "known pose"
@@ -610,7 +610,7 @@ TEST_F(UserRobotTest, custom_tool_link)
 
   tf::poseMsgToEigen(pose_buffer, pose_msg_to_eigen);
 
-  const Eigen::Affine3d pose_eigen = pose_msg_to_eigen;
+  const Eigen::Isometry3d pose_eigen = pose_msg_to_eigen;
 
   const std::string TRAJECTORY_NAME("traj1");
 
