@@ -256,6 +256,26 @@ TEST_F(UserRobotTest, add_trajectory)
   EXPECT_THROW(user_robot->execute("bad_traj"), std::invalid_argument);
 }
 
+TEST_F(UserRobotTest, validate_trajectory)
+{
+  ROS_INFO_STREAM("Testing trajectory validation");
+  const std::string TRAJECTORY_NAME("val_traj");
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  // try valid trajectory
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp1", 1.0, joint, 5));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
+
+  // go back to home in no time, should fail
+  EXPECT_NO_THROW(user_robot->addTrajPoint(TRAJECTORY_NAME, "wp2",      0.0));
+  EXPECT_THROW(user_robot->execute(TRAJECTORY_NAME), moveit_simple::InvalidTrajectoryException);
+
+  // fixing the trajectory should work
+  ROS_INFO_STREAM("Attempting to fix the trajectory");
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME, false, true));
+}
+
 TEST_F(DeveloperRobotTest, planning)
 {
   const double ALLOWED_ERROR = 1e-2;
@@ -747,18 +767,18 @@ TEST_F(UserRobotTest, copy_current_pose)
 
   // Before the first execution robot should be at position "home"
   before_execution_1 = user_robot->getJointState();
-  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME, false, true));
   ros::Duration(0.5).sleep();
 
   // Second Execution
   // Robot should be at "wp3" at all checkpoints from here on out.
   before_execution_2 = user_robot->getJointState();
-  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME, false, true));
   ros::Duration(0.5).sleep();
 
   // Third Execution
   before_execution_3 = user_robot->getJointState();
-  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME));
+  EXPECT_NO_THROW(user_robot->execute(TRAJECTORY_NAME, false, true));
   ros::Duration(0.5).sleep();
 
   // Final Position
@@ -785,11 +805,13 @@ TEST_F(DeveloperRobotTest, collision)
   std::vector<trajectory_msgs::JointTrajectoryPoint> points;
 
   std::vector<double>joint1(6,0);
+  joint1[1] = 2.61;
   std::vector<double>joint2(6,0);
+  joint2[1] = 2.61;
+  joint2[3] = M_PI / 2;
   std::vector<double>joint3(6,0);
-
-  joint2[1] = M_PI;
-  joint3[3] = -M_PI/2;
+  joint3[1] = 2.61;
+  joint3[3] = M_PI / 4;
 
   std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
      std::unique_ptr<moveit_simple::TrajectoryPoint>
@@ -811,8 +833,8 @@ TEST_F(DeveloperRobotTest, collision)
   EXPECT_NO_THROW(developer_robot->execute(TRAJECTORY_NAME));
   EXPECT_FALSE(developer_robot->isInCollision(joint1));
 
-  EXPECT_TRUE(developer_robot->isInCollision(joint2));
-  EXPECT_FALSE(developer_robot->isInCollision(joint3));
+  EXPECT_FALSE(developer_robot->isInCollision(joint2));
+  EXPECT_TRUE(developer_robot->isInCollision(joint3));
   EXPECT_THROW(developer_robot->execute(TRAJECTORY_NAME, true), moveit_simple::CollisionDetected);
 
   // Test to see if above collision detection works when you separate out plan(...) & execute(...)

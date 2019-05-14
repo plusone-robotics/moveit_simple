@@ -146,6 +146,25 @@ TEST_F(UserRobotTest, add_trajectory)
   EXPECT_THROW(robot->execute("bad_traj"), std::invalid_argument);
 }
 
+TEST_F(UserRobotTest, validate_trajectory)
+{
+  ROS_INFO_STREAM("Testing trajectory validation");
+  const std::string TRAJECTORY_NAME("val_traj");
+  const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
+
+  // try valid trajectory
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0, joint, 5));
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME));
+
+  // go back to home in no time, should fail
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2",      0.0));
+  EXPECT_THROW(robot->execute(TRAJECTORY_NAME), moveit_simple::InvalidTrajectoryException);
+
+  // fixing the trajectory should work
+  ROS_INFO_STREAM("Attempting to fix the trajectory");
+  EXPECT_NO_THROW(robot->execute(TRAJECTORY_NAME, false, true));
+}
 
 TEST_F(DeveloperRobotTest, planning)
 {
@@ -427,11 +446,11 @@ TEST_F(UserRobotTest, speed_reconfiguration)
   double execution_time_check_2 = INT_MAX;
   double execution_time_check_3 = INT_MAX;
 
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      0.5));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 1.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   2.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 3.0));
-  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 4.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "home",      1.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint1", 2.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "tf_pub1",   3.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint2", 4.0));
+  EXPECT_NO_THROW(robot->addTrajPoint(TRAJECTORY_NAME, "waypoint3", 5.0));
 
   // Test 1 -- Max_Execution_Speed: Plan & then Execute that Plan separately
   robot->setSpeedModifier(1.0);
@@ -679,13 +698,17 @@ TEST_F(DeveloperRobotTest, collision)
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
+  // joint1, joint2 are collision free but interpolated joint3 is in collision
   std::vector<trajectory_msgs::JointTrajectoryPoint> points;
-
   std::vector<double>joint1(6,0);
+  joint1[1] = 0.77;
+  joint1[2] = 1.13;
   std::vector<double>joint2(6,0);
+  joint2[1] = 1.45;
+  joint2[2] = 0.89;
   std::vector<double>joint3(6,0);
-  joint2[2] = M_PI;
-  joint3[2] = M_PI/2;
+  joint3[1] = (joint1[1] + joint2[1]) / 2;
+  joint3[2] = (joint1[2] + joint2[2]) / 2;
   std::unique_ptr<moveit_simple::TrajectoryPoint> joint_point1 =
      std::unique_ptr<moveit_simple::TrajectoryPoint>
      (new moveit_simple::JointTrajectoryPoint(joint1, 1.0, "joint_point1"));

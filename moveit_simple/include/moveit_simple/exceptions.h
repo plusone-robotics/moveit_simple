@@ -96,5 +96,20 @@ public:
   JointSeedException(const std::string error_description)
     : std::runtime_error(error_description) { }
 };
+
+/**
+ * @brief InvalidTrajectoryException
+ *
+ * This inherits from std::runtime_error.
+ * This is an exception class to be thrown when a trajectory
+ * contains invalid waypoints, i.e. joint states are out of
+ * bounds or time stamps are not achievable.
+ */
+class InvalidTrajectoryException : public std::runtime_error
+{
+public:
+  InvalidTrajectoryException(const std::string error_description)
+    : std::runtime_error(error_description) { }
+};
 } // namespace moveit_simple
 #endif // EXCEPTIONS_H
