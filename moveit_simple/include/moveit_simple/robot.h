@@ -610,6 +610,16 @@ protected:
   bool getIK(const Eigen::Isometry3d pose, std::vector<double> &joint_point,
     double timeout = 1) const;
 
+  /**
+   * @brief getSymmetricIK-
+   * @param   pose             - End effector pose for which to solve IK
+   * @param   seed             - Seed joint state to be passed into the IK solver
+   * @param   joint_values     - If successful, joint_values will be populated
+   * @param   result_diff_pose - Transform from the pose passed in to a symmetric pose
+   * @param   result_score     - Quality of the result. Larger numbers represent solutions closer to the seed state.
+   * @param   timeout          - The amount of time to allocate for the IK solver to find a solution
+   * @return  bool             - true on success
+   */
   bool getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<double>& seed, std::vector<double>& joint_values,
       Eigen::Isometry3d& result_diff_pose, double& result_score, double timeout) const;
 

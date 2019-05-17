@@ -233,7 +233,7 @@ TEST_F(DeveloperRobotTest, test_symmetric_ik)
   std::map<size_t, double> seed_fractions;
   seed_fractions[5] = 0.0; // strongly 'pull' wrist joint towards 0
   EXPECT_TRUE(robot_->setIKSeedStateFractions(seed_fractions));
-  robot_->limitJointWindup(true);
+  robot_->setLimitJointWindup(true);
   random_numbers::RandomNumberGenerator rand(7 /* seed */);
   // wrist joint values should be below this threshold since symmetry allows it
   double orientation_threshold = M_PI / 4;
