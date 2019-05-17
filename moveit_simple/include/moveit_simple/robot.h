@@ -436,7 +436,7 @@ public:
   double getSpeedModifier(void) const;
 
   /**
-   * @brief limitJointWindup - Enable/Disable joint windup reduction in IK solutions by
+   * @brief setLimitJointWindup - Enable/Disable joint windup reduction in IK solutions by
    * applying the seed state modifiers defined in ik_seed_state_fractions_. The fraction values
    * are multiplied with the corresponding joint values in the seed state which causes IK solutions
    * to be "pulled" towards the center. Additionally the modified joints are solved with a lower
@@ -444,7 +444,12 @@ public:
    * affect the actual freedom of the joint but only centers IK solutions by a specified amount.
    * @param enabled - Set joint windup limitation feature on/off
    */
-  void limitJointWindup(bool enabled);
+  void setLimitJointWindup(bool enabled);
+
+  /**
+   * @brief getLimitJointWindup - query the robot class to determine if the limit_joint_windup_ flag is set
+   */
+  bool getLimitJointWindup();
 
   /**
    * @brief setIKSeedStateFractions - Specify joint value modifiers that should be applied in IK
@@ -583,10 +588,10 @@ protected:
   virtual std::vector<double> getJointState(void) const;
 
   bool getIK(const Eigen::Isometry3d pose, const std::vector<double> &seed,
-    std::vector<double> &joint_point, double timeout = 1, bool limit_joint_windup = false) const;
+    std::vector<double> &joint_point, double timeout = 1) const;
 
   bool getIK(const Eigen::Isometry3d pose, std::vector<double> &joint_point,
-    double timeout = 1, bool limit_joint_windup = false) const;
+    double timeout = 1) const;
 
   bool getFK(const std::vector<double> &joint_point, Eigen::Isometry3d &pose) const;
 
@@ -641,7 +646,7 @@ protected:
   std::string robot_description_;
 
   // Limit IK joint windup
-  bool limit_joint_windup_ = false;
+  bool limit_joint_windup_;
   std::map<size_t, double> ik_seed_state_fractions_;
 };
 } // namespace moveit_simple

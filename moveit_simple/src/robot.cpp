@@ -46,6 +46,7 @@ Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, co
   , params_(ros::NodeHandle("~/moveit_simple"))
   , planning_group_(group_name)
   , robot_description_(robot_description)
+  , limit_joint_windup_(false)
 {
   this->refreshRobot();
 
@@ -419,7 +420,7 @@ bool Robot::getJointSolution(const Eigen::Isometry3d& pose, double timeout, cons
     local_seed = getJointState();
   }
 
-  return getIK(pose, local_seed, joint_point, timeout, limit_joint_windup_);
+  return getIK(pose, local_seed, joint_point, timeout);
 }
 
 bool Robot::getJointSolution(const Eigen::Isometry3d& pose, const std::string& tool_name, double timeout,
@@ -1231,11 +1232,11 @@ bool Robot::getFK(const std::vector<double>& joint_point, Eigen::Isometry3d& pos
 }
 
 bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed, std::vector<double>& joint_point,
-                  double timeout, bool limit_joint_windup) const
+                  double timeout) const
 {
   std::vector<double> local_seed(seed);
   // If joint windup should be limited, the seed state is 'pulled' towards 0 for the specified joints
-  if (limit_joint_windup)
+  if (limit_joint_windup_)
   {
     for (const std::pair<size_t, double> seed_state_fraction : ik_seed_state_fractions_)
     {
@@ -1244,16 +1245,15 @@ bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed,
     }
   }
   virtual_robot_state_->setJointGroupPositions(joint_group_, local_seed);
-  return getIK(pose, joint_point, timeout, limit_joint_windup);
+  return getIK(pose, joint_point, timeout);
 }
 
-bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout,
-                  bool limit_joint_windup) const
+bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout) const
 {
   Eigen::Isometry3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
   std::vector<double> consistency_limit(6, 4 * M_PI);
   // we add a 'soft' consistency limit so that IK solutions can only converge slowly towards the joint limit
-  if (limit_joint_windup && !ik_seed_state_fractions_.empty())
+  if (limit_joint_windup_ && !ik_seed_state_fractions_.empty())
   {
     for (const std::pair<size_t, double>& seed_state_fraction : ik_seed_state_fractions_)
       consistency_limit[seed_state_fraction.first] = M_PI;
@@ -1273,9 +1273,14 @@ bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point
   return false;
 }
 
-void Robot::limitJointWindup(bool enabled)
+void Robot::setLimitJointWindup(bool enabled)
 {
   limit_joint_windup_ = enabled;
+}
+
+bool Robot::getLimitJointWindup()
+{
+  return limit_joint_windup_;
 }
 
 bool Robot::setIKSeedStateFractions(const std::map<size_t, double>& ik_seed_state_fractions)

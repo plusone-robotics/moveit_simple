@@ -82,8 +82,11 @@ TEST(MoveitSimpleTest, test_limit_ik_windup)
   seed_fractions[5] = 0.3;
   EXPECT_TRUE(robot.setIKSeedStateFractions(seed_fractions));
   EXPECT_TRUE(seed_fractions == robot.getIKSeedStateFractions());
-  // enable joint windup limitation
-  robot.limitJointWindup(true);
+  // Test enable and disable joint windup limitation. (this should end with an enabled flag)
+  robot.setLimitJointWindup(false);
+  EXPECT_FALSE(robot.getLimitJointWindup());
+  robot.setLimitJointWindup(true);
+  EXPECT_TRUE(robot.getLimitJointWindup());
 
   // run same rotations as before and verify that windup is disabled
   pose.linear().setIdentity();
