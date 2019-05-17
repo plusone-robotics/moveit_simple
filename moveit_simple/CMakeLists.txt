@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning
   moveit_simple_msgs
   moveit_visual_tools
+  random_numbers
   roscpp
   rosparam_handler
   sensor_msgs
@@ -38,6 +39,7 @@ catkin_package(
     eigen_conversions
     geometry_msgs
     moveit_simple_msgs
+    random_numbers
     roscpp
     rosparam_handler
     sensor_msgs
@@ -99,6 +101,10 @@ if(CATKIN_ENABLE_TESTING)
   set(MOVEIT_SIMPLE_TEST_SRC_FILES test/moveit_simple_utest.cpp test/joint_locker.cpp test/joint_lock_options.cpp)
   catkin_add_gtest(moveit_simple_utest ${MOVEIT_SIMPLE_TEST_SRC_FILES})
   target_link_libraries(moveit_simple_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+  set(TOOL_WINDUP_SRC_FILES test/tool_windup_utest.cpp test/tool_windup.cpp)
+  add_rostest_gtest(tool_windup_utest test/launch/tool_windup_utest.launch ${TOOL_WINDUP_SRC_FILES})
+  target_link_libraries(tool_windup_utest ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 endif()
 

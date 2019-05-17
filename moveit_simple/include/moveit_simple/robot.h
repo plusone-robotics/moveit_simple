@@ -435,6 +435,37 @@ public:
    */
   double getSpeedModifier(void) const;
 
+  /**
+   * @brief setLimitJointWindup - Enable/Disable joint windup reduction in IK solutions by
+   * applying the seed state modifiers defined in ik_seed_state_fractions_. The fraction values
+   * are multiplied with the corresponding joint values in the seed state which causes IK solutions
+   * to be "pulled" towards the center. Additionally the modified joints are solved with a lower
+   * consistency_limit of PI. Both measures in combination act as a "soft" joint limit which doesn't
+   * affect the actual freedom of the joint but only centers IK solutions by a specified amount.
+   * @param enabled - Set joint windup limitation feature on/off
+   */
+  void setLimitJointWindup(bool enabled);
+
+  /**
+   * @brief getLimitJointWindup - query the robot class to determine if the limit_joint_windup_ flag is set
+   */
+  bool getLimitJointWindup();
+
+  /**
+   * @brief setIKSeedStateFractions - Specify joint value modifiers that should be applied in IK
+   * calls if joint windup limitation is enabled. On how to enable and use this feature see the function
+   * limitJointWindup() above.
+   * @param ik_seed_state_fractions - A map from joint ids to fraction values in range [0,1]
+   * @return true on success, false if invalid entries are found (invalid joint id, value out of range)
+   */
+  bool setIKSeedStateFractions(const std::map<size_t, double>& ik_seed_state_fractions);
+
+  /**
+   * @brief getIKSeedStateFractions - Get the currently specified ik_seed_state_fractions_ map.
+   * @return ik_seed_state_fractions_
+   */
+  std::map<size_t, double> getIKSeedStateFractions() const;
+
   void updateRvizRobotState(const Eigen::Isometry3d &pose, const std::string &in_frame,
     const std::string &joint_seed, double timeout = 10.0) const;
 
@@ -613,6 +644,10 @@ protected:
 
   std::string planning_group_;
   std::string robot_description_;
+
+  // Limit IK joint windup
+  bool limit_joint_windup_;
+  std::map<size_t, double> ik_seed_state_fractions_;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H
