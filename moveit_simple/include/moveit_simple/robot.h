@@ -356,6 +356,41 @@ public:
     const std::vector<double> &seed, std::vector<double> &joint_point, bool symmetric_solution = false) const;
 
   /**
+   * @brief getPickPlaceJointSolutions computes IK solutions for pick and place poses of a desired object.
+   * The pick pose is computed with symmetric IK solutions so that joint windup and displacement is minimized
+   * as much as possible. The place pose is solved by simple IK with applied orientation offset of the pick pose.
+   * @param pick_pose - the desired pick pose of the object (the grasp pose, not the object pose)
+   * @param place_pose - the desired place pose of the object (the grasp pose, not the object pose)
+   * @param reference_frame - the frame of pick_pose and place_pose
+   * @param timeout - the solver timeout in seconds
+   * @param seed - the seed state to use for IK, if empty the current state is used
+   * @param pick_joint_state - returns the joint state solution for pick_pose
+   * @param place_joint_state - returns the joint state solution for place_pose
+   * @return true if joint solutions found
+   */
+  bool getPickPlaceJointSolutions(const Eigen::Isometry3d& pick_pose, const Eigen::Isometry3d& place_pose,
+                                  const std::string& reference_frame, double timeout,
+                                  const std::vector<double>& seed, std::vector<double>& pick_joint_state,
+                                  std::vector<double>& place_joint_state) const;
+
+  /**
+   * @brief getPickPlaceJointSolutions computes IK solutions for pick and place poses of a desired object.
+   * The pick pose is computed with symmetric IK solutions so that joint windup and displacement is minimized
+   * as much as possible. The place pose is solved by simple IK with applied orientation offset of the pick pose.
+   * @param pick_pose - the desired pick pose of the object (the grasp pose, not the object pose)
+   * @param place_pose - the desired place pose of the object (the grasp pose, not the object pose)
+   * @param timeout - the solver timeout in seconds
+   * @param seed - the seed state to use for IK, if empty the current state is used
+   * @param pick_joint_state - returns the joint state solution for pick_pose
+   * @param place_joint_state - returns the joint state solution for place_pose
+   * @return true if joint solutions found
+   */
+  bool getPickPlaceJointSolutions(const Eigen::Isometry3d& pick_pose, const Eigen::Isometry3d& place_pose,
+                                  double timeout, const std::vector<double>& seed,
+                                  std::vector<double>& pick_joint_state,
+                                  std::vector<double>& place_joint_state) const;
+
+  /**
    * @brief getPose finds cartesian pose for the given joint positions.
    * @param joint_point - joint positions
    * @param pose - pose corresponding to joint_pose

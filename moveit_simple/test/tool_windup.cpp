@@ -245,4 +245,46 @@ TEST_F(DeveloperRobotTest, test_symmetric_ik)
     ASSERT_TRUE(std::abs(joint_state[5]) < orientation_threshold);
   }
 }
+TEST_F(DeveloperRobotTest, text_pick_place_ik)
+{
+  // init pick pose
+  Eigen::Isometry3d pick_pose(Eigen::Translation3d(Eigen::Vector3d(1.5, 0, 1)));
+  pick_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
+
+  // init place pose
+  Eigen::Isometry3d place_pose = pick_pose;
+
+  // set robot end effector symmetry to circular
+
+  robot_->setEndEffectorSymmetry(moveit_simple::EndEffectorSymmetry::Circular);
+
+  // compute pick/place pose
+  std::vector<double> seed, pick_state, place_state;
+  EXPECT_TRUE(robot_->getPickPlaceJointSolutions(pick_pose, place_pose, 1.0, seed, pick_state, place_state));
+  // move place pose and compute pick/place
+  place_pose *= Eigen::Translation3d(Eigen::Vector3d(0, 0.2, 0));
+  EXPECT_TRUE(robot_->getPickPlaceJointSolutions(pick_pose, place_pose, 1.0, seed, pick_state, place_state));
+
+  // rotate place pose and compute pick/place
+  place_pose *= Eigen::AngleAxisd(M_PI / 4, Eigen::Vector3d::UnitX());
+  ASSERT_TRUE(robot_->getPickPlaceJointSolutions(pick_pose, place_pose, 1.0, seed, pick_state, place_state));
+
+  // compute forward kinematics of solutions
+  Eigen::Isometry3d actual_pick_pose, actual_place_pose;
+  ASSERT_TRUE(robot_->getPose(pick_state, actual_pick_pose));
+  ASSERT_TRUE(robot_->getPose(place_state, actual_place_pose));
+
+  // compute pick/place diffs
+  Eigen::Isometry3d pick_diff = pick_pose * actual_pick_pose.inverse();
+  Eigen::Isometry3d place_diff = place_pose * actual_place_pose.inverse();
+
+  // validate poses are at desired position
+  constexpr double DISTANCE_THRESHOLD = 0.0001;
+  EXPECT_TRUE(pick_diff.translation().norm() <  DISTANCE_THRESHOLD);
+  EXPECT_TRUE(place_diff.translation().norm() < DISTANCE_THRESHOLD);
+
+  // validate diff orientations are the same
+  constexpr double ANGLE_THRESHOLD = 0.001;
+  EXPECT_TRUE(Eigen::AngleAxisd((pick_diff.inverse() * place_diff).rotation()).angle() < ANGLE_THRESHOLD);
+}
 }
