@@ -127,13 +127,37 @@ void OnlineRobot::execute(std::vector<moveit_simple::JointTrajectoryPoint> &join
 
     ros::Duration timeout(TIMEOUT_SCALE * traj_time.toSec());
 
-    if (action_.sendGoalAndWait(goal, timeout) == actionlib::SimpleClientGoalState::SUCCEEDED)
+    actionlib::SimpleClientGoalState result = action_.sendGoalAndWait(goal, timeout);
+    if (result == actionlib::SimpleClientGoalState::SUCCEEDED)
     {
-      ROS_INFO_STREAM("Successfully executed Joint Trajectory ");
+      std::vector<double> joint_state = getJointState();
+      std::vector<double> joint_state_goal = joint_trajectory_points.back().jointPoint();
+
+      bool reached_goal = true;
+      for (size_t i = 0; i < joint_state.size(); ++i)
+      {
+        // Use the dynamic param joint_equality_tolerance_ to check whether we
+        // are close enough to the goal in joint space.
+	if (std::abs(joint_state[i] - joint_state_goal[i]) > joint_equality_tolerance_)
+        {
+          ROS_ERROR("Joint %zu angle (%lf) not within tolerance (%lf) of goal "
+                    "angle (%lf)",
+                    i, joint_state[i], joint_equality_tolerance_, joint_state_goal[i]);
+          reached_goal = false;
+          break;
+        }
+      }
+
+      if (!reached_goal)
+      {
+        ROS_ERROR("Trajectory failed to reach goal");
+        throw ExecutionFailureException("Trajectory failed to reach goal");
+      }
     }
     else
     {
-      ROS_ERROR_STREAM("Joint Trajectory failed to execute.. check input Plan");
+      ROS_ERROR("Joint Trajectory failed to execute. Action server responded "
+                "with goal state: %s.", result.toString().c_str());
       throw ExecutionFailureException("Execution failed for Joint Trajectory");
     }
   }
