@@ -38,15 +38,15 @@ int main(int argc, char **argv)
   const moveit_simple::InterpolationType cart = moveit_simple::interpolation_type::CARTESIAN;
   const moveit_simple::InterpolationType joint = moveit_simple::interpolation_type::JOINT;
 
-  robot->addTrajPoint(trajectory_name, "home",      0.5);
-  robot->addTrajPoint(trajectory_name, "waypoint1", 1.0, joint, 5);
-  robot->addTrajPoint(trajectory_name, "tf_pub1",   2.0, cart, 8);
-  robot->addTrajPoint(trajectory_name, "waypoint2", 3.0);
-  robot->addTrajPoint(trajectory_name, "waypoint3", 4.0, joint);
-  robot->addTrajPoint(trajectory_name, "waypoint1", 4.0, joint);
-  robot->addTrajPoint(trajectory_name, "waypoint3", 4.0, cart);
-  robot->addTrajPoint(trajectory_name, "waypoint1", 4.0, cart);
-  robot->addTrajPoint(trajectory_name, pose, "tool0", 5.0);
+  robot->addTrajPoint(trajectory_name, "home",      1.0);
+  robot->addTrajPoint(trajectory_name, "waypoint1", 2.0, joint, 5);
+  robot->addTrajPoint(trajectory_name, "tf_pub1",   3.0, cart, 8);
+  robot->addTrajPoint(trajectory_name, "waypoint2", 4.0);
+  robot->addTrajPoint(trajectory_name, "waypoint3", 5.0, joint);
+  robot->addTrajPoint(trajectory_name, "waypoint1", 6.0, joint);
+  robot->addTrajPoint(trajectory_name, "waypoint3", 7.0, cart);
+  robot->addTrajPoint(trajectory_name, "waypoint1", 8.0, cart);
+  robot->addTrajPoint(trajectory_name, pose, "tool0", 9.0);
 
   robot->execute(trajectory_name);
 
