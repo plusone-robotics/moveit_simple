@@ -40,6 +40,7 @@
   <run_depend>industrial_robot_simulator</run_depend>
   <run_depend>moveit_core</run_depend>
   <run_depend>moveit_ros_planning</run_depend>
+  <run_depend>moveit_visual_tools</run_depend>
   <run_depend>random_numbers</run_depend>
   <run_depend>robot_state_publisher</run_depend>
   <run_depend>roscpp</run_depend>
