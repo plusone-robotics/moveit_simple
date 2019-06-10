@@ -640,10 +640,10 @@ protected:
   virtual std::vector<double> getJointState(void) const;
 
   bool getIK(const Eigen::Isometry3d pose, const std::vector<double> &seed,
-    std::vector<double> &joint_point, double timeout = 1) const;
+    std::vector<double> &joint_point, double timeout = 1, bool limit_joint_windup = false) const;
 
   bool getIK(const Eigen::Isometry3d pose, std::vector<double> &joint_point,
-    double timeout = 1) const;
+    double timeout = 1, bool limit_joint_windup = false) const;
 
   /**
    * @brief getSymmetricIK-

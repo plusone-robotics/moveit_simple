@@ -424,7 +424,7 @@ bool Robot::getJointSolution(const Eigen::Isometry3d& pose, double timeout, cons
   if (symmetric_solution)
     return getSymmetricIK(pose, local_seed, joint_point, timeout);
   else
-    return getIK(pose, local_seed, joint_point, timeout);
+    return getIK(pose, local_seed, joint_point, timeout, limit_joint_windup_);
 }
 
 bool Robot::getJointSolution(const Eigen::Isometry3d& pose, const std::string& tool_name, double timeout,
@@ -552,7 +552,7 @@ bool Robot::getPickPlaceJointSolutions(const Eigen::Isometry3d& pick_pose, const
     ROS_ERROR("Ran out of time computing pick and place joint solutions");
     return false;
   }
-  if (!getIK(place_pose * pick_pose_diff, pick_joint_state, place_joint_state, timeout))
+  if (!getIK(place_pose * pick_pose_diff, pick_joint_state, place_joint_state, timeout, false))
   {
     ROS_ERROR_STREAM("Unable to find IK solution for place pose");
     return false;
@@ -1310,11 +1310,11 @@ bool Robot::getFK(const std::vector<double>& joint_point, Eigen::Isometry3d& pos
 }
 
 bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed, std::vector<double>& joint_point,
-                  double timeout) const
+                  double timeout, bool limit_joint_windup) const
 {
   std::vector<double> local_seed(seed);
   // If joint windup should be limited, the seed state is 'pulled' towards 0 for the specified joints
-  if (limit_joint_windup_)
+  if (limit_joint_windup)
   {
     for (const std::pair<size_t, double> seed_state_fraction : ik_seed_state_fractions_)
     {
@@ -1323,15 +1323,16 @@ bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed,
     }
   }
   virtual_robot_state_->setJointGroupPositions(joint_group_, local_seed);
-  return getIK(pose, joint_point, timeout);
+  return getIK(pose, joint_point, timeout, limit_joint_windup);
 }
 
-bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout) const
+bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point, double timeout,
+                  bool limit_joint_windup) const
 {
   Eigen::Isometry3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
   std::vector<double> consistency_limit(joint_group_->getActiveJointModels().size(), 4 * M_PI);
   // we add a 'soft' consistency limit so that IK solutions can only converge slowly towards the joint limit
-  if (limit_joint_windup_ && !ik_seed_state_fractions_.empty())
+  if (limit_joint_windup && !ik_seed_state_fractions_.empty())
   {
     for (const std::pair<size_t, double>& seed_state_fraction : ik_seed_state_fractions_)
       consistency_limit[seed_state_fraction.first] = M_PI;
