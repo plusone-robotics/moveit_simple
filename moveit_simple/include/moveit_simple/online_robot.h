@@ -60,25 +60,30 @@ public:
    * prior calls to "addTrajPoint".
    * @param collision_check - bool to turn check for collision on\off
    * @param retime_trajectory - bool to fix trajectory timesteps if necessary on\off
+   * @param max_velocity_scaling_factor - double for limiting the joint velocities if you retime trajectory
+   * @param max_acceleration_scaling_factor - double for limiting the joint velocities if you retime trajectory
    * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
    * @throws <moveit_simple::IKFailException> (Conversion to joint trajectory failed)
    * @throws <std::invalid_argument> (Trajectory "traj_name" not found)
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
-  void execute(const std::string traj_name, bool collision_check = false, bool retime_trajectory = false);
+  void execute(const std::string traj_name, bool collision_check = false, bool retime_trajectory = false,
+               double max_velocity_scaling_factor = 1.0, double max_acceleration_scaling_factor = 1.0);
 
   /**
    * @brief execute a given planned joint trajectory
    * @param goal - Joint Trajectory goal which is a known 'Plan'
    * @param collision_check - bool to turn check for collision on\off
    * @param retime_trajectory - bool to fix trajectory timesteps if necessary on\off
+   * @param max_velocity_scaling_factor - double for limiting the joint velocities if you retime trajectory
+   * @param max_acceleration_scaling_factor - double for limiting the joint velocities if you retime trajectory
    * @throws <moveit_simple::ExecutionFailureException> (Execution failure)
    * @throws <moveit_simple::CollisionDetected> (One of interpolated point is
    * in Collision with itself or environment)
    */
   void execute(std::vector<moveit_simple::JointTrajectoryPoint> &goal, bool collision_check = false,
-               bool retime_trajectory = false);
+               bool retime_trajectory = false, double max_velocity_scaling_factor = 1.0, double max_acceleration_scaling_factor = 1.0);
 
   /**
    * @brief Starts execution for a given trajectory, non blocking
