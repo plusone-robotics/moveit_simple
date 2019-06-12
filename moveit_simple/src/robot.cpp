@@ -1374,7 +1374,7 @@ bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed,
       else
         midpoint = 0;
 
-      local_seed[joint] = (local_seed[joint] - midpoint) * seed_state_fraction.second + midpoint;
+      local_seed[joint] = local_seed[joint] * seed_state_fraction.second + midpoint * (1 - seed_state_fraction.second);
     }
   }
   virtual_robot_state_->setJointGroupPositions(joint_group_, local_seed);
