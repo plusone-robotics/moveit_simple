@@ -81,8 +81,9 @@ std::vector<moveit_simple::JointTrajectoryPoint> TrajectoryPlanner::plan(Robot& 
  return plan;
 }
 
-bool TrajectoryPlanner::toJointTrajectory(Robot& robot, const std::string traj_name, std::vector<trajectory_msgs::JointTrajectoryPoint>& points,
-                              bool collision_check)
+bool TrajectoryPlanner::toJointTrajectory(Robot& robot, const std::string traj_name,
+                                          std::vector<trajectory_msgs::JointTrajectoryPoint>& points,
+                                          bool collision_check)
 {
   const TrajectoryInfo& traj_info = traj_info_map_[traj_name];
 
@@ -157,7 +158,7 @@ bool TrajectoryPlanner::jointInterpolation(Robot& robot, const std::unique_ptr<T
   std::unique_ptr<JointTrajectoryPoint> target_point;
   if (traj_point->type() != TrajectoryPoint::JOINT)
   {
-    const size_t MAX_IK_ATTEMPTS = 2;
+    const size_t MAX_IK_ATTEMPTS = 6;
     size_t num_attempts = 0;
 
     while (true)
