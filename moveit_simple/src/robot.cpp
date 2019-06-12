@@ -966,9 +966,10 @@ void Robot::reconfigureRequest(moveit_simple_dynamic_reconfigure_Config& config,
   joint_equality_tolerance_ = params_.joint_equality_tolerance;
 }
 
-void Robot::setEndEffectorSymmetry(EndEffectorSymmetry end_effector_symmetry)
+void Robot::setEndEffectorSymmetry(EndEffectorSymmetry end_effector_symmetry, const Eigen::Vector3d& symmetry_axis)
 {
   end_effector_symmetry_ = end_effector_symmetry;
+  symmetry_axis_ = symmetry_axis;
 }
 
 EndEffectorSymmetry Robot::getEndEffectorSymmetry(void) const
@@ -1457,7 +1458,7 @@ bool Robot::getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<doub
       angle_step = rand.uniformReal(-M_PI, M_PI);
 
     // sample next orientation and reset seed state
-    sample_pose.rotate(Eigen::AngleAxisd(angle_step, Eigen::Vector3d::UnitX()));
+    sample_pose.rotate(Eigen::AngleAxisd(angle_step, symmetry_axis_));
     sample_state.setJointGroupPositions(joint_group_, local_seed);
   }
 

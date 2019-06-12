@@ -462,9 +462,11 @@ public:
    * @brief setEndEffectorSymmetry: Setter method for the end effector symmetry mode.
    * The symmetry mode (None, Circular, Rectangular, Quadratic) is applied when calling
    * getSymmeticIK() and leads to limiting joint windup through minimizing joint displacement.
-   * @param end_effector_symmetry
+   * @param end_effector_symmetry: The symmetry type of the end effector
+   * @param symmetry_axis: The axis along which the end effector is symmetric
    */
-  void setEndEffectorSymmetry(EndEffectorSymmetry end_effector_symmetry);
+  void setEndEffectorSymmetry(EndEffectorSymmetry end_effector_symmetry,
+                              const Eigen::Vector3d& symmetry_axis = Eigen::Vector3d::UnitX());
 
   /**
    * @brief getEndEffectorSymmetry: returns the currently defined symmetry mode of the end effector
@@ -717,6 +719,7 @@ protected:
   bool limit_joint_windup_;
   std::map<size_t, double> ik_seed_state_fractions_;
   EndEffectorSymmetry end_effector_symmetry_ = EndEffectorSymmetry::None;
+  Eigen::Vector3d symmetry_axis_;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H
