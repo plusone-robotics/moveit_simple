@@ -740,7 +740,7 @@ protected:
 
   // Collision Checking
   bool only_check_self_collisions_;
-  moveit::core::GroupStateValidityCallbackFn constraint_fn_;
+  moveit::core::GroupStateValidityCallbackFn ik_validity_callback_fn_;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H

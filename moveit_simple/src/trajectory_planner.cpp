@@ -158,7 +158,7 @@ bool TrajectoryPlanner::jointInterpolation(Robot& robot, const std::unique_ptr<T
   std::unique_ptr<JointTrajectoryPoint> target_point;
   if (traj_point->type() != TrajectoryPoint::JOINT)
   {
-    const size_t MAX_IK_ATTEMPTS = 6;
+    const size_t MAX_IK_ATTEMPTS = 2;
     size_t num_attempts = 0;
 
     while (true)

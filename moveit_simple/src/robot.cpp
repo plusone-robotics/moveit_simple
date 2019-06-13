@@ -73,7 +73,7 @@ bool isStateValid(const planning_scene::PlanningScene* planning_scene, bool only
   return false;
 }
 
-}  // end annonymous namespace
+}  // end anonymous namespace
 
 namespace moveit_simple
 {
@@ -150,9 +150,9 @@ void Robot::refreshRobot()
   planning_scene_.reset(new planning_scene::PlanningScene(robot_model_ptr_));
 
   only_check_self_collisions_ = true;
-  constraint_fn_ = boost::bind(&isStateValid,
-                               planning_scene_.get(),
-                               only_check_self_collisions_, _1, _2, _3);
+  ik_validity_callback_fn_ = boost::bind(&isStateValid,
+                                         planning_scene_.get(),
+                                         only_check_self_collisions_, _1, _2, _3);
 
   joint_group_ = robot_model_ptr_->getJointModelGroup(planning_group_);
 
@@ -1367,13 +1367,8 @@ bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed,
   {
     for (const std::pair<size_t, double> seed_state_fraction : ik_seed_state_fractions_)
     {
-      double midpoint;
       size_t joint = seed_state_fraction.first;
-      if (joint < ik_seed_state_mid_point_.size())
-        midpoint = ik_seed_state_mid_point_[joint];
-      else
-        midpoint = 0;
-
+      double midpoint = ik_seed_state_mid_point_[joint];
       local_seed[joint] = local_seed[joint] * seed_state_fraction.second + midpoint * (1 - seed_state_fraction.second);
     }
   }
@@ -1394,7 +1389,7 @@ bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point
   }
   std::string ik_tip_frame = joint_group_->getSolverInstance()->getTipFrame();
 
-  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, ik_tip_frame, {consistency_limit}, timeout, constraint_fn_))
+  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, ik_tip_frame, {consistency_limit}, timeout, ik_validity_callback_fn_))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();
@@ -1445,6 +1440,11 @@ std::map<size_t, double> Robot::getIKSeedStateFractions() const
 
 bool Robot::setIKSeedStateMidPoint(const std::vector<double>& ik_seed_state_mid_point)
 {
+  if (ik_seed_state_mid_point.size() != joint_group_->getActiveJointModels().size())
+  {
+    ROS_ERROR("Invalid IK seed state midpoint. Size must match active joint models");
+    return false;
+  }
   ik_seed_state_mid_point_ = ik_seed_state_mid_point;
   return true;
 }
@@ -1506,7 +1506,7 @@ bool Robot::getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<doub
   while ((ros::Time::now() - start_time).toSec() < timeout && --steps != -1)
   {
     // solve IK
-    if (sample_state.setFromIK(joint_group_, sample_pose * ik_tip_to_srdf_tip_, ik_tip_frame_, {consistency_limit}, timeout, constraint_fn_))
+    if (sample_state.setFromIK(joint_group_, sample_pose * ik_tip_to_srdf_tip_, ik_tip_frame_, {consistency_limit}, timeout, ik_validity_callback_fn_))
     {
       // maximize score and save solutions
       double sample_score =  1 / virtual_robot_state_->distance(sample_state);
