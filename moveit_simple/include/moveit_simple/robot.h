@@ -507,6 +507,28 @@ public:
   bool getLimitJointWindup();
 
   /**
+   * @brief setMaxVelocityScalingFactor - Set the velocity scaling factor to be used when retime_trajectory
+   * @param max_velocity_scaling_factor - [0,1] for limiting the joint velocities if you retime trajectory on execute
+   */
+  void setMaxVelocityScalingFactor(double max_velocity_scaling_factor);
+
+  /**
+   * @brief getMaxVelocityScalingFactor - query the robot class for the max_velocity_scaling_factor_
+   */
+  double getMaxVelocityScalingFactor();
+
+  /**
+   * @brief setMaxAccelerationScalingFactor - query the robot class to determine if the limit_joint_windup_ flag is set
+   * @param max_acceleration_scaling_factor - [0,1] for limiting the joint acceleration if you retime trajectory on execute
+   */
+  void setMaxAccelerationScalingFactor(double max_acceleration_scaling_factor);
+
+  /**
+   * @brief getMaxAccelerationScalingFactor - query the robot class for max_acceleration_scaling_factor
+   */
+  double getMaxAccelerationScalingFactor();
+
+  /**
    * @brief setIKSeedStateFractions - Specify joint value modifiers that should be applied in IK
    * calls if joint windup limitation is enabled. On how to enable and use this feature see the function
    * limitJointWindup() above.
@@ -739,8 +761,11 @@ protected:
   Eigen::Vector3d symmetry_axis_;
 
   // Collision Checking
-  bool only_check_self_collisions_;
   moveit::core::GroupStateValidityCallbackFn ik_validity_callback_fn_;
+
+  // For retiming trajectories before execution
+  double max_velocity_scaling_factor_;
+  double max_acceleration_scaling_factor_;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H

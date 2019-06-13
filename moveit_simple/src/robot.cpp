@@ -149,10 +149,10 @@ void Robot::refreshRobot()
 
   planning_scene_.reset(new planning_scene::PlanningScene(robot_model_ptr_));
 
-  only_check_self_collisions_ = true;
+  bool only_check_self_collisions = true;
   ik_validity_callback_fn_ = boost::bind(&isStateValid,
                                          planning_scene_.get(),
-                                         only_check_self_collisions_, _1, _2, _3);
+                                         only_check_self_collisions, _1, _2, _3);
 
   joint_group_ = robot_model_ptr_->getJointModelGroup(planning_group_);
 
@@ -166,11 +166,15 @@ void Robot::refreshRobot()
   virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
   virtual_visual_tools_->trigger();
 
-
+  // Set initial values for the ik_seed_state_mid_point_ to the default configuration
   robot_state::RobotStatePtr virtual_state = virtual_visual_tools_->getSharedRobotState();
   virtual_state->setToDefaultValues();
   virtual_state->update();
   virtual_state->copyJointGroupPositions(joint_group_, ik_seed_state_mid_point_);
+
+  // Set initial values for velocity and acceleration scaling factors
+  max_velocity_scaling_factor_ = 1;
+  max_acceleration_scaling_factor_ = 1;
 }
 
 void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Isometry3d pose, const std::string& frame,
@@ -1411,6 +1415,26 @@ void Robot::setLimitJointWindup(bool enabled)
 bool Robot::getLimitJointWindup()
 {
   return limit_joint_windup_;
+}
+
+void Robot::setMaxVelocityScalingFactor(double max_velocity_scaling_factor)
+{
+  max_velocity_scaling_factor_ = max_velocity_scaling_factor;
+}
+
+double Robot::getMaxVelocityScalingFactor()
+{
+  return max_velocity_scaling_factor_;
+}
+
+double Robot::getMaxAccelerationScalingFactor()
+{
+  return max_acceleration_scaling_factor_;
+}
+
+void Robot::setMaxAccelerationScalingFactor(double max_acceleration_scaling_factor)
+{
+  max_acceleration_scaling_factor_ = max_acceleration_scaling_factor;
 }
 
 bool Robot::setIKSeedStateFractions(const std::map<size_t, double>& ik_seed_state_fractions)

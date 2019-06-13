@@ -103,7 +103,8 @@ TrajectoryValidationResult validateTrajectory(robot_model::RobotModelConstPtr ro
 }
 
 void retimeTrajectory(robot_model::RobotModelConstPtr robot_model, const std::string& group_name,
-                      trajectory_msgs::JointTrajectory& joint_trajectory, double max_velocity_scaling_factor = 1.0, double max_acceleration_scaling_factor = 1.0)
+                      trajectory_msgs::JointTrajectory& joint_trajectory,
+                      double max_velocity_scaling_factor = 1.0, double max_acceleration_scaling_factor = 1.0)
 {
   // convert trajectory message to robot trajectory
   robot_trajectory::RobotTrajectory trajectory(robot_model, group_name);
@@ -117,10 +118,8 @@ void retimeTrajectory(robot_model::RobotModelConstPtr robot_model, const std::st
   joint_trajectory = trajectory_msg.joint_trajectory;
 }
 
-void validateTrajectory(robot_model::RobotModelConstPtr robot_model,
-                        const std::string& group_name,
-                        trajectory_msgs::JointTrajectory& trajectory,
-                        bool retime_trajectory,
+void validateTrajectory(robot_model::RobotModelConstPtr robot_model, const std::string& group_name,
+                        trajectory_msgs::JointTrajectory& trajectory, bool retime_trajectory,
                         double max_velocity_scaling_factor = 1.0, double max_acceleration_scaling_factor = 1.0)
 {
   TrajectoryValidationResult result = validateTrajectory(robot_model, trajectory);
@@ -133,6 +132,7 @@ void validateTrajectory(robot_model::RobotModelConstPtr robot_model,
       throw InvalidTrajectoryException(result.error_message);
   }
 }
+
 }  // namespace trajectory_processing
 }  // namespace moveit_simple
 #endif  // TRAJECTORY_PROCESSING_H
