@@ -16,16 +16,16 @@
   <include file="$(find moveit_simple)/test/launch/test_display.launch"/>
 
   <!-- Launch Kuka -->
-  <include file="$(find moveit_simple)/test/launch/kuka_kr210.launch">
+  <include file="$(find moveit_simple)/test/launch/motoman_mh5.launch">
     <arg name="robot_description" value="$(arg robot_description)"/>
-    <arg name="urdf_file" value="$(find moveit_simple)/test/resources/kuka_kr210/kr210l150.urdf"/>
-    <arg name="urdf_file_custom_tool" value="$(find moveit_simple)/test/resources/kuka_kr210/kuka_custom_tool.urdf"/>
+    <arg name="urdf_file" value="$(find moveit_simple)/test/resources/motoman_mh5/urdf/motoman_mh5_robot.xacro"/>
+    <!-- <arg name="urdf_file_custom_tool" value="$(find moveit_simple)/test/resources/kuka_kr210/kuka_custom_tool.urdf"/> -->
     <arg name="run_test_node" value="$(arg run_test_node)"/>
   </include>
 
-  <node pkg="tf" type="static_transform_publisher" name="tfdummy" args="0 0 0 0 0 0 /base_link /world  10" />
+  <node pkg="tf" type="static_transform_publisher" name="tfdummy" args="0 0 0 0 0 0 /world /base_link 10" />
 
   <!-- Test Node -->
-  <node name="kuka_kr210_demo" pkg="moveit_simple" type="moveit_simple_kuka_trajectory_planner_demo"
+  <node name="motoman_demo" pkg="moveit_simple" type="moveit_simple_motoman_trajectory_planner_demo"
   launch-prefix="$(arg launch_prefix)" />
 </launch>

@@ -39,6 +39,7 @@ catkin_package(
     eigen_conversions
     geometry_msgs
     moveit_simple_msgs
+    moveit_visual_tools
     random_numbers
     roscpp
     rosparam_handler
@@ -76,12 +77,23 @@ add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_genparam)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_executable(
-  ${PROJECT_NAME}_trajectory_planner_demo
-  scripts/trajectory_planner_demo.cpp
+  ${PROJECT_NAME}_kuka_trajectory_planner_demo
+  scripts/kuka_trajectory_planner_demo.cpp
 )
 
 target_link_libraries(
-  ${PROJECT_NAME}_trajectory_planner_demo
+  ${PROJECT_NAME}_kuka_trajectory_planner_demo
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+)
+
+add_executable(
+  ${PROJECT_NAME}_motoman_trajectory_planner_demo
+  scripts/motoman_trajectory_planner_demo.cpp
+)
+
+target_link_libraries(
+  ${PROJECT_NAME}_motoman_trajectory_planner_demo
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
@@ -108,7 +120,9 @@ if(CATKIN_ENABLE_TESTING)
 
 endif()
 
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_trajectory_planner_demo
+install(TARGETS ${PROJECT_NAME}
+    ${PROJECT_NAME}_kuka_trajectory_planner_demo
+    ${PROJECT_NAME}_motoman_trajectory_planner_demo
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
