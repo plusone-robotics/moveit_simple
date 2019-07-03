@@ -2,8 +2,8 @@
 Changelog for package moveit_simple
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.2.0 (2019-07-03)
+------------------
 * [feature] Check to make sure that the goal has been reached (`#93 <https://github.com/plusone-robotics/moveit_simple/issues/93>`_)
 * Contributors: Kris Kozak
 
