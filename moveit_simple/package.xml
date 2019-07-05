@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>moveit_simple</name>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <description>Includes simple wrappers for calling MoveIt as a ROS based library.  Similar function as MoveGroup but all calls are made locally using direct MoveIt objects.  This library assumes that MoveIt is being used in a broader ROS system (i.e. certain parameters, like robot_description exist)</description>
 
   <license>Apache 2.0</license> <!-- moveit_simple -->
