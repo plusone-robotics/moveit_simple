@@ -81,8 +81,9 @@ std::vector<moveit_simple::JointTrajectoryPoint> TrajectoryPlanner::plan(Robot& 
  return plan;
 }
 
-bool TrajectoryPlanner::toJointTrajectory(Robot& robot, const std::string traj_name, std::vector<trajectory_msgs::JointTrajectoryPoint>& points,
-                              bool collision_check)
+bool TrajectoryPlanner::toJointTrajectory(Robot& robot, const std::string traj_name,
+                                          std::vector<trajectory_msgs::JointTrajectoryPoint>& points,
+                                          bool collision_check)
 {
   const TrajectoryInfo& traj_info = traj_info_map_[traj_name];
 

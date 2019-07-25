@@ -103,35 +103,36 @@ TrajectoryValidationResult validateTrajectory(robot_model::RobotModelConstPtr ro
 }
 
 void retimeTrajectory(robot_model::RobotModelConstPtr robot_model, const std::string& group_name,
-                      trajectory_msgs::JointTrajectory& joint_trajectory)
+                      trajectory_msgs::JointTrajectory& joint_trajectory,
+                      double max_velocity_scaling_factor = 1.0, double max_acceleration_scaling_factor = 1.0)
 {
   // convert trajectory message to robot trajectory
   robot_trajectory::RobotTrajectory trajectory(robot_model, group_name);
   moveit::core::RobotState robot_state(robot_model);
   trajectory.setRobotTrajectoryMsg(robot_state, joint_trajectory);
   ::trajectory_processing::TimeOptimalTrajectoryGeneration totg;
-  if (!totg.computeTimeStamps(trajectory))
+  if (!totg.computeTimeStamps(trajectory, max_velocity_scaling_factor, max_acceleration_scaling_factor))
     throw InvalidTrajectoryException("Failed to recompute trajectory time stamps");
   moveit_msgs::RobotTrajectory trajectory_msg;
   trajectory.getRobotTrajectoryMsg(trajectory_msg);
   joint_trajectory = trajectory_msg.joint_trajectory;
 }
 
-void validateTrajectory(robot_model::RobotModelConstPtr robot_model,
-                        const std::string& group_name,
-                        trajectory_msgs::JointTrajectory& trajectory,
-                        bool retime_trajectory)
+void validateTrajectory(robot_model::RobotModelConstPtr robot_model, const std::string& group_name,
+                        trajectory_msgs::JointTrajectory& trajectory, bool retime_trajectory,
+                        double max_velocity_scaling_factor = 1.0, double max_acceleration_scaling_factor = 1.0)
 {
   TrajectoryValidationResult result = validateTrajectory(robot_model, trajectory);
   if (result.value != TrajectoryValidationResult::Success)
   {
     // we can't fix invalid positions by trajectory parameterization
     if (retime_trajectory && result.value != TrajectoryValidationResult::InvalidPosition)
-      retimeTrajectory(robot_model, group_name, trajectory);
+      retimeTrajectory(robot_model, group_name, trajectory, max_velocity_scaling_factor, max_acceleration_scaling_factor);
     else
       throw InvalidTrajectoryException(result.error_message);
   }
 }
+
 }  // namespace trajectory_processing
 }  // namespace moveit_simple
 #endif  // TRAJECTORY_PROCESSING_H

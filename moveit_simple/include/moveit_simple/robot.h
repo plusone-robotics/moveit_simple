@@ -27,6 +27,7 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <dynamic_reconfigure/server.h>
 #include <moveit/robot_model/robot_model.h>
+#include <moveit/robot_state/robot_state.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
 #include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
@@ -506,6 +507,28 @@ public:
   bool getLimitJointWindup();
 
   /**
+   * @brief setMaxVelocityScalingFactor - Set the velocity scaling factor to be used when retime_trajectory
+   * @param max_velocity_scaling_factor - [0,1] for limiting the joint velocities if you retime trajectory on execute
+   */
+  void setMaxVelocityScalingFactor(double max_velocity_scaling_factor);
+
+  /**
+   * @brief getMaxVelocityScalingFactor - query the robot class for the max_velocity_scaling_factor_
+   */
+  double getMaxVelocityScalingFactor();
+
+  /**
+   * @brief setMaxAccelerationScalingFactor - query the robot class to determine if the limit_joint_windup_ flag is set
+   * @param max_acceleration_scaling_factor - [0,1] for limiting the joint acceleration if you retime trajectory on execute
+   */
+  void setMaxAccelerationScalingFactor(double max_acceleration_scaling_factor);
+
+  /**
+   * @brief getMaxAccelerationScalingFactor - query the robot class for max_acceleration_scaling_factor
+   */
+  double getMaxAccelerationScalingFactor();
+
+  /**
    * @brief setIKSeedStateFractions - Specify joint value modifiers that should be applied in IK
    * calls if joint windup limitation is enabled. On how to enable and use this feature see the function
    * limitJointWindup() above.
@@ -519,6 +542,21 @@ public:
    * @return ik_seed_state_fractions_
    */
   std::map<size_t, double> getIKSeedStateFractions() const;
+
+  /**
+   * @brief setIKSeedStateMidPoint - Specify joint value modifiers that should be applied in IK
+   * calls if joint windup limitation is enabled. On how to enable and use this feature see the function
+   * limitJointWindup() above.
+   * @param ik_seed_state_mid_point - A vector of joint values that IK should stay near
+   * @return true on success, false if invalid entries are found (invalid joint id, value out of range)
+   */
+  bool setIKSeedStateMidPoint(const std::vector<double>& ik_seed_state_mid_point);
+
+  /**
+   * @brief getIKSeedStateFractions - Get the currently specified ik_seed_state_mid_point_ map.
+   * @return ik_seed_state_mid_point_
+   */
+  std::vector<double> getIKSeedStateMidPoint() const;
 
   void updateRvizRobotState(const Eigen::Isometry3d &pose, const std::string &in_frame,
     const std::string &joint_seed, double timeout = 10.0) const;
@@ -718,8 +756,16 @@ protected:
   // Limit IK joint windup
   bool limit_joint_windup_;
   std::map<size_t, double> ik_seed_state_fractions_;
+  std::vector<double> ik_seed_state_mid_point_;
   EndEffectorSymmetry end_effector_symmetry_ = EndEffectorSymmetry::None;
   Eigen::Vector3d symmetry_axis_;
+
+  // Collision Checking
+  moveit::core::GroupStateValidityCallbackFn ik_validity_callback_fn_;
+
+  // For retiming trajectories before execution
+  double max_velocity_scaling_factor_;
+  double max_acceleration_scaling_factor_;
 };
 } // namespace moveit_simple
 #endif // ROBOT_H

@@ -38,6 +38,43 @@
 
 #include <random_numbers/random_numbers.h>
 
+namespace
+{
+bool isStateValid(const planning_scene::PlanningScene* planning_scene, bool only_check_self_collision,
+                  moveit::core::RobotState* robot_state, const robot_model::JointModelGroup* group,
+                  const double* ik_solution)
+{
+  robot_state->setJointGroupPositions(group, ik_solution);
+  robot_state->update();
+
+  if (!planning_scene)
+  {
+    ROS_ERROR_STREAM("No planning scene provided to isStateValid");
+    return false;
+  }
+
+  if (only_check_self_collision)
+  {
+    // No easy API exists for only checking self-collision, so we do it here. TODO: move this big into
+    // planning_scene.cpp
+    collision_detection::CollisionRequest req;
+    req.verbose = false;
+    req.group_name = group->getName();
+    collision_detection::CollisionResult res;
+    planning_scene->checkSelfCollision(req, res, *robot_state);
+    if (!res.collision)
+      return true;  // not in collision
+  }
+  else if (!planning_scene->isStateColliding(*robot_state, group->getName()))
+  {
+    return true;  // not in collision
+  }
+
+  return false;
+}
+
+}  // end anonymous namespace
+
 namespace moveit_simple
 {
 Robot::Robot(const ros::NodeHandle& nh, const std::string& robot_description, const std::string& group_name)
@@ -112,6 +149,11 @@ void Robot::refreshRobot()
 
   planning_scene_.reset(new planning_scene::PlanningScene(robot_model_ptr_));
 
+  bool only_check_self_collisions = true;
+  ik_validity_callback_fn_ = boost::bind(&isStateValid,
+                                         planning_scene_.get(),
+                                         only_check_self_collisions, _1, _2, _3);
+
   joint_group_ = robot_model_ptr_->getJointModelGroup(planning_group_);
 
   ROS_INFO_STREAM("Calculating all positions assuming, root: " << robot_model_ptr_->getRootLinkName() << ", and tool: "
@@ -123,6 +165,16 @@ void Robot::refreshRobot()
   virtual_visual_tools_->loadRobotStatePub(nh_.getNamespace() + "/display_robot_state");
   virtual_visual_tools_->publishRobotState(virtual_robot_state_, rviz_visual_tools::PURPLE);
   virtual_visual_tools_->trigger();
+
+  // Set initial values for the ik_seed_state_mid_point_ to the default configuration
+  robot_state::RobotStatePtr virtual_state = virtual_visual_tools_->getSharedRobotState();
+  virtual_state->setToDefaultValues();
+  virtual_state->update();
+  virtual_state->copyJointGroupPositions(joint_group_, ik_seed_state_mid_point_);
+
+  // Set initial values for velocity and acceleration scaling factors
+  max_velocity_scaling_factor_ = 1;
+  max_acceleration_scaling_factor_ = 1;
 }
 
 void Robot::addTrajPoint(const std::string& traj_name, const Eigen::Isometry3d pose, const std::string& frame,
@@ -1320,7 +1372,8 @@ bool Robot::getIK(const Eigen::Isometry3d pose, const std::vector<double>& seed,
     for (const std::pair<size_t, double> seed_state_fraction : ik_seed_state_fractions_)
     {
       size_t joint = seed_state_fraction.first;
-      local_seed[joint] = local_seed[joint] * seed_state_fraction.second;
+      double midpoint = ik_seed_state_mid_point_[joint];
+      local_seed[joint] = local_seed[joint] * seed_state_fraction.second + midpoint * (1 - seed_state_fraction.second);
     }
   }
   virtual_robot_state_->setJointGroupPositions(joint_group_, local_seed);
@@ -1339,7 +1392,8 @@ bool Robot::getIK(const Eigen::Isometry3d pose, std::vector<double>& joint_point
       consistency_limit[seed_state_fraction.first] = M_PI;
   }
   std::string ik_tip_frame = joint_group_->getSolverInstance()->getTipFrame();
-  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, ik_tip_frame, {consistency_limit}, timeout))
+
+  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, ik_tip_frame, {consistency_limit}, timeout, ik_validity_callback_fn_))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();
@@ -1361,6 +1415,26 @@ void Robot::setLimitJointWindup(bool enabled)
 bool Robot::getLimitJointWindup()
 {
   return limit_joint_windup_;
+}
+
+void Robot::setMaxVelocityScalingFactor(double max_velocity_scaling_factor)
+{
+  max_velocity_scaling_factor_ = max_velocity_scaling_factor;
+}
+
+double Robot::getMaxVelocityScalingFactor()
+{
+  return max_velocity_scaling_factor_;
+}
+
+double Robot::getMaxAccelerationScalingFactor()
+{
+  return max_acceleration_scaling_factor_;
+}
+
+void Robot::setMaxAccelerationScalingFactor(double max_acceleration_scaling_factor)
+{
+  max_acceleration_scaling_factor_ = max_acceleration_scaling_factor;
 }
 
 bool Robot::setIKSeedStateFractions(const std::map<size_t, double>& ik_seed_state_fractions)
@@ -1386,6 +1460,22 @@ bool Robot::setIKSeedStateFractions(const std::map<size_t, double>& ik_seed_stat
 std::map<size_t, double> Robot::getIKSeedStateFractions() const
 {
   return ik_seed_state_fractions_;
+}
+
+bool Robot::setIKSeedStateMidPoint(const std::vector<double>& ik_seed_state_mid_point)
+{
+  if (ik_seed_state_mid_point.size() != joint_group_->getActiveJointModels().size())
+  {
+    ROS_ERROR("Invalid IK seed state midpoint. Size must match active joint models");
+    return false;
+  }
+  ik_seed_state_mid_point_ = ik_seed_state_mid_point;
+  return true;
+}
+
+std::vector<double> Robot::getIKSeedStateMidPoint() const
+{
+  return ik_seed_state_mid_point_;
 }
 
 bool Robot::getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<double>& seed,
@@ -1440,7 +1530,7 @@ bool Robot::getSymmetricIK(const Eigen::Isometry3d& pose, const std::vector<doub
   while ((ros::Time::now() - start_time).toSec() < timeout && --steps != -1)
   {
     // solve IK
-    if (sample_state.setFromIK(joint_group_, sample_pose * ik_tip_to_srdf_tip_, ik_tip_frame_, {consistency_limit}, timeout))
+    if (sample_state.setFromIK(joint_group_, sample_pose * ik_tip_to_srdf_tip_, ik_tip_frame_, {consistency_limit}, timeout, ik_validity_callback_fn_))
     {
       // maximize score and save solutions
       double sample_score =  1 / virtual_robot_state_->distance(sample_state);
