@@ -1511,8 +1511,10 @@ bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double>& seed, s
 bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double>& joint_point, double timeout,
                   unsigned int attempts) const
 {
-  Eigen::Affine3d ik_tip_pose = pose * ik_tip_to_srdf_tip_;
-  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose, attempts, timeout))
+  Eigen::Affine3d pose_reconstructed = reconstruct_pose(pose);
+  Eigen::Affine3d ik_tip_pose_reconstructed = pose_reconstructed * ik_tip_to_srdf_tip_;
+
+  if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose_reconstructed, attempts, timeout))
   {
     virtual_robot_state_->copyJointGroupPositions(joint_group_->getName(), joint_point);
     virtual_robot_state_->update();
@@ -1524,6 +1526,24 @@ bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double>& joint_point, 
   }
 
   return false;
+}
+
+Eigen::Affine3d Robot::reconstruct_pose(const Eigen::Affine3d &pose) const {
+  Eigen::Affine3d pose_reconstructed;
+
+  auto pose_rotation = pose.rotation().eulerAngles(0, 1, 2);
+  Eigen::Affine3d rx = Eigen::Affine3d(Eigen::AngleAxisd(pose_rotation(0), Eigen::Vector3d(1, 0, 0)));
+  Eigen::Affine3d ry = Eigen::Affine3d(Eigen::AngleAxisd(pose_rotation(1), Eigen::Vector3d(0, 1, 0)));
+  Eigen::Affine3d rz = Eigen::Affine3d(Eigen::AngleAxisd(pose_rotation(2), Eigen::Vector3d(0, 0, 1)));
+  Eigen::Affine3d r = rz * ry * rx;
+
+  auto pose_translation = pose.translation();
+  Eigen::Affine3d t(Eigen::Translation3d(Eigen::Vector3d(pose_translation(0), pose_translation(1), pose_translation(2))));
+
+  Eigen::Matrix4d m = (t * r).matrix();
+  pose_reconstructed.matrix() = m;
+
+  return pose_reconstructed;
 }
 
 bool Robot::isNearSingular(const std::vector<double>& joint_point) const
