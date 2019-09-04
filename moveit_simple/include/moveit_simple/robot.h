@@ -455,6 +455,8 @@ public:
 
   geometry_msgs::TransformStamped lookupTransformToBase(const std::string &in_frame) const;
 
+  Eigen::Affine3d lookupPose(const std::string& point_name, const double& time);
+
 protected:
   Robot();
 

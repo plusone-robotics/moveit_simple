@@ -334,6 +334,15 @@ void Robot::addTrajPointJointLock(const std::string& traj_name, const Eigen::Aff
   }
 }
 
+Eigen::Affine3d Robot::lookupPose(const std::string &point_name, const double &time)
+{
+  auto point = lookupTrajectoryPoint(point_name, time)->toCartTrajPoint(*this);
+  if(point != nullptr)
+    return point->pose();
+  else
+    return Eigen::Affine3d::Identity();
+}
+
 std::unique_ptr<TrajectoryPoint> Robot::lookupTrajectoryPoint(const std::string& name, double time) const
 {
   ROS_INFO_STREAM("Looking up trajectory point: " << name);
