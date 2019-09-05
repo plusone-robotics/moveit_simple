@@ -569,7 +569,7 @@ protected:
    * @param pose
    * @return reconstructed pose
    */
-  Eigen::Affine3d reconstruct_pose(const Eigen::Affine3d &pose) const;
+  Eigen::Affine3d reconstructPose(const Eigen::Affine3d &pose) const;
 
   bool getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const;
 

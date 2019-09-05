@@ -1511,7 +1511,7 @@ bool Robot::getIK(const Eigen::Affine3d pose, const std::vector<double>& seed, s
 bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double>& joint_point, double timeout,
                   unsigned int attempts) const
 {
-  Eigen::Affine3d pose_reconstructed = reconstruct_pose(pose);
+  Eigen::Affine3d pose_reconstructed = reconstructPose(pose);
   Eigen::Affine3d ik_tip_pose_reconstructed = pose_reconstructed * ik_tip_to_srdf_tip_;
 
   if (virtual_robot_state_->setFromIK(joint_group_, ik_tip_pose_reconstructed, attempts, timeout))
@@ -1528,7 +1528,7 @@ bool Robot::getIK(const Eigen::Affine3d pose, std::vector<double>& joint_point, 
   return false;
 }
 
-Eigen::Affine3d Robot::reconstruct_pose(const Eigen::Affine3d &pose) const {
+Eigen::Affine3d Robot::reconstructPose(const Eigen::Affine3d &pose) const {
   Eigen::Affine3d pose_reconstructed;
 
   auto pose_rotation = pose.rotation().eulerAngles(0, 1, 2);
