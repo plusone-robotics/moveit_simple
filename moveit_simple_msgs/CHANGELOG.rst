@@ -2,6 +2,10 @@
 Changelog for package moveit_simple_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix version discrepancy `#100 <https://github.com/plusone-robotics/moveit_simple/issues/100>`_ 
+
 0.2.0 (2019-07-03)
 ------------------
 

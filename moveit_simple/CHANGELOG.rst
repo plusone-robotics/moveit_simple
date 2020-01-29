@@ -2,6 +2,10 @@
 Changelog for package moveit_simple
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix version discrepancy `#100 <https://github.com/plusone-robotics/moveit_simple/issues/100>`_ 
+
 0.2.0 (2019-07-03)
 ------------------
 * [feature] Check to make sure that the goal has been reached (`#93 <https://github.com/plusone-robotics/moveit_simple/issues/93>`_)
