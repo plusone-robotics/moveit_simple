@@ -2,8 +2,8 @@
 Changelog for package moveit_simple
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.2.1 (2020-01-28)
+------------------
 * Fix version discrepancy `#100 <https://github.com/plusone-robotics/moveit_simple/issues/100>`_ 
 
 0.2.0 (2019-07-03)
