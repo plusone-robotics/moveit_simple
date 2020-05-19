@@ -562,6 +562,15 @@ protected:
   bool getIK(const Eigen::Affine3d pose, std::vector<double> &joint_point,
     double timeout = 1, unsigned int attempts = 1) const;
 
+  /**
+   * @brief reconstructs a pose from its constituent translation and rotation.
+   * This is necessary to do when the pose matrix is unsolvable for IK
+   * Reconstructing the pose matrix created an equivalent but solvable matrix
+   * @param pose
+   * @return reconstructed pose
+   */
+  Eigen::Affine3d reconstructPose(const Eigen::Affine3d &pose) const;
+
   bool getFK(const std::vector<double> &joint_point, Eigen::Affine3d &pose) const;
 
   std::unique_ptr<TrajectoryPoint> lookupTrajectoryPoint(const std::string &name,
